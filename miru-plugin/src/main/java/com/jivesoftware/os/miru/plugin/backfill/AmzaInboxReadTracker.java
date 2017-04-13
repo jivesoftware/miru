@@ -57,9 +57,13 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
         MiruSolutionLog solutionLog,
         int lastActivityIndex,
         long oldestBackfilledTimestamp,
+        boolean verbose,
         StackBuffer stackBuffer) throws Exception {
 
         Collection<NamedCursor> cursors = getSipCursors(tenantId, partitionId, streamId);
+        if (verbose) {
+            log.info("Backfill unread streamId:{} cursors:{}", streamId, cursors);
+        }
         MiruWALClient.StreamBatch<MiruWALEntry, AmzaSipCursor> got = walClient.getRead(tenantId,
             streamId,
             new AmzaSipCursor(cursors, false),
@@ -68,16 +72,28 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
             true);
         AmzaSipCursor lastCursor = null;
         while (got != null && !got.activities.isEmpty()) {
+            if (verbose) {
+                log.info("Backfill unread streamId:{} got:{}", streamId, got.activities.size());
+            }
             lastCursor = got.cursor;
             for (MiruWALEntry e : got.activities) {
                 MiruReadEvent readEvent = e.activity.readEvent.get();
                 MiruFilter filter = readEvent.filter;
 
                 if (e.activity.type == MiruPartitionedActivity.Type.READ) {
+                    if (verbose) {
+                        log.info("Backfill unread streamId:{} read:{}", streamId, readEvent.time);
+                    }
                     readTracker.read(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time, stackBuffer);
                 } else if (e.activity.type == MiruPartitionedActivity.Type.UNREAD) {
+                    if (verbose) {
+                        log.info("Backfill unread streamId:{} unread:{}", streamId, readEvent.time);
+                    }
                     readTracker.unread(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time, stackBuffer);
                 } else if (e.activity.type == MiruPartitionedActivity.Type.MARK_ALL_READ) {
+                    if (verbose) {
+                        log.info("Backfill unread streamId:{} markAllRead:{}", streamId, readEvent.time);
+                    }
                     readTracker.markAllRead(bitmaps, requestContext, streamId, readEvent.time, stackBuffer);
                 }
             }

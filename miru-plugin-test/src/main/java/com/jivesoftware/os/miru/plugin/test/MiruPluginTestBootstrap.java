@@ -214,7 +214,7 @@ public class MiruPluginTestBootstrap {
         clusterRegistry.updateIngress(new MiruIngressUpdate(tenantId, partitionId, new RangeMinMax(), System.currentTimeMillis(), false));
 
         MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer()
-            .initialize(config.getReadStreamIdsPropName(), miruHost, inboxReadTracker);
+            .initialize(config.getReadStreamIdsPropName(), inboxReadTracker, null);
 
         backfillerizerLifecycle.start();
         final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();

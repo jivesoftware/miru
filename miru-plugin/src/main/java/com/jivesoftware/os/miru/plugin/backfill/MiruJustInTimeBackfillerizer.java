@@ -108,6 +108,15 @@ public class MiruJustInTimeBackfillerizer {
                     }
                     requestContext.getUnreadTrackingIndex().applyUnread(streamId, unreadMask, stackBuffer);
 
+                    if (verbose) {
+                        log.info("Backfill unread streamId:{} unreadMask:{} from:{} to:{} oldest:{}",
+                            streamId,
+                            bitmaps.cardinality(unreadMask),
+                            lastActivityIndex,
+                            lastId,
+                            oldestBackfilledTimestamp);
+                    }
+
                     elapsed = System.currentTimeMillis() - start;
                     backfillSolutionLog.log(MiruSolutionLogLevel.INFO, "Applied unread in {} ms", elapsed);
                     start = System.currentTimeMillis();
@@ -128,6 +137,7 @@ public class MiruJustInTimeBackfillerizer {
                         backfillSolutionLog,
                         lastId,
                         oldestBackfilledTimestamp,
+                        verbose,
                         stackBuffer);
                     requestContext.getUnreadTrackingIndex().setLastActivityIndex(streamId, lastId, stackBuffer);
 
@@ -255,6 +265,7 @@ public class MiruJustInTimeBackfillerizer {
                         backfillSolutionLog,
                         lastId,
                         oldestBackfilledEventId,
+                        false,
                         stackBuffer);
                 }
 

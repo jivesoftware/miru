@@ -20,7 +20,9 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Interners;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
@@ -34,6 +36,7 @@ import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.realtime.MiruRealtimeDelivery;
@@ -122,6 +125,7 @@ import com.jivesoftware.os.routing.bird.server.util.Resource;
 import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
@@ -446,8 +450,12 @@ public class MiruReaderMain {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
 
+
+            Set<MiruStreamId> verboseStreamIds = Sets.newHashSet(Lists.transform(
+                Arrays.asList(miruServiceConfig.getBackfillVerboseStreamIds().split("\\s*,\\s*")),
+                input -> new MiruStreamId(input.getBytes(StandardCharsets.UTF_8))));
             MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer()
-                .initialize(miruServiceConfig.getReadStreamIdsPropName(), miruHost, inboxReadTracker);
+                .initialize(miruServiceConfig.getReadStreamIdsPropName(), inboxReadTracker, verboseStreamIds);
 
             backfillerizerLifecycle.start();
             MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
