@@ -275,8 +275,8 @@ public class RoaringInspection {
         int pos1 = 0;
         int pos2 = 0;
 
-        int lastKey1 = Util.toIntUnsigned(x1.highLowContainer.getKeyAtIndex(length1 - 1));
-        int lastKey2 = Util.toIntUnsigned(x2.highLowContainer.getKeyAtIndex(length2 - 1));
+        int lastKey1 = length1 == 0 ? -1 : Util.toIntUnsigned(x1.highLowContainer.getKeyAtIndex(length1 - 1));
+        int lastKey2 = length2 == 0 ? -1 : Util.toIntUnsigned(x2.highLowContainer.getKeyAtIndex(length2 - 1));
         int[] keys = new int[Math.max(lastKey1, lastKey2) + 1];
 
         int ki = 0;
