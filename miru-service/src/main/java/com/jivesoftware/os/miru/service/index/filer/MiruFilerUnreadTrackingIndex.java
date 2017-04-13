@@ -9,10 +9,14 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collections;
 
 /** @author jonathan */
 public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTrackingIndex<BM, IBM> {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
@@ -64,6 +68,12 @@ public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
 
     @Override
     public int getLastActivityIndex(MiruStreamId streamId, StackBuffer stackBuffer) throws Exception {
-        return getUnread(streamId).lastId(stackBuffer);
+        LOG.error("Deprecated usage of filer getLastActivityIndex");
+        return -1;
+    }
+
+    @Override
+    public void setLastActivityIndex(MiruStreamId streamId, int lastActivityIndex, StackBuffer stackBuffer) throws Exception {
+        LOG.error("Deprecated usage of filer setLastActivityIndex");
     }
 }

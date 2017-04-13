@@ -716,6 +716,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             bitmaps,
             trackError,
             new byte[] { (byte) -1 },
+            new byte[] { (byte) -4 },
             atomized,
             bitmapIndex,
             streamStripingLocksProvider);
