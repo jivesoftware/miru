@@ -54,6 +54,7 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
         MiruSolutionLog solutionLog,
         int lastActivityIndex,
         long oldestBackfilledTimestamp,
+        boolean verbose,
         StackBuffer stackBuffer) throws Exception {
 
         // First find the oldest eventId from our sip WAL

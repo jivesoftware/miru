@@ -1,19 +1,20 @@
 package com.jivesoftware.os.miru.plugin.index;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.backfill.MiruInboxReadTracker;
 import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import org.apache.commons.lang.StringUtils;
 
 public class MiruBackfillerizerInitializer {
 
     public MiruLifecyle<MiruJustInTimeBackfillerizer> initialize(String readStreamIdsPropName,
-        MiruHost miruHost,
-        MiruInboxReadTracker inboxReadTracker) {
+        MiruInboxReadTracker inboxReadTracker,
+        Set<MiruStreamId> verboseStreamIds) {
         if (StringUtils.isEmpty(readStreamIdsPropName)) {
             readStreamIdsPropName = null;
         }
@@ -21,7 +22,7 @@ public class MiruBackfillerizerInitializer {
         final ExecutorService backfillExecutor =  BoundedExecutor.newBoundedExecutor(10, "backfillerizer");
 
         final MiruJustInTimeBackfillerizer backfillerizer = new MiruJustInTimeBackfillerizer(inboxReadTracker,
-            Optional.fromNullable(readStreamIdsPropName), backfillExecutor, null);
+            Optional.fromNullable(readStreamIdsPropName), backfillExecutor, verboseStreamIds);
 
         return new MiruLifecyle<MiruJustInTimeBackfillerizer>() {
 

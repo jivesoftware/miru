@@ -19,5 +19,6 @@ public interface MiruInboxReadTracker {
         MiruSolutionLog solutionLog,
         int lastActivityIndex,
         long oldestBackfilledTimestamp,
+        boolean verbose,
         StackBuffer stackBuffer) throws Exception;
 }

@@ -277,4 +277,7 @@ public interface MiruServiceConfig extends Config {
 
     @LongDefault(30 * 60 * 1_000L)
     long getDropRealtimeDeliveryOlderThanNMillis();
+
+    @StringDefault("")
+    String getBackfillVerboseStreamIds();
 }
