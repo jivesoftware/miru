@@ -608,6 +608,12 @@ public class RoaringInspectionTest {
         assertEquals(keys[1], 1);
         assertEquals(keys[2], 4);
         assertEquals(keys[3], 5);
+
+        b1 = RoaringBitmap.bitmapOf();
+        b2 = RoaringBitmap.bitmapOf();
+
+        keys = RoaringInspection.keysNotEqual(b1, b2);
+        assertEquals(keys.length, 0);
     }
 
 }
