@@ -18,7 +18,6 @@ package com.jivesoftware.os.miru.manage.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.amza.service.storage.PartitionCreator;
@@ -60,6 +59,7 @@ import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
+import com.jivesoftware.os.routing.bird.deployable.TenantAwareHttpClientHealthCheck;
 import com.jivesoftware.os.routing.bird.endpoints.base.FullyOnlineVersion;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI.UI;
@@ -90,9 +90,6 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -163,6 +160,9 @@ public class MiruManageMain {
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build();
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("stump", miruStumptownClient));
+
             new MiruLogAppenderInitializer().initialize(
                 instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
@@ -184,6 +184,9 @@ public class MiruManageMain {
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build();
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("anomaly", miruAnomalyClient));
+
             new MiruMetricSamplerInitializer().initialize(
                 instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
@@ -205,6 +208,9 @@ public class MiruManageMain {
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("wal", walHttpClient));
+
             @SuppressWarnings("unchecked")
             TenantsServiceConnectionDescriptorProvider<String> readerConnectionDescriptorProvider =
                 tenantRoutingProvider.getConnections("miru-reader", "main", 10_000); // TODO config
@@ -214,6 +220,10 @@ public class MiruManageMain {
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("reader", readerClient));
+
+
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
             SickThreads walClientSickThreads = new SickThreads();

@@ -16,67 +16,79 @@ class MiruBotDistinctsInitializer {
 
         @IntDefault(86400000)
         int getReadTimeRange();
+
         void setReadTimeRange(int value);
 
         @IntDefault(10)
         int getWriteHesitationFactor();
+
         void setWriteHesitationFactor(int value);
 
         @IntDefault(10)
         int getValueSizeFactor();
+
         void setValueSizeFactor(int value);
 
         @LongDefault(20_000L)
         long getFailureRetryWaitMs();
+
         void setFailureRetryWaitMs(long value);
 
         @IntDefault(500)
         int getBirthRateFactor();
+
         void setBirthRateFactor(int value);
 
         @IntDefault(1_000)
         int getReadFrequency();
+
         void setReadFrequency(int value);
 
         @IntDefault(100)
         int getBatchWriteCountFactor();
+
         void setBatchWriteCountFactor(int value);
 
         @IntDefault(10)
         int getBatchWriteFrequency();
+
         void setBatchWriteFrequency(int value);
 
         @IntDefault(4)
         int getNumberOfFields();
+
         void setNumberOfFields(int value);
 
         @IntDefault(5)
         int getBotBucketSeed();
+
         void setBotBucketSeed(int value);
 
         @LongDefault(10_000L)
         long getWriteReadPauseMs();
+
         void setWriteReadPauseMs(long value);
 
         @LongDefault(Long.MAX_VALUE)
         long getRuntimeMs();
+
         void setRuntimeMs(long value);
 
     }
 
     MiruBotDistinctsService initialize(MiruBotConfig miruBotConfig,
-                                       MiruBotDistinctsConfig miruBotDistinctsConfig,
-                                       OrderIdProvider orderIdProvider,
-                                       MiruBotSchemaService miruBotSchemaService,
-                                       TenantAwareHttpClient<String> miruReader,
-                                       TenantAwareHttpClient<String> miruWriter) {
+        MiruBotDistinctsConfig miruBotDistinctsConfig,
+        OrderIdProvider orderIdProvider,
+        MiruBotSchemaService miruBotSchemaService,
+        TenantAwareHttpClient<String> miruReader,
+        TenantAwareHttpClient<String> miruWriter) {
         return new MiruBotDistinctsService(
-                miruBotConfig.getMiruIngressEndpoint(),
-                miruBotDistinctsConfig,
-                orderIdProvider,
-                miruBotSchemaService,
-                miruReader,
-                miruWriter);
+            miruBotConfig.getMiruIngressEndpoint(),
+            miruBotDistinctsConfig,
+            orderIdProvider,
+            miruBotSchemaService,
+            miruReader,
+            miruWriter);
     }
 
 }

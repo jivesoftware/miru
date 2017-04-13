@@ -46,6 +46,7 @@ import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
+import com.jivesoftware.os.routing.bird.deployable.TenantAwareHttpClientHealthCheck;
 import com.jivesoftware.os.routing.bird.endpoints.base.FullyOnlineVersion;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI.UI;
@@ -125,6 +126,9 @@ public class MiruStumptownMain {
                     .deadAfterNErrors(miruStumptownConfig.getDeadAfterNErrors())
                     .checkDeadEveryNMillis(miruStumptownConfig.getCheckDeadEveryNMillis())
                     .build();
+
+                deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("amza", amzaClient));
+
                 payloads = new MiruStumptownPayloadsAmzaIntializer().initialize(instanceConfig.getClusterName(),
                     amzaClient,
                     miruStumptownConfig.getAwaitLeaderElectionForNMillis(),
@@ -143,6 +147,8 @@ public class MiruStumptownMain {
                 .checkDeadEveryNMillis(miruStumptownConfig.getCheckDeadEveryNMillis())
                 .build();
 
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("write", miruWriterClient));
+
             @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.builder(
                 deployable.getTenantRoutingProvider().getConnections("miru-manage", "main", miruStumptownConfig.getRefreshConnectionsAfterNMillis()),
@@ -151,6 +157,8 @@ public class MiruStumptownMain {
                 .checkDeadEveryNMillis(miruStumptownConfig.getCheckDeadEveryNMillis())
                 .build();
 
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("manage", miruManageClient));
+
             @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.builder(
                 deployable.getTenantRoutingProvider().getConnections("miru-reader", "main", miruStumptownConfig.getRefreshConnectionsAfterNMillis()),
@@ -158,6 +166,8 @@ public class MiruStumptownMain {
                 .deadAfterNErrors(miruStumptownConfig.getDeadAfterNErrors())
                 .checkDeadEveryNMillis(miruStumptownConfig.getCheckDeadEveryNMillis())
                 .build();
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("reader", readerClient));
 
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
