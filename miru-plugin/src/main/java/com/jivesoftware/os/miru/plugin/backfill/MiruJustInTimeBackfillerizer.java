@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.plugin.backfill;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -22,6 +21,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -34,19 +34,19 @@ public class MiruJustInTimeBackfillerizer {
 
     private final MiruInboxReadTracker inboxReadTracker;
 
-    private final MiruHost localHost;
     private final Optional<String> readStreamIdsPropName;
     private final ExecutorService backfillExecutor;
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
+    private final Set<MiruStreamId> verboseStreamIds;
 
     public MiruJustInTimeBackfillerizer(MiruInboxReadTracker inboxReadTracker,
-        MiruHost localHost,
         Optional<String> readStreamIdsPropName,
-        ExecutorService backfillExecutor) {
+        ExecutorService backfillExecutor,
+        Set<MiruStreamId> verboseStreamIds) {
         this.inboxReadTracker = inboxReadTracker;
-        this.localHost = localHost;
         this.readStreamIdsPropName = readStreamIdsPropName;
         this.backfillExecutor = backfillExecutor;
+        this.verboseStreamIds = verboseStreamIds;
     }
 
     public <BM extends IBM, IBM> void backfillUnread(MiruBitmaps<BM, IBM> bitmaps,
@@ -65,17 +65,16 @@ public class MiruJustInTimeBackfillerizer {
                 StackBuffer stackBuffer = new StackBuffer();
                 synchronized (requestContext.getStreamLocks().lock(streamId, 0)) {
                     long start = System.currentTimeMillis();
+                    boolean verbose = verboseStreamIds != null && verboseStreamIds.contains(streamId);
                     int lastActivityIndex = requestContext.getUnreadTrackingIndex().getLastActivityIndex(streamId, stackBuffer);
                     int lastId = requestContext.getActivityIndex().lastId(stackBuffer);
 
-                    if (log.isDebugEnabled()) {
+                    if (verbose) {
                         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
                         requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(container, stackBuffer);
-                        log.debug("before:\n  host={}\n  streamId={}\n  unread={}\n  last={}",
-                            localHost,
-                            streamId.getBytes(),
-                            container,
-                            lastActivityIndex);
+                        log.info("Backfill unread streamId:{} before:{}",
+                            streamId,
+                            bitmaps.cardinality(container.getBitmap()));
                     }
 
                     long oldestBackfilledTimestamp = Long.MAX_VALUE;
@@ -113,14 +112,12 @@ public class MiruJustInTimeBackfillerizer {
                     backfillSolutionLog.log(MiruSolutionLogLevel.INFO, "Applied unread in {} ms", elapsed);
                     start = System.currentTimeMillis();
 
-                    if (log.isDebugEnabled()) {
+                    if (verbose) {
                         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
                         requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(container, stackBuffer);
-                        log.debug("after:\n  host={}\n  streamId={}\n  unread={}\n  last={}",
-                            localHost,
-                            streamId.getBytes(),
-                            container,
-                            lastActivityIndex);
+                        log.info("Backfill unread streamId:{} after:{}",
+                            streamId,
+                            bitmaps.cardinality(container.getBitmap()));
                     }
 
                     inboxReadTracker.sipAndApplyReadTracking(bitmaps,
@@ -185,8 +182,7 @@ public class MiruJustInTimeBackfillerizer {
                         requestContext.getInboxIndex().getInbox(streamId).getIndex(inboxContainer, stackBuffer);
                         BitmapAndLastId<BM> unreadContainer = new BitmapAndLastId<>();
                         requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(inboxContainer, stackBuffer);
-                        log.debug("before:\n  host={}\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
-                            localHost,
+                        log.debug("before:\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
                             streamId.getBytes(),
                             inboxContainer,
                             unreadContainer,
@@ -244,8 +240,7 @@ public class MiruJustInTimeBackfillerizer {
                         requestContext.getInboxIndex().getInbox(streamId).getIndex(inboxContainer, stackBuffer);
                         BitmapAndLastId<BM> unreadContainer = new BitmapAndLastId<>();
                         requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(inboxContainer, stackBuffer);
-                        log.debug("after:\n  host={}\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
-                            localHost,
+                        log.debug("after:\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
                             streamId.getBytes(),
                             inboxContainer,
                             unreadContainer,

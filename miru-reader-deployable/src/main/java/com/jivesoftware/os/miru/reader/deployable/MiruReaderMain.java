@@ -280,6 +280,8 @@ public class MiruReaderMain {
             TenantAwareHttpClient<String> readerHttpClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-reader", "main", 10_000), // TODO config
                 clientHealthProvider)
+                .maxConnections(-1)
+                .maxConnectionsPerHost(-1)
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
