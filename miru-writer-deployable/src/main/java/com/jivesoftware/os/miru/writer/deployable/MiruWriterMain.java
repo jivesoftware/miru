@@ -50,6 +50,7 @@ import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
+import com.jivesoftware.os.routing.bird.deployable.TenantAwareHttpClientHealthCheck;
 import com.jivesoftware.os.routing.bird.endpoints.base.FullyOnlineVersion;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI.UI;
@@ -147,6 +148,9 @@ public class MiruWriterMain {
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build();
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("stump", miruStumptownClient));
+
             new MiruLogAppenderInitializer().initialize(
                 instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
@@ -168,6 +172,9 @@ public class MiruWriterMain {
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build();
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("anomaly", miruAnomalyClient));
+
             new MiruMetricSamplerInitializer().initialize(
                 instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
@@ -188,6 +195,8 @@ public class MiruWriterMain {
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
 
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("manage", manageHttpClient));
+
             @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-wal", "main", 10_000), // TODO config
@@ -195,6 +204,8 @@ public class MiruWriterMain {
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("wal", walHttpClient));
 
             final Map<MiruTenantId, Boolean> latestAlignmentCache = Maps.newConcurrentMap();
 

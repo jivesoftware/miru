@@ -98,6 +98,7 @@ import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
+import com.jivesoftware.os.routing.bird.deployable.TenantAwareHttpClientHealthCheck;
 import com.jivesoftware.os.routing.bird.endpoints.base.FullyOnlineVersion;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI.UI;
@@ -192,6 +193,9 @@ public class MiruReaderMain {
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build();
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("stump", miruStumptownClient));
+
             new MiruLogAppenderInitializer().initialize(
                 instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
@@ -213,6 +217,9 @@ public class MiruReaderMain {
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build();
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("anomaly", miruAnomalyClient));
+
             new MiruMetricSamplerInitializer().initialize(
                 instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
@@ -268,6 +275,8 @@ public class MiruReaderMain {
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
 
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("wal", walHttpClient));
+
             @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-manage", "main", 10_000), // TODO config
@@ -275,6 +284,8 @@ public class MiruReaderMain {
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("manage", manageHttpClient));
 
             @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> readerHttpClient = tenantRoutingHttpClientInitializer.builder(
@@ -286,6 +297,8 @@ public class MiruReaderMain {
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
 
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("reader", readerHttpClient));
+
             @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> catwalkHttpClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-catwalk", "main", 10_000), // TODO config
@@ -293,6 +306,8 @@ public class MiruReaderMain {
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("catwalk", catwalkHttpClient));
 
             // TODO add fall back to config
             final MiruStats miruStats = new MiruStats();
@@ -318,6 +333,8 @@ public class MiruReaderMain {
                     .deadAfterNErrors(10)
                     .checkDeadEveryNMillis(10_000)
                     .build(); // TODO expose to conf
+
+                deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("realtime", realtimeDeliveryHttpClient));
 
                 realtimeDelivery = new RoutingBirdRealtimeDelivery(miruHost,
                     realtimeDeliveryHttpClient,

@@ -18,7 +18,6 @@ package com.jivesoftware.os.miru.anomaly.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.filer.queue.guaranteed.delivery.DeliveryCallback;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -44,6 +43,7 @@ import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
+import com.jivesoftware.os.routing.bird.deployable.TenantAwareHttpClientHealthCheck;
 import com.jivesoftware.os.routing.bird.endpoints.base.FullyOnlineVersion;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI.UI;
@@ -66,9 +66,6 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 public class MiruAnomalyMain {
 
@@ -132,6 +129,8 @@ public class MiruAnomalyMain {
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
 
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("manage", miruManageClient));
+
             @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> miruWriteClient = tenantRoutingHttpClientInitializer.builder(deployable
                     .getTenantRoutingProvider()
@@ -141,6 +140,8 @@ public class MiruAnomalyMain {
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
 
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("writer", miruWriteClient));
+
             @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.builder(deployable
                     .getTenantRoutingProvider()
@@ -149,6 +150,8 @@ public class MiruAnomalyMain {
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("reader", readerClient));
 
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
@@ -195,6 +198,9 @@ public class MiruAnomalyMain {
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build();
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("stump", miruStumptownClient));
+
             new MiruLogAppenderInitializer().initialize(
                 instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
