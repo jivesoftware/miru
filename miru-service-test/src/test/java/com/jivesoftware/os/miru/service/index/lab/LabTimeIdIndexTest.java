@@ -11,7 +11,6 @@ import com.jivesoftware.os.lab.LabHeapPressure.FreeHeapStrategy;
 import com.jivesoftware.os.lab.api.JournalStream;
 import com.jivesoftware.os.lab.guts.LABHashIndexType;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
-import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -20,7 +19,6 @@ import com.jivesoftware.os.miru.service.locator.DiskIdentifierPartResourceLocato
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -265,7 +263,7 @@ public class LabTimeIdIndexTest {
             10 * 1024 * 1024,
             true,
             LABEnvironment.buildLeapsCache(1_000_000, 10),
-            new StripingBolBufferLocks(2048));
+            new StripingBolBufferLocks(2048), Executors.newCachedThreadPool(), Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
         for (File labDir : labDirs) {
             labDir.mkdirs();

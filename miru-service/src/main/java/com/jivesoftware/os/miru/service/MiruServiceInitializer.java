@@ -118,7 +118,17 @@ public class MiruServiceInitializer {
         MiruIndexCallbacks indexCallbacks,
         PartitionErrorTracker partitionErrorTracker,
         MiruInterner<MiruTermId> termInterner,
-        AtomicBoolean atleastOneThumpThump) throws Exception {
+        AtomicBoolean atleastOneThumpThump,
+        ExecutorService inMemoryLabHeapScheduler,
+        ExecutorService onDiskLabHeapScheduler,
+        ExecutorService timeIdLabHeapScheduler,
+        ExecutorService memoryLABScheduler,
+        ExecutorService memoryLABCompactor,
+        ExecutorService memoryLABDestroyer,
+        ExecutorService onDiskLABScheduler,
+        ExecutorService onDiskLABCompactor,
+        ExecutorService onDiskLABDestroyer
+    ) throws Exception {
 
         final ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
 
@@ -141,7 +151,6 @@ public class MiruServiceInitializer {
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(config.getStreamNumberOfLocks());
         StripingLocksProvider<String> authzStripingLocksProvider = new StripingLocksProvider<>(config.getAuthzNumberOfLocks());
 
-        ExecutorService inMemoryLabHeapScheduler = LABEnvironment.buildLABHeapSchedulerThreadPool(config.getRebuildLabHeapPressureStripes());
         AtomicLong inMemoryLabHeapCostInBytes = new AtomicLong();
         LabHeapPressure[] inMemoryLabHeapPressures = new LabHeapPressure[config.getRebuildLabHeapPressureStripes()];
         for (int i = 0; i < inMemoryLabHeapPressures.length; i++) {
@@ -155,7 +164,6 @@ public class MiruServiceInitializer {
             );
         }
 
-        ExecutorService onDiskLabHeapScheduler = LABEnvironment.buildLABHeapSchedulerThreadPool(config.getGlobalLabHeapPressureStripes());
         AtomicLong onDiskLabHeapCostInBytes = new AtomicLong();
         LabHeapPressure[] onDiskLabHeapPressures = new LabHeapPressure[config.getGlobalLabHeapPressureStripes()];
         for (int i = 0; i < onDiskLabHeapPressures.length; i++) {
@@ -169,7 +177,6 @@ public class MiruServiceInitializer {
             );
         }
 
-        ExecutorService timeIdLabHeapScheduler = LABEnvironment.buildLABHeapSchedulerThreadPool(config.getTimeIdLabHeapPressureStripes());
         AtomicLong timeIdLabHeapCostInBytes = new AtomicLong();
         LabHeapPressure timeIdLabHeapPressure = new LabHeapPressure(globalLABStats,
             timeIdLabHeapScheduler,
@@ -201,7 +208,7 @@ public class MiruServiceInitializer {
             config.getLabUseOffHeap(),
             config.getUseLabIndexes(),
             leapCache,
-            bolBufferLocks);
+            bolBufferLocks, memoryLABScheduler, memoryLABCompactor, memoryLABDestroyer);
 
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(resourceLocator,
             byteBufferFactory,
@@ -217,7 +224,7 @@ public class MiruServiceInitializer {
             config.getLabMaxWALOnOpenHeapPressureOverride(),
             config.getLabUseOffHeap(),
             leapCache,
-            bolBufferLocks);
+            bolBufferLocks, onDiskLABScheduler, onDiskLABCompactor, onDiskLABDestroyer);
 
         TxCogs persistentCogs = new TxCogs(1024, 1024,
             new ConcurrentKeyToFPCacheFactory(),

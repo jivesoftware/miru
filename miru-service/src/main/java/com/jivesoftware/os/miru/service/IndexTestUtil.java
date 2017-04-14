@@ -142,7 +142,10 @@ public class IndexTestUtil {
             true,
             useLabIndexes,
             leapCache,
-            bolBufferLocks);
+            bolBufferLocks,
+            LABEnvironment.buildLABSchedulerThreadPool(12),
+            LABEnvironment.buildLABCompactorThreadPool(12),
+            LABEnvironment.buildLABDestroyThreadPool(12));
 
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(diskResourceLocator,
             new HeapByteBufferFactory(),
@@ -158,7 +161,10 @@ public class IndexTestUtil {
             labMaxWALOnOpenHeapPressureOverride,
             true,
             leapCache,
-            bolBufferLocks);
+            bolBufferLocks,
+            LABEnvironment.buildLABSchedulerThreadPool(12),
+            LABEnvironment.buildLABCompactorThreadPool(12),
+            LABEnvironment.buildLABDestroyThreadPool(12));
 
         File[] labDirs = diskResourceLocator.getChunkDirectories(() -> new String[] { "timeId" }, "lab", -1);
         for (File labDir : labDirs) {

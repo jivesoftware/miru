@@ -418,7 +418,17 @@ public class MiruReaderMain {
                     indexCallbacks,
                     partitionErrorTracker,
                     termInterner,
-                    atleastOneThumpThump);
+                    atleastOneThumpThump,
+                    deployable.newBoundedExecutor(miruServiceConfig.getRebuildLabHeapPressureStripes(), "in-memory-lab-heap-scheduler"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getGlobalLabHeapPressureStripes(), "on-disk-lab-heap-scheduler"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getTimeIdLabHeapPressureStripes(), "time-id-lab-heap-scheduler"),
+                    deployable.newBoundedExecutor(12, "in-memory-lab-scheduler"),
+                    deployable.newBoundedExecutor(12, "in-memory-lab-compactor"),
+                    deployable.newBoundedExecutor(12, "in-memory-lab-destroyer"),
+                    deployable.newBoundedExecutor(12, "on-disk-lab-scheduler"),
+                    deployable.newBoundedExecutor(12, "on-disk-lab-compactor"),
+                    deployable.newBoundedExecutor(12, "on-disk-lab-destroyer")
+                    );
             } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient,
                     tasExecutors,
@@ -458,7 +468,17 @@ public class MiruReaderMain {
                     indexCallbacks,
                     partitionErrorTracker,
                     termInterner,
-                    atleastOneThumpThump);
+                    atleastOneThumpThump,
+                    deployable.newBoundedExecutor(miruServiceConfig.getRebuildLabHeapPressureStripes(), "in-memory-lab-heap-scheduler"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getGlobalLabHeapPressureStripes(), "on-disk-lab-heap-scheduler"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getTimeIdLabHeapPressureStripes(), "time-id-lab-heap-scheduler"),
+                    deployable.newBoundedExecutor(12, "in-memory-lab-scheduler"),
+                    deployable.newBoundedExecutor(12, "in-memory-lab-compactor"),
+                    deployable.newBoundedExecutor(12, "in-memory-lab-destroyer"),
+                    deployable.newBoundedExecutor(12, "on-disk-lab-scheduler"),
+                    deployable.newBoundedExecutor(12, "on-disk-lab-compactor"),
+                    deployable.newBoundedExecutor(12, "on-disk-lab-destroyer")
+                );
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }

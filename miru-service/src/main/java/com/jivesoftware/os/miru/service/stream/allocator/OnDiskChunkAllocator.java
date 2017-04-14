@@ -14,7 +14,6 @@ import com.jivesoftware.os.lab.api.JournalStream;
 import com.jivesoftware.os.lab.api.rawhide.FixedWidthRawhide;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
-import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.plugin.context.LastIdKeyValueRawhide;
 import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
@@ -24,7 +23,6 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import org.apache.commons.lang.builder.HashCodeBuilder;
@@ -53,9 +51,9 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     private final StripingBolBufferLocks bolBufferLocks;
     private final ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
 
-    private final ExecutorService buildLABSchedulerThreadPool = LABEnvironment.buildLABSchedulerThreadPool(12);
-    private final ExecutorService buildLABCompactorThreadPool = LABEnvironment.buildLABCompactorThreadPool(12); // TODO config
-    private final ExecutorService buildLABDestroyThreadPool = LABEnvironment.buildLABDestroyThreadPool(12); // TODO config
+    private final ExecutorService buildLABSchedulerThreadPool;
+    private final ExecutorService buildLABCompactorThreadPool;
+    private final ExecutorService buildLABDestroyThreadPool;
 
     public OnDiskChunkAllocator(
         MiruResourceLocator resourceLocator,
@@ -72,7 +70,11 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         long labMaxWALOnOpenHeapPressureOverride,
         boolean labUseOffHeap,
         LRUConcurrentBAHLinkedHash<Leaps> leapCache,
-        StripingBolBufferLocks bolBufferLocks) {
+        StripingBolBufferLocks bolBufferLocks,
+        ExecutorService buildLABSchedulerThreadPool,
+        ExecutorService buildLABCompactorThreadPool,
+        ExecutorService buildLABDestroyThreadPool) {
+
         this.resourceLocator = resourceLocator;
         this.cacheByteBufferFactory = cacheByteBufferFactory;
         this.numberOfChunkStores = numberOfChunkStores;
@@ -88,6 +90,9 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         this.labUseOffHeap = labUseOffHeap;
         this.leapCache = leapCache;
         this.bolBufferLocks = bolBufferLocks;
+        this.buildLABSchedulerThreadPool = buildLABSchedulerThreadPool;
+        this.buildLABCompactorThreadPool = buildLABCompactorThreadPool;
+        this.buildLABDestroyThreadPool = buildLABDestroyThreadPool;
     }
 
     private static int offset(int hashCode, int index, int shift, int length) {
