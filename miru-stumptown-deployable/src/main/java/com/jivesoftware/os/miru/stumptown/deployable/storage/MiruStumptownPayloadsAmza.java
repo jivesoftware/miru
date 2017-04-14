@@ -55,7 +55,7 @@ public class MiruStumptownPayloadsAmza implements MiruStumptownPayloadStorage {
         payload = new PartitionName(false, "p".getBytes(StandardCharsets.UTF_8), (nameSpace + "-stumptown").getBytes(StandardCharsets.UTF_8));
 
         TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
-            BoundedExecutor.newBoundedExecutor(1024, "tas"),
+            BoundedExecutor.newBoundedExecutor(1024, "amza-client-tas"),
             100, // TODO config
             95, // TODO config
             1000

@@ -52,7 +52,7 @@ public class WikiMiruGramsAmza {
         this.mapper = mapper;
 
         TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
-            BoundedExecutor.newBoundedExecutor(1024, "tas"),
+            BoundedExecutor.newBoundedExecutor(1024, "amza-clienttas"),
             100, // TODO config
             95, // TODO config
             1000

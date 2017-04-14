@@ -185,7 +185,7 @@ public class MiruToolsMain {
             MiruTenantQueryRouting miruTenantQueryRouting = new MiruTenantQueryRouting(miruReaderClient,
                 mapper,
                 responseMapper,
-                deployable.newBoundedExecutor(1024, "tas"),
+                deployable.newBoundedExecutor(1024, "reader-tas"),
                 100, // TODO config
                 95, // TODO config
                 1000,

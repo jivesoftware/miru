@@ -154,7 +154,7 @@ public class MiruAnomalyMain {
 
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
-            ExecutorService tasExecutors = deployable.newBoundedExecutor(1024, "tas");
+            ExecutorService tasExecutors = deployable.newBoundedExecutor(1024, "manage-tas");
 
             MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(new MiruStats(), "", miruManageClient, mapper);
             AnomalySchemaService anomalySchemaService = new AnomalySchemaService(clusterClient);

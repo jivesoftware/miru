@@ -314,7 +314,7 @@ public class MiruCatwalkMain {
                 });
 
             TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
-                deployable.newBoundedExecutor(1024, "tas"),
+                deployable.newBoundedExecutor(1024, "amza-client-tas"),
                 100, // TODO config
                 95, // TODO config
                 1000
@@ -341,7 +341,7 @@ public class MiruCatwalkMain {
 
             ExecutorService modelUpdaters = deployable.newBoundedExecutor(amzaCatwalkConfig.getModelUpdaterThreadPoolSize(), "model-updater");
             ExecutorService readRepairers = deployable.newBoundedExecutor(amzaCatwalkConfig.getReadRepairThreadPoolSize(), "read-repair");
-            ExecutorService tasExecutors = deployable.newBoundedExecutor(1024, "tas");
+            ExecutorService tasExecutors = deployable.newBoundedExecutor(1024, "reader-tas");
 
             MiruCatwalkConfig catwalkConfig = deployable.config(MiruCatwalkConfig.class);
 
