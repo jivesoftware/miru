@@ -64,7 +64,6 @@ import com.jivesoftware.os.routing.bird.http.client.TailAtScaleStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
-import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
@@ -315,7 +314,7 @@ public class MiruCatwalkMain {
                 });
 
             TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
-                BoundedExecutor.newBoundedExecutor(1024, "tas"),
+                deployable.newBoundedExecutor(1024, "tas"),
                 100, // TODO config
                 95, // TODO config
                 1000
@@ -325,7 +324,7 @@ public class MiruCatwalkMain {
                 new HttpPartitionClientFactory(),
                 new HttpPartitionHostsProvider(amzaClient, tailAtScaleStrategy, mapper),
                 new RingHostHttpClientProvider(amzaClient),
-                BoundedExecutor.newBoundedExecutor(amzaCatwalkConfig.getAmzaCallerThreadPoolSize(), "amza-client"),
+                deployable.newBoundedExecutor(amzaCatwalkConfig.getAmzaCallerThreadPoolSize(), "amza-client"),
                 amzaCatwalkConfig.getAmzaAwaitLeaderElectionForNMillis(),
                 amzaCatwalkConfig.getAmzaDebugClientCount(),
                 amzaCatwalkConfig.getAmzaDebugClientCountInterval());
@@ -340,9 +339,9 @@ public class MiruCatwalkMain {
             ScheduledExecutorService queueConsumers = Executors.newScheduledThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("queueConsumers-%d")
                 .build());
 
-            ExecutorService modelUpdaters = BoundedExecutor.newBoundedExecutor(amzaCatwalkConfig.getModelUpdaterThreadPoolSize(), "model-updater");
-            ExecutorService readRepairers = BoundedExecutor.newBoundedExecutor(amzaCatwalkConfig.getReadRepairThreadPoolSize(), "read-repair");
-            ExecutorService tasExecutors = BoundedExecutor.newBoundedExecutor(1024, "tas");
+            ExecutorService modelUpdaters = deployable.newBoundedExecutor(amzaCatwalkConfig.getModelUpdaterThreadPoolSize(), "model-updater");
+            ExecutorService readRepairers = deployable.newBoundedExecutor(amzaCatwalkConfig.getReadRepairThreadPoolSize(), "read-repair");
+            ExecutorService tasExecutors = deployable.newBoundedExecutor(1024, "tas");
 
             MiruCatwalkConfig catwalkConfig = deployable.config(MiruCatwalkConfig.class);
 

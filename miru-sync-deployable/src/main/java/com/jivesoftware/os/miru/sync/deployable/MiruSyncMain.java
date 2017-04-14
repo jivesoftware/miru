@@ -248,7 +248,7 @@ public class MiruSyncMain {
 
             deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("amza", amzaClient));
 
-            ExecutorService tasExecutor = BoundedExecutor.newBoundedExecutor(1024, "tas");
+            ExecutorService tasExecutor = deployable.newBoundedExecutor(1024, "tas");
             TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
                 tasExecutor,
                 100, // TODO config
@@ -260,7 +260,7 @@ public class MiruSyncMain {
                 new HttpPartitionClientFactory(),
                 new HttpPartitionHostsProvider(amzaClient, tailAtScaleStrategy, mapper),
                 new RingHostHttpClientProvider(amzaClient),
-                BoundedExecutor.newBoundedExecutor(syncConfig.getAmzaCallerThreadPoolSize(), "amza-client"),
+                deployable.newBoundedExecutor(syncConfig.getAmzaCallerThreadPoolSize(), "amza-client"),
                 syncConfig.getAmzaAwaitLeaderElectionForNMillis(),
                 -1,
                 -1);

@@ -73,7 +73,6 @@ import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
-import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.util.Arrays;
@@ -186,7 +185,7 @@ public class MiruToolsMain {
             MiruTenantQueryRouting miruTenantQueryRouting = new MiruTenantQueryRouting(miruReaderClient,
                 mapper,
                 responseMapper,
-                BoundedExecutor.newBoundedExecutor(1024, "tas"),
+                deployable.newBoundedExecutor(1024, "tas"),
                 100, // TODO config
                 95, // TODO config
                 1000,

@@ -61,7 +61,6 @@ import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
-import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -155,7 +154,7 @@ public class MiruAnomalyMain {
 
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
-            ExecutorService tasExecutors = BoundedExecutor.newBoundedExecutor(1024, "tas");
+            ExecutorService tasExecutors = deployable.newBoundedExecutor(1024, "tas");
 
             MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(new MiruStats(), "", miruManageClient, mapper);
             AnomalySchemaService anomalySchemaService = new AnomalySchemaService(clusterClient);

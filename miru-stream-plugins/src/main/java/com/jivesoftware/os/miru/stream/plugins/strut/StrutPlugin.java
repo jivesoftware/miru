@@ -21,7 +21,6 @@ import com.jivesoftware.os.routing.bird.health.HealthCheckResponse;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckConfig;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -66,7 +65,7 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
             int gatherThreadPoolSize = config.getGatherThreadPoolSize();
             gatherExecutorService = gatherThreadPoolSize <= 1
                 ? MoreExecutors.sameThreadExecutor()
-                : BoundedExecutor.newBoundedExecutor(gatherThreadPoolSize, "gather");
+                : miruProvider.allocateThreadPool("gather", gatherThreadPoolSize);
 
         }
     }
@@ -106,7 +105,7 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
                 .build();
         }
 
-        ExecutorService stas = BoundedExecutor.newBoundedExecutor(1024, "stas");
+        ExecutorService stas = miruProvider.allocateThreadPool("strut-tas", 1024);
 
         StrutModelCache cache = new StrutModelCache(catwalkHttpClient, stas, 100, 95, 1000, mapper, responseMapper, modelCache);
 
