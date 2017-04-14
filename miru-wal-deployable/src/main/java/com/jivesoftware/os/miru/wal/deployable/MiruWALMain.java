@@ -101,7 +101,6 @@ import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
-import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.File;
@@ -343,7 +342,7 @@ public class MiruWALMain {
 
             deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("manage", manageHttpClient));
 
-            ExecutorService tasExecutors = BoundedExecutor.newBoundedExecutor(1024, "tas");
+            ExecutorService tasExecutors = deployable.newBoundedExecutor(1024, "tas");
 
             MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(miruStats, "", manageHttpClient, mapper);
             SickThreads walClientSickThreads = new SickThreads();

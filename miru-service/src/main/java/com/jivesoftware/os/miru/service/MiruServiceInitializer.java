@@ -74,7 +74,6 @@ import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.cache.LabPluginCacheProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -90,7 +89,15 @@ public class MiruServiceInitializer {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    public <C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> MiruLifecyle<MiruService> initialize(final MiruServiceConfig config,
+    public <C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> MiruLifecyle<MiruService> initialize(
+        MiruServiceConfig config,
+        ExecutorService solverExecutor,
+        ExecutorService parallelExecutor,
+        ExecutorService rebuildExecutors,
+        ExecutorService sipIndexExecutor,
+        ExecutorService persistentMergeExecutor,
+        ExecutorService transientMergeExecutor,
+        ExecutorService streamFactoryExecutor,
         MiruStats miruStats,
         LABStats rebuildLABStats,
         LABStats globalLABStats,
@@ -118,21 +125,6 @@ public class MiruServiceInitializer {
         // heartbeat and ensurePartitions
         final ScheduledExecutorService serviceScheduledExecutor = Executors.newScheduledThreadPool(2,
             new NamedThreadFactory(threadGroup, "service"));
-
-        // query solvers
-        final ExecutorService solverExecutor = BoundedExecutor.newBoundedExecutor(config.getSolverExecutorThreads(), "solver");
-
-        final ExecutorService parallelExecutor = BoundedExecutor.newBoundedExecutor(config.getParallelSolversExecutorThreads(), "parallel-solver");
-
-        final ExecutorService rebuildExecutors = BoundedExecutor.newBoundedExecutor(config.getRebuilderThreads(), "rebuild-wal-consumer");
-
-        final ExecutorService sipIndexExecutor = BoundedExecutor.newBoundedExecutor(config.getSipIndexerThreads(), "sip-index");
-
-        final ExecutorService persistentMergeExecutor = BoundedExecutor.newBoundedExecutor(config.getMergeIndexThreads(), "persistent-merge-index");
-
-        final ExecutorService transientMergeExecutor = BoundedExecutor.newBoundedExecutor(config.getMergeIndexThreads(), "transient-merge-index");
-
-        final ExecutorService streamFactoryExecutor = BoundedExecutor.newBoundedExecutor(config.getStreamFactoryExecutorCount(), "stream-factory");
 
         MiruHostedPartitionComparison partitionComparison = new MiruHostedPartitionComparison(
             config.getLongTailSolverWindowSize(),

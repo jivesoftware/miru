@@ -81,16 +81,20 @@ import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.ws.rs.HEAD;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -213,8 +217,9 @@ public class MiruPluginTestBootstrap {
         replicaSetDirector.electHostsForTenantPartition(tenantId, partitionId, new MiruReplicaSet(ArrayListMultimap.create(), new HashSet<>(), 3, 3));
         clusterRegistry.updateIngress(new MiruIngressUpdate(tenantId, partitionId, new RangeMinMax(), System.currentTimeMillis(), false));
 
+
         MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer()
-            .initialize(config.getReadStreamIdsPropName(), inboxReadTracker, null);
+            .initialize(Executors.newCachedThreadPool(), config.getReadStreamIdsPropName(), inboxReadTracker, null);
 
         backfillerizerLifecycle.start();
         final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
@@ -274,7 +279,16 @@ public class MiruPluginTestBootstrap {
             }
         };
 
-        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
+
+        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(
+            config,
+            BoundedExecutor.newBoundedExecutor(config.getSolverExecutorThreads(), "solver"),
+            BoundedExecutor.newBoundedExecutor(config.getParallelSolversExecutorThreads(), "parallel-solver"),
+            BoundedExecutor.newBoundedExecutor(config.getRebuilderThreads(), "rebuild-wal-consumer"),
+            BoundedExecutor.newBoundedExecutor(config.getSipIndexerThreads(), "sip-index"),
+            BoundedExecutor.newBoundedExecutor(config.getMergeIndexThreads(), "persistent-merge-index"),
+            BoundedExecutor.newBoundedExecutor(config.getMergeIndexThreads(), "transient-merge-index"),
+            BoundedExecutor.newBoundedExecutor(config.getStreamFactoryExecutorCount(), "stream-factory"),
             miruStats,
             new LABStats(),
             new LABStats(),
@@ -433,6 +447,11 @@ public class MiruPluginTestBootstrap {
 
             @Override
             public void removeIndexCloseCallback(IndexCloseCallback callback) {
+            }
+
+            @Override
+            public ExecutorService allocateThreadPool(String name, int maxThreads) {
+                return BoundedExecutor.newBoundedExecutor(maxThreads, name);
             }
         };
     }

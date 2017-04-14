@@ -122,7 +122,6 @@ import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
-import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -134,6 +133,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.ws.rs.HEAD;
 import org.merlin.config.Config;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
@@ -316,7 +316,7 @@ public class MiruReaderMain {
             // TODO add fall back to config
             final MiruStats miruStats = new MiruStats();
 
-            ExecutorService tasExecutors = BoundedExecutor.newBoundedExecutor(1024, "tas");
+            ExecutorService tasExecutors = deployable.newBoundedExecutor(1024, "tas");
 
             MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(miruStats, "", manageHttpClient, mapper);
             MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
@@ -392,6 +392,13 @@ public class MiruReaderMain {
 
                 inboxReadTracker = new RCVSInboxReadTracker(rcvsWALClient);
                 miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
+                    deployable.newBoundedExecutor(miruServiceConfig.getSolverExecutorThreads(), "solver"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getParallelSolversExecutorThreads(), "parallel-solver"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getRebuilderThreads(), "rebuild-wal-consumer"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getSipIndexerThreads(), "sip-index"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getMergeIndexThreads(), "persistent-merge-index"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getMergeIndexThreads(), "transient-merge-index"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getStreamFactoryExecutorCount(), "stream-factory"),
                     miruStats,
                     rebuildLABStats,
                     globalLABStats,
@@ -425,6 +432,13 @@ public class MiruReaderMain {
 
                 inboxReadTracker = new AmzaInboxReadTracker(amzaWALClient);
                 miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
+                    deployable.newBoundedExecutor(miruServiceConfig.getSolverExecutorThreads(), "solver"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getParallelSolversExecutorThreads(), "parallel-solver"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getRebuilderThreads(), "rebuild-wal-consumer"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getSipIndexerThreads(), "sip-index"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getMergeIndexThreads(), "persistent-merge-index"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getMergeIndexThreads(), "transient-merge-index"),
+                    deployable.newBoundedExecutor(miruServiceConfig.getStreamFactoryExecutorCount(), "stream-factory"),
                     miruStats,
                     rebuildLABStats,
                     globalLABStats,
@@ -450,12 +464,12 @@ public class MiruReaderMain {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
 
-
+            final ExecutorService backfillExecutor = deployable.newBoundedExecutor(10, "backfillerizer");
             Set<MiruStreamId> verboseStreamIds = Sets.newHashSet(Lists.transform(
                 Arrays.asList(miruServiceConfig.getBackfillVerboseStreamIds().split("\\s*,\\s*")),
                 input -> new MiruStreamId(input.getBytes(StandardCharsets.UTF_8))));
             MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer()
-                .initialize(miruServiceConfig.getReadStreamIdsPropName(), inboxReadTracker, verboseStreamIds);
+                .initialize(backfillExecutor, miruServiceConfig.getReadStreamIdsPropName(), inboxReadTracker, verboseStreamIds);
 
             backfillerizerLifecycle.start();
             MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
@@ -613,6 +627,11 @@ public class MiruReaderMain {
                 @Override
                 public void removeIndexCloseCallback(IndexCloseCallback callback) {
                     indexCallbacks.closeCallbacks.remove(callback);
+                }
+
+                @Override
+                public ExecutorService allocateThreadPool(String name, int maxThreads) {
+                    return deployable.newBoundedExecutor(maxThreads, name);
                 }
             };
 

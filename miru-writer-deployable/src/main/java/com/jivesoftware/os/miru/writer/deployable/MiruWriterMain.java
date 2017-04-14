@@ -236,7 +236,7 @@ public class MiruWriterMain {
             SickThreads walClientSickThreads = new SickThreads();
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
-            ExecutorService tasExecutors = BoundedExecutor.newBoundedExecutor(1024, "tas");
+            ExecutorService tasExecutors = deployable.newBoundedExecutor(1024, "tas");
 
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
             MiruWALClient<?, ?> walClient;
@@ -285,7 +285,7 @@ public class MiruWriterMain {
                 clusterClient,
                 clientConfig.getPartitionMaximumAgeInMillis());
 
-            ExecutorService sendActivitiesExecutorService = BoundedExecutor.newBoundedExecutor(clientConfig.getSendActivitiesThreadPoolSize(),
+            ExecutorService sendActivitiesExecutorService = deployable.newBoundedExecutor(clientConfig.getSendActivitiesThreadPoolSize(),
                 "send-activities");
 
             MiruActivityIngress activityIngress = new MiruActivityIngress(miruPartitioner, latestAlignmentCache, sendActivitiesExecutorService);

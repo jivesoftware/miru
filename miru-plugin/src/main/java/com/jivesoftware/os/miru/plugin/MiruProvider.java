@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.routing.bird.health.HealthCheck;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import org.merlin.config.Config;
 
 /**
@@ -61,4 +62,6 @@ public interface MiruProvider<T extends Miru> {
     void removeIndexCommitCallback(IndexCommitCallback callback);
 
     void removeIndexCloseCallback(IndexCloseCallback callback);
+
+    ExecutorService allocateThreadPool(String name, int maxThreads);
 }

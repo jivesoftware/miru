@@ -7,11 +7,10 @@ import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
 import com.jivesoftware.os.miru.plugin.solution.FstRemotePartitionReader;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutConfig;
-import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 /**
  *
@@ -28,7 +27,7 @@ public class CatwalkPlugin implements MiruPlugin<CatwalkEndpoints, CatwalkInject
 
         StrutConfig config = miruProvider.getConfig(StrutConfig.class);
         Catwalk catwalk = new Catwalk(config.getVerboseLogging());
-        Executor catwalkExecutor = BoundedExecutor.newBoundedExecutor(config.getCatwalkSolverPoolSize(), "catwalk-solver");
+        ExecutorService catwalkExecutor = miruProvider.allocateThreadPool("catwalk-solver", config.getCatwalkSolverPoolSize());
 
         return Collections.singletonList(new MiruEndpointInjectable<>(
             CatwalkInjectable.class,

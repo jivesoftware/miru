@@ -162,7 +162,7 @@ public class WikiMiruMain {
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
 
-            ExecutorService tasExecutors = BoundedExecutor.newBoundedExecutor(1024, "tas");
+            ExecutorService tasExecutors = deployable.newBoundedExecutor(1024, "tas");
 
             MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(new MiruStats(), "", miruManageClient, mapper);
             WikiSchemaService wikiSchemaService = new WikiSchemaService(clusterClient);
