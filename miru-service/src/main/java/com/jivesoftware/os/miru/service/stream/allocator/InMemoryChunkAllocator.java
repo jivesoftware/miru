@@ -53,9 +53,9 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     private final StripingBolBufferLocks bolBufferLocks;
     private final boolean useLabIndexes;
 
-    private final ExecutorService buildLABSchedulerThreadPool = LABEnvironment.buildLABSchedulerThreadPool(12);
-    private final ExecutorService buildLABCompactorThreadPool = LABEnvironment.buildLABCompactorThreadPool(12);
-    private final ExecutorService buildLABDestroyThreadPool = LABEnvironment.buildLABDestroyThreadPool(12);
+    private final ExecutorService buildLABSchedulerThreadPool;
+    private final ExecutorService buildLABCompactorThreadPool;
+    private final ExecutorService buildLABDestroyThreadPool;
 
     public InMemoryChunkAllocator(MiruResourceLocator resourceLocator,
         ByteBufferFactory rebuildByteBufferFactory,
@@ -74,7 +74,11 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         boolean labUseOffHeap,
         boolean useLabIndexes,
         LRUConcurrentBAHLinkedHash<Leaps> leapCache,
-        StripingBolBufferLocks bolBufferLocks) {
+        StripingBolBufferLocks bolBufferLocks,
+        ExecutorService buildLABSchedulerThreadPool,
+        ExecutorService buildLABCompactorThreadPool,
+        ExecutorService buildLABDestroyThreadPool) {
+
         this.resourceLocator = resourceLocator;
         this.rebuildByteBufferFactory = rebuildByteBufferFactory;
         this.cacheByteBufferFactory = cacheByteBufferFactory;
@@ -93,6 +97,9 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         this.labHeapPressures = labHeapPressures;
         this.leapCache = leapCache;
         this.bolBufferLocks = bolBufferLocks;
+        this.buildLABSchedulerThreadPool = buildLABSchedulerThreadPool;
+        this.buildLABCompactorThreadPool = buildLABCompactorThreadPool;
+        this.buildLABDestroyThreadPool = buildLABDestroyThreadPool;
     }
 
     @Override

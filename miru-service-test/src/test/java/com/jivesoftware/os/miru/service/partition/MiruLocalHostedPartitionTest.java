@@ -260,7 +260,7 @@ public class MiruLocalHostedPartitionTest {
             true,
             useLabIndexes,
             leapCache,
-            bolBufferLocks);
+            bolBufferLocks, Executors.newCachedThreadPool(), Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
         MiruChunkAllocator diskContextAllocator = new OnDiskChunkAllocator(
             resourceLocator,
@@ -277,7 +277,7 @@ public class MiruLocalHostedPartitionTest {
             labMaxWALOnOpenHeapPressureOverride,
             true,
             leapCache,
-            bolBufferLocks);
+            bolBufferLocks, Executors.newCachedThreadPool(), Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
 
         TxCogs cogs = new TxCogs(256, 64, null, null, null);
         ObjectMapper mapper = new ObjectMapper();

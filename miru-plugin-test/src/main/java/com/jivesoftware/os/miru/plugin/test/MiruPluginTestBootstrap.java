@@ -10,6 +10,7 @@ import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
@@ -94,7 +95,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.ws.rs.HEAD;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -309,7 +309,17 @@ public class MiruPluginTestBootstrap {
             new MiruIndexCallbacks(),
             new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
             termInterner,
-            new AtomicBoolean(false));
+            new AtomicBoolean(false),
+            LABEnvironment.buildLABHeapSchedulerThreadPool(config.getRebuildLabHeapPressureStripes()),
+            LABEnvironment.buildLABHeapSchedulerThreadPool(config.getGlobalLabHeapPressureStripes()),
+            LABEnvironment.buildLABHeapSchedulerThreadPool(config.getTimeIdLabHeapPressureStripes()),
+            Executors.newCachedThreadPool(),
+            Executors.newCachedThreadPool(),
+            Executors.newCachedThreadPool(),
+            Executors.newCachedThreadPool(),
+            Executors.newCachedThreadPool(),
+            Executors.newCachedThreadPool()
+        );
 
         miruServiceLifecyle.start();
 
