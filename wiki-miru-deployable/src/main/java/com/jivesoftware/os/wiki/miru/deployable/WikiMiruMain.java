@@ -50,7 +50,6 @@ import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
-import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import com.jivesoftware.os.wiki.miru.deployable.endpoints.WikiMiruIndexPluginEndpoints;
 import com.jivesoftware.os.wiki.miru.deployable.endpoints.WikiMiruStressPluginEndpoints;
 import com.jivesoftware.os.wiki.miru.deployable.endpoints.WikiQueryPluginEndpoints;
@@ -162,7 +161,7 @@ public class WikiMiruMain {
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
 
-            ExecutorService tasExecutors = deployable.newBoundedExecutor(1024, "tas");
+            ExecutorService tasExecutors = deployable.newBoundedExecutor(1024, "manage-tas");
 
             MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(new MiruStats(), "", miruManageClient, mapper);
             WikiSchemaService wikiSchemaService = new WikiSchemaService(clusterClient);

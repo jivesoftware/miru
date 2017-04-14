@@ -93,7 +93,6 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.oauth.validator.AuthValidator;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
-import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptors;
 import com.jivesoftware.os.routing.bird.shared.HttpClientException;
@@ -248,7 +247,7 @@ public class MiruSyncMain {
 
             deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("amza", amzaClient));
 
-            ExecutorService tasExecutor = deployable.newBoundedExecutor(1024, "tas");
+            ExecutorService tasExecutor = deployable.newBoundedExecutor(1024, "amza-client-tas");
             TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
                 tasExecutor,
                 100, // TODO config

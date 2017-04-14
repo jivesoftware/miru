@@ -342,7 +342,7 @@ public class MiruWALMain {
 
             deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("manage", manageHttpClient));
 
-            ExecutorService tasExecutors = deployable.newBoundedExecutor(1024, "tas");
+            ExecutorService tasExecutors = deployable.newBoundedExecutor(1024, "manage-tas");
 
             MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(miruStats, "", manageHttpClient, mapper);
             SickThreads walClientSickThreads = new SickThreads();
