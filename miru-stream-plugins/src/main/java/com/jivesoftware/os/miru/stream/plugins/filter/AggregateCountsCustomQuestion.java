@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author jonathan
@@ -40,17 +41,20 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
     private final MiruJustInTimeBackfillerizer backfillerizer;
     private final MiruRequest<AggregateCountsQuery> request;
     private final MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition;
+    private final Set<MiruStreamId> verboseStreamIds;
+
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public AggregateCountsCustomQuestion(AggregateCounts aggregateCounts,
         MiruJustInTimeBackfillerizer backfillerizer,
         MiruRequest<AggregateCountsQuery> request,
-        MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition) {
+        MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition, Set<MiruStreamId> verboseStreamIds) {
         this.aggregateCounts = aggregateCounts;
         this.backfillerizer = backfillerizer;
         this.request = request;
         this.remotePartition = remotePartition;
+        this.verboseStreamIds = verboseStreamIds;
     }
 
     @Override
@@ -64,12 +68,15 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
+        MiruStreamId streamId = request.query.streamId;
+        boolean verbose = verboseStreamIds != null && streamId != null && !MiruStreamId.NULL.equals(streamId) && verboseStreamIds.contains(streamId);
+
         MiruTimeRange answerTimeRange = request.query.answerTimeRange;
         if (!context.getTimeIndex().intersects(answerTimeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), answerTimeRange);
             return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts("aggregateCountsCustom", solutionLog,
-                bitmaps, context, request, handle.getCoord(), report, bitmaps.create(), Optional.absent()), solutionLog.asList());
+                bitmaps, context, request, handle.getCoord(), report, bitmaps.create(), Optional.absent(), verbose), solutionLog.asList());
         }
 
         List<IBM> ands = new ArrayList<>();
@@ -88,8 +95,8 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
 
         ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex(), null, stackBuffer));
 
-        if (request.query.streamId != null
-            && !MiruStreamId.NULL.equals(request.query.streamId)
+        if (streamId != null
+            && !MiruStreamId.NULL.equals(streamId)
             && (request.query.includeUnreadState || request.query.unreadOnly)) {
             if (request.query.suppressUnreadFilter != null && handle.canBackfill()) {
                 backfillerizer.backfillUnread(bitmaps,
@@ -97,13 +104,13 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
                     solutionLog,
                     request.tenantId,
                     handle.getCoord().partitionId,
-                    request.query.streamId,
+                    streamId,
                     request.query.suppressUnreadFilter);
             }
 
             if (request.query.unreadOnly) {
                 BitmapAndLastId<BM> container = new BitmapAndLastId<>();
-                context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(container, stackBuffer);
+                context.getUnreadTrackingIndex().getUnread(streamId).getIndex(container, stackBuffer);
                 if (container.isSet()) {
                     ands.add(container.getBitmap());
                 } else {
@@ -111,7 +118,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
                     LOG.debug("No user unread");
                     return new MiruPartitionResponse<>(
                         aggregateCounts.getAggregateCounts("aggregateCountsCustom", solutionLog, bitmaps, context, request, handle.getCoord(), report,
-                            bitmaps.create(), Optional.of(bitmaps.create())),
+                            bitmaps.create(), Optional.of(bitmaps.create()), verbose),
                         solutionLog.asList());
                 }
             }
@@ -135,7 +142,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         }
 
         return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts("aggregateCountsCustom", solutionLog, bitmaps, context, request,
-            handle.getCoord(), report, answer, Optional.fromNullable(counter)), solutionLog.asList());
+            handle.getCoord(), report, answer, Optional.fromNullable(counter), verbose), solutionLog.asList());
     }
 
     @Override

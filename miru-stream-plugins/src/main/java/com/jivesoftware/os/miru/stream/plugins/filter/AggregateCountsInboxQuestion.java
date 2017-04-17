@@ -73,7 +73,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
             LOG.debug("No answer time index intersection");
             return new MiruPartitionResponse<>(
                 aggregateCounts.getAggregateCounts("aggregateCountsInbox", solutionLog, bitmaps, context, request, handle.getCoord(), report,
-                    bitmaps.create(), Optional.absent()),
+                    bitmaps.create(), Optional.absent(), false),
                 solutionLog.asList());
         }
 
@@ -98,7 +98,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
             LOG.debug("No user inbox");
             return new MiruPartitionResponse<>(
                 aggregateCounts.getAggregateCounts("aggregateCountsInbox", solutionLog, bitmaps, context, request, handle.getCoord(), report,
-                    bitmaps.create(), Optional.of(bitmaps.create())),
+                    bitmaps.create(), Optional.of(bitmaps.create()), false),
                 solutionLog.asList());
         }
 
@@ -111,7 +111,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
                 LOG.debug("No user unread");
                 return new MiruPartitionResponse<>(
                     aggregateCounts.getAggregateCounts("aggregateCountsInbox", solutionLog, bitmaps, context, request, handle.getCoord(), report,
-                        bitmaps.create(), Optional.of(bitmaps.create())),
+                        bitmaps.create(), Optional.of(bitmaps.create()), false),
                     solutionLog.asList());
             }
         }
@@ -138,7 +138,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
 
         return new MiruPartitionResponse<>(
             aggregateCounts.getAggregateCounts("aggregateCountsInbox", solutionLog, bitmaps, context, request, handle.getCoord(), report,
-                answer, Optional.of(counter)),
+                answer, Optional.of(counter), false),
             solutionLog.asList());
     }
 
