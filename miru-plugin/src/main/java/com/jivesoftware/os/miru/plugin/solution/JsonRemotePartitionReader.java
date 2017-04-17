@@ -10,12 +10,12 @@ import com.jivesoftware.os.miru.api.MiruHostSelectiveStrategy;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
-import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.NonSuccessStatusCodeException;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
+import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import java.util.Map;
 import org.apache.http.HttpStatus;
 
