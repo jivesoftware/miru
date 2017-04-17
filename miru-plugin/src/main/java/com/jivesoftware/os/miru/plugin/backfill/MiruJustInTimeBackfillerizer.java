@@ -72,7 +72,9 @@ public class MiruJustInTimeBackfillerizer {
                     if (verbose) {
                         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
                         requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(container, stackBuffer);
-                        log.info("Backfill unread streamId:{} before:{}",
+                        log.info("Backfill unread tenantId:{} partitionId:{} streamId:{} before:{}",
+                            tenantId,
+                            partitionId,
                             streamId,
                             bitmaps.cardinality(container.getBitmap()));
                     }
@@ -109,7 +111,9 @@ public class MiruJustInTimeBackfillerizer {
                     requestContext.getUnreadTrackingIndex().applyUnread(streamId, unreadMask, stackBuffer);
 
                     if (verbose) {
-                        log.info("Backfill unread streamId:{} unreadMask:{} from:{} to:{} oldest:{}",
+                        log.info("Backfill unread tenantId:{} partitionId:{} streamId:{} unreadMask:{} from:{} to:{} oldest:{}",
+                            tenantId,
+                            partitionId,
                             streamId,
                             bitmaps.cardinality(unreadMask),
                             lastActivityIndex,
@@ -124,7 +128,9 @@ public class MiruJustInTimeBackfillerizer {
                     if (verbose) {
                         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
                         requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(container, stackBuffer);
-                        log.info("Backfill unread streamId:{} after:{}",
+                        log.info("Backfill unread tenantId:{} partitionId:{} streamId:{} after:{}",
+                            tenantId,
+                            partitionId,
                             streamId,
                             bitmaps.cardinality(container.getBitmap()));
                     }

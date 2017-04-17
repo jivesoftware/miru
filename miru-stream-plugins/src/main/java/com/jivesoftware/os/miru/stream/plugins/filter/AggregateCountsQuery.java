@@ -19,7 +19,8 @@ public class AggregateCountsQuery {
     public final MiruTimeRange countTimeRange;
     public final MiruFilter streamFilter;
     public final Map<String, AggregateCountsQueryConstraint> constraints;
-    public final boolean unreadOnly;
+    public final boolean includeUnreadState; // include whether things are unread (trues vs. falses)
+    public final boolean unreadOnly; // only return unread things (only trues)
 
     public AggregateCountsQuery(
         @JsonProperty("streamId") MiruStreamId streamId,
@@ -29,6 +30,7 @@ public class AggregateCountsQuery {
         @JsonProperty("countTimeRange") MiruTimeRange countTimeRange,
         @JsonProperty("streamFilter") MiruFilter streamFilter,
         @JsonProperty("constraints") Map<String, AggregateCountsQueryConstraint> constraints,
+        @JsonProperty("includeUnreadState") boolean includeUnreadState,
         @JsonProperty("unreadOnly") boolean unreadOnly) {
         this.streamId = Preconditions.checkNotNull(streamId);
         this.suppressUnreadFilter = suppressUnreadFilter;
@@ -37,6 +39,7 @@ public class AggregateCountsQuery {
         this.countTimeRange = Preconditions.checkNotNull(countTimeRange);
         this.streamFilter = Preconditions.checkNotNull(streamFilter);
         this.constraints = Preconditions.checkNotNull(constraints);
+        this.includeUnreadState = includeUnreadState;
         this.unreadOnly = unreadOnly;
     }
 
@@ -50,6 +53,7 @@ public class AggregateCountsQuery {
             ", countTimeRange=" + countTimeRange +
             ", streamFilter=" + streamFilter +
             ", constraints=" + constraints +
+            ", includeUnreadState=" + includeUnreadState +
             ", unreadOnly=" + unreadOnly +
             '}';
     }
