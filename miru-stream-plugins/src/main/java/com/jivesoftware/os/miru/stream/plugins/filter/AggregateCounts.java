@@ -201,9 +201,9 @@ public class AggregateCounts {
 
                 boolean anyUnread = false;
                 boolean oldestUnread = false;
-                if (unreadAnswer != null) {
+                if (firstIntersectingBit != -1 && unreadAnswer != null) {
                     anyUnread = bitmaps.intersects(unreadAnswer, termIndex);
-                    oldestUnread = firstIntersectingBit != -1 && bitmaps.isSet(unreadAnswer, firstIntersectingBit);
+                    oldestUnread = bitmaps.isSet(unreadAnswer, firstIntersectingBit);
                 }
 
                 bitmaps.inPlaceAndNot(answer, termIndex);
@@ -216,18 +216,23 @@ public class AggregateCounts {
                     afterCount = bitmaps.cardinality(answer);
                 }
 
-                TimeVersionRealtime oldestTVR = firstIntersectingBit != -1
-                    ? requestContext.getActivityIndex().getTimeVersionRealtime(name, firstIntersectingBit, stackBuffer)
-                    : null;
+                TimeVersionRealtime oldestTVR;
+                MiruValue[][] oldestValues;
+                if (firstIntersectingBit != -1) {
+                    oldestTVR = requestContext.getActivityIndex().getTimeVersionRealtime(name, firstIntersectingBit, stackBuffer);
 
-                //TODO much more efficient to accumulate bits and gather these once at the end
-                MiruValue[][] oldestValues = new MiruValue[gatherFieldDefinitions.length][];
-                for (int i = 0; i < gatherFieldDefinitions.length; i++) {
-                    MiruFieldDefinition gatherFieldDefinition = gatherFieldDefinitions[i];
-                    MiruTermId[] termIds = requestContext.getActivityIndex().get(name, firstIntersectingBit, gatherFieldDefinition, stackBuffer);
-                    oldestValues[i] = termsToValues(stackBuffer, schema, termComposer, gatherFieldDefinition, termIds);
+                    //TODO much more efficient to accumulate bits and gather these once at the end
+                    oldestValues = new MiruValue[gatherFieldDefinitions.length][];
+                    for (int i = 0; i < gatherFieldDefinitions.length; i++) {
+                        MiruFieldDefinition gatherFieldDefinition = gatherFieldDefinitions[i];
+                        MiruTermId[] termIds = requestContext.getActivityIndex().get(name, firstIntersectingBit, gatherFieldDefinition, stackBuffer);
+                        oldestValues[i] = termsToValues(stackBuffer, schema, termComposer, gatherFieldDefinition, termIds);
+                    }
+                    //TODO much more efficient to accumulate bits and gather these once at the end
+                } else {
+                    oldestTVR = null;
+                    oldestValues = null;
                 }
-                //TODO much more efficient to accumulate bits and gather these once at the end
 
                 aggregateCounts.add(new AggregateCount(aggregateTerm,
                     null,
