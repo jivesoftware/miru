@@ -75,6 +75,7 @@ public class AggregateCounts {
                     coord,
                     request.query.streamId,
                     request.query.collectTimeRange,
+                    request.query.includeUnreadState,
                     entry.getValue(),
                     lastReportConstraint,
                     answer,
@@ -94,6 +95,7 @@ public class AggregateCounts {
         MiruPartitionCoord coord,
         MiruStreamId streamId,
         MiruTimeRange collectTimeRange,
+        boolean includeUnreadState,
         AggregateCountsQueryConstraint constraint,
         Optional<AggregateCountsReportConstraint> lastReport,
         BM answer,
@@ -156,7 +158,7 @@ public class AggregateCounts {
         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
         if (fieldId >= 0) {
             IBM unreadAnswer = null;
-            if (!MiruStreamId.NULL.equals(streamId)) {
+            if (includeUnreadState && !MiruStreamId.NULL.equals(streamId)) {
                 container.clear();
                 requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(container, stackBuffer);
                 if (container.isSet()) {

@@ -62,7 +62,7 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
 
         Collection<NamedCursor> cursors = getSipCursors(tenantId, partitionId, streamId);
         if (verbose) {
-            log.info("Backfill unread streamId:{} cursors:{}", streamId, cursors);
+            log.info("Backfill tenantId:{} partitionId:{} unread streamId:{} cursors:{}", tenantId, partitionId, streamId, cursors);
         }
         MiruWALClient.StreamBatch<MiruWALEntry, AmzaSipCursor> got = walClient.getRead(tenantId,
             streamId,
@@ -73,7 +73,7 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
         AmzaSipCursor lastCursor = null;
         while (got != null && !got.activities.isEmpty()) {
             if (verbose) {
-                log.info("Backfill unread streamId:{} got:{}", streamId, got.activities.size());
+                log.info("Backfill unread tenantId:{} partitionId:{} streamId:{} got:{}", tenantId, partitionId, streamId, got.activities.size());
             }
             lastCursor = got.cursor;
             for (MiruWALEntry e : got.activities) {
@@ -82,17 +82,17 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
 
                 if (e.activity.type == MiruPartitionedActivity.Type.READ) {
                     if (verbose) {
-                        log.info("Backfill unread streamId:{} read:{}", streamId, readEvent.time);
+                        log.info("Backfill unread tenantId:{} partitionId:{} streamId:{} read:{}", tenantId, partitionId, streamId, readEvent.time);
                     }
                     readTracker.read(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time, stackBuffer);
                 } else if (e.activity.type == MiruPartitionedActivity.Type.UNREAD) {
                     if (verbose) {
-                        log.info("Backfill unread streamId:{} unread:{}", streamId, readEvent.time);
+                        log.info("Backfill unread tenantId:{} partitionId:{} streamId:{} unread:{}", tenantId, partitionId, streamId, readEvent.time);
                     }
                     readTracker.unread(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time, stackBuffer);
                 } else if (e.activity.type == MiruPartitionedActivity.Type.MARK_ALL_READ) {
                     if (verbose) {
-                        log.info("Backfill unread streamId:{} markAllRead:{}", streamId, readEvent.time);
+                        log.info("Backfill unread tenantId:{} partitionId:{} streamId:{} markAllRead:{}", tenantId, partitionId, streamId, readEvent.time);
                     }
                     readTracker.markAllRead(bitmaps, requestContext, streamId, readEvent.time, stackBuffer);
                 }

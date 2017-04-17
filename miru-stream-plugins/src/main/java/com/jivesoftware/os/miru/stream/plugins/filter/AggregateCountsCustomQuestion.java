@@ -90,7 +90,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
 
         if (request.query.streamId != null
             && !MiruStreamId.NULL.equals(request.query.streamId)
-            && request.query.unreadOnly) {
+            && (request.query.includeUnreadState || request.query.unreadOnly)) {
             if (request.query.suppressUnreadFilter != null && handle.canBackfill()) {
                 backfillerizer.backfillUnread(bitmaps,
                     context,
@@ -101,17 +101,19 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
                     request.query.suppressUnreadFilter);
             }
 
-            BitmapAndLastId<BM> container = new BitmapAndLastId<>();
-            context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(container, stackBuffer);
-            if (container.isSet()) {
-                ands.add(container.getBitmap());
-            } else {
-                // Short-circuit if the user doesn't have any unread
-                LOG.debug("No user unread");
-                return new MiruPartitionResponse<>(
-                    aggregateCounts.getAggregateCounts("aggregateCountsCustom", solutionLog, bitmaps, context, request, handle.getCoord(), report,
-                        bitmaps.create(), Optional.of(bitmaps.create())),
-                    solutionLog.asList());
+            if (request.query.unreadOnly) {
+                BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+                context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(container, stackBuffer);
+                if (container.isSet()) {
+                    ands.add(container.getBitmap());
+                } else {
+                    // Short-circuit if the user doesn't have any unread
+                    LOG.debug("No user unread");
+                    return new MiruPartitionResponse<>(
+                        aggregateCounts.getAggregateCounts("aggregateCountsCustom", solutionLog, bitmaps, context, request, handle.getCoord(), report,
+                            bitmaps.create(), Optional.of(bitmaps.create())),
+                        solutionLog.asList());
+                }
             }
         }
 

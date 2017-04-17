@@ -157,6 +157,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                                         0,
                                         input.count,
                                         new String[0])),
+                                false,
                                 false),
                             MiruSolutionLogLevel.valueOf(input.logLevel));
 

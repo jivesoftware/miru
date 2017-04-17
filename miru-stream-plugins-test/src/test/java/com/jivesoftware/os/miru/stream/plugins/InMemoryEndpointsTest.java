@@ -123,6 +123,7 @@ public class InMemoryEndpointsTest {
                     0,
                     100,
                     new String[0])),
+                false,
                 false),
             MiruSolutionLogLevel.NONE));
         assertNotNull(getResponse);
@@ -153,6 +154,7 @@ public class InMemoryEndpointsTest {
                     0,
                     100,
                     new String[0])),
+                false,
                 false),
             MiruSolutionLogLevel.NONE));
         assertNotNull(getResponse);
