@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.stream.plugins.filter;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
@@ -13,6 +14,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
+import java.util.Set;
 
 /**
  *
@@ -21,11 +23,14 @@ public class AggregateCountsInjectable {
 
     private final MiruProvider<? extends Miru> provider;
     private final AggregateCounts aggregateCounts;
+    private final Set<MiruStreamId> verboseStreamIds;
 
     public AggregateCountsInjectable(MiruProvider<? extends Miru> provider,
-        AggregateCounts aggregateCounts) {
+        AggregateCounts aggregateCounts,
+        Set<MiruStreamId> verboseStreamIds) {
         this.provider = provider;
         this.aggregateCounts = aggregateCounts;
+        this.verboseStreamIds = verboseStreamIds;
     }
 
     public MiruResponse<AggregateCountsAnswer> filterCustomStream(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException,
@@ -40,7 +45,8 @@ public class AggregateCountsInjectable {
                     new AggregateCountsCustomQuestion(aggregateCounts,
                         provider.getBackfillerizer(tenantId),
                         request,
-                        provider.getRemotePartition(AggregateCountsCustomRemotePartition.class))),
+                        provider.getRemotePartition(AggregateCountsCustomRemotePartition.class),
+                        verboseStreamIds)),
                 new AggregateCountsAnswerEvaluator(request.query),
                 new AggregateCountsAnswerMerger(),
                 AggregateCountsAnswer.EMPTY_RESULTS,
@@ -93,7 +99,8 @@ public class AggregateCountsInjectable {
                     new AggregateCountsCustomQuestion(aggregateCounts,
                         provider.getBackfillerizer(tenantId),
                         requestAndReport.request,
-                        provider.getRemotePartition(AggregateCountsCustomRemotePartition.class))),
+                        provider.getRemotePartition(AggregateCountsCustomRemotePartition.class),
+                        verboseStreamIds)),
                 Optional.fromNullable(requestAndReport.report),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);

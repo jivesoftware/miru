@@ -41,7 +41,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class AggregateCounts {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
@@ -54,10 +54,11 @@ public class AggregateCounts {
         MiruPartitionCoord coord,
         Optional<AggregateCountsReport> lastReport,
         BM answer,
-        Optional<BM> counter)
+        Optional<BM> counter,
+        boolean verbose)
         throws Exception {
 
-        log.debug("Get aggregate counts for answer={} request={}", answer, request);
+        LOG.debug("Get aggregate counts for answer={} request={}", answer, request);
 
         Map<String, AggregateCountsAnswerConstraint> results = Maps.newHashMapWithExpectedSize(request.query.constraints.size());
         for (Map.Entry<String, AggregateCountsQueryConstraint> entry : request.query.constraints.entrySet()) {
@@ -79,12 +80,13 @@ public class AggregateCounts {
                     entry.getValue(),
                     lastReportConstraint,
                     answer,
-                    counter));
+                    counter,
+                    verbose));
         }
 
         boolean resultsExhausted = request.query.answerTimeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         AggregateCountsAnswer result = new AggregateCountsAnswer(results, resultsExhausted);
-        log.debug("result={}", result);
+        LOG.debug("result={}", result);
         return result;
     }
 
@@ -99,7 +101,8 @@ public class AggregateCounts {
         AggregateCountsQueryConstraint constraint,
         Optional<AggregateCountsReportConstraint> lastReport,
         BM answer,
-        Optional<BM> counter) throws Exception {
+        Optional<BM> counter,
+        boolean verbose) throws Exception {
 
         StackBuffer stackBuffer = new StackBuffer();
 
@@ -132,9 +135,15 @@ public class AggregateCounts {
             skippedDistincts = lastReport.get().skippedDistincts;
             aggregated = Sets.newHashSet(lastReport.get().aggregateTerms);
             uncollected = Sets.newHashSet(lastReport.get().uncollectedTerms);
+            if (verbose) {
+                LOG.info("Aggregate counts report coord:{} streamId:{} aggregated:{} uncollected:{}", coord, streamId, aggregated, uncollected);
+            }
         } else {
             aggregated = Sets.newHashSet();
             uncollected = Sets.newHashSet();
+            if (verbose) {
+                LOG.info("Aggregate counts no report coord:{} streamId:{}", coord, streamId);
+            }
         }
 
         if (!MiruFilter.NO_FILTER.equals(constraint.constraintsFilter)) {
@@ -152,7 +161,7 @@ public class AggregateCounts {
         //MiruActivityInternExtern activityInternExtern = miruProvider.getActivityInternExtern(coord.tenantId);
 
         MiruFieldIndex<BM, IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-        log.debug("fieldId={}", fieldId);
+        LOG.debug("fieldId={}", fieldId);
 
         List<AggregateCount> aggregateCounts = new ArrayList<>();
         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
@@ -249,14 +258,14 @@ public class AggregateCounts {
 
             while (true) {
                 int lastSetBit = bitmaps.lastSetBit(answer);
-                log.trace("lastSetBit={}", lastSetBit);
+                LOG.trace("lastSetBit={}", lastSetBit);
                 if (lastSetBit < 0) {
                     break;
                 }
 
                 MiruTermId[] fieldValues = requestContext.getActivityIndex().get(name, lastSetBit, fieldDefinition, stackBuffer);
-                if (log.isTraceEnabled()) {
-                    log.trace("fieldValues={}", Arrays.toString(fieldValues));
+                if (LOG.isTraceEnabled()) {
+                    LOG.trace("fieldValues={}", Arrays.toString(fieldValues));
                 }
                 if (fieldValues == null || fieldValues.length == 0) {
                     BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
@@ -290,9 +299,17 @@ public class AggregateCounts {
                     if (collected) {
                         aggregated.add(aggregateValue);
                         collectedDistincts++;
+                        if (verbose) {
+                            LOG.info("Aggregate counts aggregated coord:{} streamId:{} value:{} timestamp:{} collect:{}",
+                                coord, streamId, aggregateValue, latestTVR.monoTimestamp, collectTimeRange);
+                        }
                     } else {
                         uncollected.add(aggregateValue);
                         skippedDistincts++;
+                        if (verbose) {
+                            LOG.info("Aggregate counts uncollected coord:{} streamId:{} value:{} timestamp:{} collect:{}",
+                                coord, streamId, aggregateValue, latestTVR.monoTimestamp, collectTimeRange);
+                        }
                     }
 
                     boolean anyUnread = false;
