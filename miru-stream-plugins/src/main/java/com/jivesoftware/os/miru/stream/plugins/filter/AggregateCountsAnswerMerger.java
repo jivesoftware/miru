@@ -56,7 +56,7 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
                             lower.gatherOldestValues,
                             higher.count + lower.count,
                             higher.latestTimestamp,
-                            lower.oldestTimestamp,
+                            lower.oldestTimestamp == -1 ? higher.oldestTimestamp : lower.oldestTimestamp,
                             lower.anyUnread || higher.anyUnread,
                             higher.latestUnread,
                             lower.oldestUnread));
