@@ -149,7 +149,7 @@ public class MiruService implements Miru {
                 if (done) {
                     expectedSolution.cancel();
                 } else {
-                    MiruSolved<A> solved = expectedSolution.get(Optional.absent());
+                    MiruSolved<A> solved = expectedSolution.get(lastAnswer);
                     if (solved == null) {
                         solutionLog.log(MiruSolutionLogLevel.WARN, "No solution for partition:{}", expectedSolution.getPartitionId());
                         solutionLog.log(MiruSolutionLogLevel.WARN, "WARNING result set is incomplete! elapse:{}",
