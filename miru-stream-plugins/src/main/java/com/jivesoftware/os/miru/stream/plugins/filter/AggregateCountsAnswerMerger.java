@@ -51,15 +51,16 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
                     if (lower == null) {
                         mergedResults.add(higher);
                     } else {
+                        boolean hasLower = lower.oldestTimestamp != -1;
                         mergedResults.add(new AggregateCount(higher.distinctValue,
                             higher.gatherLatestValues,
-                            lower.gatherOldestValues,
-                            higher.count + lower.count,
+                            hasLower ? lower.gatherOldestValues : higher.gatherOldestValues,
+                            higher.count + lower.count, // count may be supplied even if isLower=false
                             higher.latestTimestamp,
-                            lower.oldestTimestamp == -1 ? higher.oldestTimestamp : lower.oldestTimestamp,
+                            hasLower ? lower.oldestTimestamp : higher.oldestTimestamp,
                             lower.anyUnread || higher.anyUnread,
                             higher.latestUnread,
-                            lower.oldestUnread));
+                            hasLower ? lower.oldestUnread : higher.oldestUnread));
                     }
                 }
                 for (AggregateCount lower : currentConstraint.results) {
