@@ -216,7 +216,9 @@ public class AggregateCounts {
                     afterCount = bitmaps.cardinality(answer);
                 }
 
-                TimeVersionRealtime oldestTVR = requestContext.getActivityIndex().getTimeVersionRealtime(name, firstIntersectingBit, stackBuffer);
+                TimeVersionRealtime oldestTVR = firstIntersectingBit != -1
+                    ? requestContext.getActivityIndex().getTimeVersionRealtime(name, firstIntersectingBit, stackBuffer)
+                    : null;
 
                 //TODO much more efficient to accumulate bits and gather these once at the end
                 MiruValue[][] oldestValues = new MiruValue[gatherFieldDefinitions.length][];
@@ -232,7 +234,7 @@ public class AggregateCounts {
                     oldestValues,
                     beforeCount - afterCount,
                     -1L,
-                    oldestTVR.timestamp,
+                    oldestTVR == null ? -1 : oldestTVR.timestamp,
                     anyUnread,
                     false,
                     oldestUnread));
