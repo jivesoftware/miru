@@ -32,7 +32,6 @@ public class RCVSReadTrackingWALReader implements MiruReadTrackingWALReader<RCVS
         return new MiruReadTrackingWALRow(streamId);
     }
 
-    @Override
     public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruStreamId streamId, boolean createIfAbsent) throws Exception {
         RowColumnValueStore.HostAndPort hostAndPort = readTrackingSipWAL.locate(tenantId, rowKey(streamId));
         int port = hostPortProvider.getPort(hostAndPort.host);

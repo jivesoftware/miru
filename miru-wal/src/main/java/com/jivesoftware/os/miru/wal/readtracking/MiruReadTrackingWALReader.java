@@ -9,8 +9,6 @@ import com.jivesoftware.os.routing.bird.shared.HostPort;
 
 public interface MiruReadTrackingWALReader<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> {
 
-    HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruStreamId streamId, boolean createIfAbsent) throws Exception;
-
     C getCursor(long eventId);
 
     C stream(MiruTenantId tenantId,

@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.api.MiruWriterEndpointConstants;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
+import com.jivesoftware.os.miru.api.activity.MiruStreamEvent;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.writer.deployable.base.MiruActivityIngress;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -157,6 +158,47 @@ public class MiruIngressEndpoints {
         }
     }
 
+    static interface IngressStreamEventHealth extends TimerHealthCheckConfig {
+
+        @StringDefault("http>ingressStreamEvent")
+        @Override
+        String getName();
+
+        @DoubleDefault(30000d) /// 30sec
+        @Override
+        Double get95ThPecentileMax();
+
+        @IntDefault(50)
+        @Override
+        Integer getSampleWindowSize();
+    }
+
+    private final HealthTimer ingressStreamEventTimer = HealthFactory.getHealthTimer(IngressStreamEventHealth.class, TimerHealthChecker.FACTORY);
+
+    @POST
+    @Path(MiruWriterEndpointConstants.STREAM_EVENT)
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response ingressStreamEvent(List<MiruStreamEvent> events) {
+        if (events == null) {
+            return Response
+                .status(Response.Status.BAD_REQUEST)
+                .entity("Read all events list must not be null.")
+                .build();
+        }
+
+        try {
+            ingressStreamEventTimer.startTimer();
+            activityIngress.sendStreamEvents(events);
+            return responseHelper.jsonResponse("Success");
+        } catch (Exception e) {
+            LOG.error("Failed to read activities.", e);
+            return Response.serverError().build();
+        } finally {
+            ingressStreamEventTimer.stopTimer("Read All Latency", " Add more capacity. Increase batching. Look for down stream issue.");
+        }
+    }
+
     static interface IngressReadAllHealth extends TimerHealthCheckConfig {
 
         @StringDefault("http>ingressReadAll")
@@ -188,9 +230,7 @@ public class MiruIngressEndpoints {
 
         try {
             ingressReadAllTimer.startTimer();
-            for (MiruReadEvent event : events) {
-                activityIngress.sendAllRead(event);
-            }
+            activityIngress.sendAllRead(events);
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
             LOG.error("Failed to read activities.", e);
@@ -231,9 +271,7 @@ public class MiruIngressEndpoints {
 
         try {
             ingressReadTimer.startTimer();
-            for (MiruReadEvent event : events) {
-                activityIngress.sendRead(event);
-            }
+            activityIngress.sendRead(events);
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
             LOG.error("Failed to read activities.", e);
@@ -274,9 +312,7 @@ public class MiruIngressEndpoints {
 
         try {
             ingressUnreadTimer.startTimer();
-            for (MiruReadEvent event : events) {
-                activityIngress.sendUnread(event);
-            }
+            activityIngress.sendUnread(events);
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
             LOG.error("Failed to unread activities.", e);

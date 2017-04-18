@@ -6,6 +6,7 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
+import com.jivesoftware.os.miru.api.activity.MiruStreamEvent;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.writer.deployable.MiruPartitioner;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * @author jonathan
@@ -71,22 +73,51 @@ public class MiruActivityIngress {
         }
     }
 
-    public void sendRead(MiruReadEvent readEvent) throws Exception {
-        MiruTenantId tenantId = readEvent.tenantId;
-        checkForWriterAlignmentIfNecessary(tenantId);
-        miruPartitioner.writeReadEvent(tenantId, readEvent);
+    public void sendStreamEvents(List<MiruStreamEvent> streamEvents) {
+        ListMultimap<MiruTenantId, MiruStreamEvent> tenantStreamEvents = ArrayListMultimap.create();
+        for (MiruStreamEvent streamEvent : streamEvents) {
+            tenantStreamEvents.put(streamEvent.tenantId, streamEvent);
+        }
+        for (MiruTenantId tenantId : tenantStreamEvents.keySet()) {
+            checkForWriterAlignmentIfNecessary(tenantId);
+            List<MiruStreamEvent> events = tenantStreamEvents.get(tenantId);
+            //TODO miruPartitioner.writeStreamEvents(tenantId, events);
+        }
     }
 
-    public void sendUnread(MiruReadEvent readEvent) throws Exception {
-        MiruTenantId tenantId = readEvent.tenantId;
-        checkForWriterAlignmentIfNecessary(tenantId);
-        miruPartitioner.writeUnreadEvent(tenantId, readEvent);
+    public void sendRead(List<MiruReadEvent> readEvents) throws Exception {
+        ListMultimap<MiruTenantId, MiruReadEvent> tenantReadEvents = splitByTenant(readEvents);
+        for (MiruTenantId tenantId : tenantReadEvents.keySet()) {
+            checkForWriterAlignmentIfNecessary(tenantId);
+            List<MiruReadEvent> events = tenantReadEvents.get(tenantId);
+            miruPartitioner.writeReadEvents(tenantId, events);
+        }
     }
 
-    public void sendAllRead(MiruReadEvent readEvent) throws Exception {
-        MiruTenantId tenantId = readEvent.tenantId;
-        checkForWriterAlignmentIfNecessary(tenantId);
-        miruPartitioner.writeAllReadEvent(tenantId, readEvent);
+    public void sendUnread(List<MiruReadEvent> readEvents) throws Exception {
+        ListMultimap<MiruTenantId, MiruReadEvent> tenantReadEvents = splitByTenant(readEvents);
+        for (MiruTenantId tenantId : tenantReadEvents.keySet()) {
+            checkForWriterAlignmentIfNecessary(tenantId);
+            List<MiruReadEvent> events = tenantReadEvents.get(tenantId);
+            miruPartitioner.writeUnreadEvents(tenantId, events);
+        }
+    }
+
+    public void sendAllRead(List<MiruReadEvent> readEvents) throws Exception {
+        ListMultimap<MiruTenantId, MiruReadEvent> tenantReadEvents = splitByTenant(readEvents);
+        for (MiruTenantId tenantId : tenantReadEvents.keySet()) {
+            checkForWriterAlignmentIfNecessary(tenantId);
+            List<MiruReadEvent> events = tenantReadEvents.get(tenantId);
+            miruPartitioner.writeAllReadEvents(tenantId, events);
+        }
+    }
+
+    private ListMultimap<MiruTenantId, MiruReadEvent> splitByTenant(List<MiruReadEvent> readEvents) {
+        ListMultimap<MiruTenantId, MiruReadEvent> tenantReadEvents = ArrayListMultimap.create();
+        for (MiruReadEvent readEvent : readEvents) {
+            tenantReadEvents.put(readEvent.tenantId, readEvent);
+        }
+        return tenantReadEvents;
     }
 
     public void updateCursor(int writerId, MiruTenantId tenantId, MiruPartitionId partitionId, int index) throws Exception {

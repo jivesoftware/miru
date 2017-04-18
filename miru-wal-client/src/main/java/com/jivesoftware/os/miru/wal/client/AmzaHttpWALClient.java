@@ -3,15 +3,17 @@ package com.jivesoftware.os.miru.wal.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.wal.AmzaCursor;
+import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
-import com.jivesoftware.os.miru.api.wal.MiruCursor;
-import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
@@ -36,10 +38,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.http.HttpStatus;
 
-public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> implements MiruWALClient<C, S> {
+public class AmzaHttpWALClient implements MiruWALClient<AmzaCursor, AmzaSipCursor> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
@@ -53,14 +56,11 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     private final HttpResponseMapper responseMapper;
     private final SickThreads sickThreads;
     private final long sleepOnFailureMillis;
-    private final String pathPrefix;
-    private final Class<C> cursorClass;
-    private final Class<S> sipCursorClass;
     private final Cache<TenantRoutingGroup<?>, NextClientStrategy> tenantRoutingCache;
 
     private final Map<MiruTenantId, NextClientStrategy> tenantNextClientStrategy = Maps.newConcurrentMap();
 
-    public MiruHttpWALClient(String routingTenantId,
+    public AmzaHttpWALClient(String routingTenantId,
         TenantAwareHttpClient<String> walClient,
         ExecutorService tasExecutors,
         int tasWindowSize,
@@ -68,11 +68,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         long tasInitialSLAMillis,
         ObjectMapper requestMapper,
         HttpResponseMapper responseMapper,
-        SickThreads sickThreads, long sleepOnFailureMillis,
-        String pathPrefix,
-        Class<C> cursorClass,
-        Class<S> sipCursorClass) {
-
+        SickThreads sickThreads, long sleepOnFailureMillis) {
 
         this.routingTenantId = routingTenantId;
         this.walClient = walClient;
@@ -84,32 +80,32 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         this.responseMapper = responseMapper;
         this.sickThreads = sickThreads;
         this.sleepOnFailureMillis = sleepOnFailureMillis;
-        this.pathPrefix = pathPrefix;
-        this.cursorClass = cursorClass;
-        this.sipCursorClass = sipCursorClass;
         this.tenantRoutingCache = CacheBuilder.newBuilder()
             .maximumSize(50_000) //TODO config
             .expireAfterWrite(5, TimeUnit.MINUTES) //TODO config
             .build();
     }
 
-    @Override
-    public HostPort[] getTenantRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId) throws Exception {
+    private HostPort[] getTenantRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, boolean createIfAbsent) throws Exception {
         return send(tenantId, "getTenantRoutingGroup", httpClient -> {
-            HttpResponse httpResponse = httpClient.get(pathPrefix + "/routing/tenant/" + routingGroupType.name() + "/" + tenantId.toString(), null);
+            HttpResponse httpResponse = httpClient.get(
+                "/miru/wal/amza/routing/lazyTenant" +
+                    "/" + routingGroupType.name() +
+                    "/" + tenantId.toString() +
+                    "/" + createIfAbsent,
+                null);
             HostPort[] response = responseMapper.extractResultFromResponse(httpResponse, HostPort[].class, null);
             return new ClientResponse<>(response, true);
         });
     }
 
-    @Override
-    public HostPort[] getTenantPartitionRoutingGroup(RoutingGroupType routingGroupType,
+    private HostPort[] getTenantPartitionRoutingGroup(RoutingGroupType routingGroupType,
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
         boolean createIfAbsent) throws Exception {
         return send(tenantId, "getTenantPartitionRoutingGroup", httpClient -> {
             HttpResponse httpResponse = httpClient.get(
-                pathPrefix + "/routing/lazyTenantPartition" +
+                "/miru/wal/amza/routing/lazyTenantPartition" +
                     "/" + routingGroupType.name() +
                     "/" + tenantId.toString() +
                     "/" + partitionId.getId() +
@@ -121,27 +117,9 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     }
 
     @Override
-    public HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType,
-        MiruTenantId tenantId,
-        MiruStreamId streamId,
-        boolean createIfAbsent) throws Exception {
-        return send(tenantId, "getTenantStreamRoutingGroup", httpClient -> {
-            HttpResponse httpResponse = httpClient.get(
-                pathPrefix + "/routing/lazyTenantStream" +
-                    "/" + routingGroupType.name() +
-                    "/" + tenantId.toString() +
-                    "/" + streamId.toString() +
-                    "/" + createIfAbsent,
-                null);
-            HostPort[] response = responseMapper.extractResultFromResponse(httpResponse, HostPort[].class, null);
-            return new ClientResponse<>(response, true);
-        });
-    }
-
-    @Override
     public List<MiruTenantId> getAllTenantIds() throws Exception { //TODO finish this
         return send(new MiruTenantId(new byte[0]), "getAllTenantIds", client -> {
-            HttpResponse response = client.get(pathPrefix + "/tenants/all", null);
+            HttpResponse response = client.get("/miru/wal/amza/tenants/all", null);
             MiruTenantId[] result = responseMapper.extractResultFromResponse(response, MiruTenantId[].class, null);
             return new ClientResponse<>(Arrays.asList(result), true);
         });
@@ -155,7 +133,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                 try {
                     String result = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, true, "writeActivity",
                         client -> extract(
-                            client.postJson(pathPrefix + "/write/activities/" + tenantId.toString() + "/" + partitionId.getId(), jsonActivities, null),
+                            client.postJson("/miru/wal/amza/write/activities/" + tenantId.toString() + "/" + partitionId.getId(), jsonActivities, null),
                             String.class,
                             null));
                     if (result != null) {
@@ -175,23 +153,29 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     }
 
     @Override
-    public void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+    public void writeReadTracking(MiruTenantId tenantId,
+        List<MiruReadEvent> readEvents,
+        Function<MiruReadEvent, MiruPartitionedActivity> transformer) throws Exception {
+        List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayListWithCapacity(readEvents.size());
+        for (MiruReadEvent readEvent : readEvents) {
+            partitionedActivities.add(transformer.apply(readEvent));
+        }
         try {
             final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
             while (true) {
                 try {
-                    String result = sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, true, "writeReadTracking",
-                        client -> extract(client.postJson(pathPrefix + "/write/reads/" + tenantId.toString() + "/" + streamId.toString(), jsonActivities, null),
+                    String result = sendWithTenant(RoutingGroupType.readTracking, tenantId, true, "writeReadTracking",
+                        client -> extract(client.postJson("/miru/wal/amza/write/reads/" + tenantId.toString(), jsonActivities, null),
                             String.class,
                             null));
                     if (result != null) {
                         return;
                     }
                     sickThreads.sick(new Throwable("Empty response"));
-                    LOG.warn("Empty response during write read tracking for {} {}, retrying in 1 sec", tenantId, streamId);
+                    LOG.warn("Empty response during write read tracking for {}, retrying in 1 sec", tenantId);
                 } catch (Exception x) {
                     sickThreads.sick(x);
-                    LOG.warn("Failed to write read tracking for {} {}, retrying in 1 sec", new Object[] { tenantId, streamId }, x);
+                    LOG.warn("Failed to write read tracking for {} {}, retrying in 1 sec", new Object[] { tenantId }, x);
                 }
                 Thread.sleep(1_000);
             }
@@ -203,7 +187,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     @Override
     public MiruPartitionId getLargestPartitionId(final MiruTenantId tenantId) throws Exception {
         return send(tenantId, "getLargestPartitionId", client -> {
-            HttpResponse response = client.get(pathPrefix + "/largestPartitionId/" + tenantId.toString(), null);
+            HttpResponse response = client.get("/miru/wal/amza/largestPartitionId/" + tenantId.toString(), null);
             return new ClientResponse<>(responseMapper.extractResultFromResponse(response, MiruPartitionId.class, null), true);
         });
     }
@@ -211,7 +195,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     @Override
     public WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception {
         return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, true, "getCursorForWriterId",
-            client -> extract(client.get(pathPrefix + "/cursor/writer/" + tenantId.toString() + "/" + partitionId.getId() + "/" + writerId, null),
+            client -> extract(client.get("/miru/wal/amza/cursor/writer/" + tenantId.toString() + "/" + partitionId.getId() + "/" + writerId, null),
                 WriterCursor.class,
                 null));
     }
@@ -219,7 +203,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     @Override
     public MiruActivityWALStatus getActivityWALStatusForTenant(final MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false, "getActivityWALStatusForTenant",
-            client -> extract(client.get(pathPrefix + "/activity/wal/status/" + tenantId.toString() + "/" + partitionId.getId(), null),
+            client -> extract(client.get("/miru/wal/amza/activity/wal/status/" + tenantId.toString() + "/" + partitionId.getId(), null),
                 MiruActivityWALStatus.class,
                 null));
     }
@@ -227,7 +211,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     @Override
     public long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         Long timestamp = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false, "oldestActivityClockTimestamp",
-            client -> extract(client.get(pathPrefix + "/oldest/activity/" + tenantId.toString() + "/" + partitionId.getId(), null),
+            client -> extract(client.get("/miru/wal/amza/oldest/activity/" + tenantId.toString() + "/" + partitionId.getId(), null),
                 Long.class,
                 null));
         return timestamp != null ? timestamp : -1;
@@ -238,14 +222,14 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         final String jsonTimestamps = requestMapper.writeValueAsString(timestamps);
         return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false, "getVersionedEntries",
             client -> extractToList(
-                client.postJson(pathPrefix + "/versioned/entries/" + tenantId.toString() + "/" + partitionId.getId(), jsonTimestamps, null),
+                client.postJson("/miru/wal/amza/versioned/entries/" + tenantId.toString() + "/" + partitionId.getId(), jsonTimestamps, null),
                 MiruVersionedActivityLookupEntry[].class));
     }
 
     @Override
-    public StreamBatch<MiruWALEntry, S> sipActivity(MiruTenantId tenantId,
+    public StreamBatch<MiruWALEntry, AmzaSipCursor> sipActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        S cursor,
+        AmzaSipCursor cursor,
         Set<TimeAndVersion> lastSeen,
         int batchSize) throws Exception {
         final String jsonCursor = requestMapper.writeValueAsString(new SipAndLastSeen<>(cursor, lastSeen));
@@ -253,12 +237,13 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
             while (true) {
                 try {
                     @SuppressWarnings("unchecked")
-                    StreamBatch<MiruWALEntry, S> response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false, "sipActivity",
+                    StreamBatch<MiruWALEntry, AmzaSipCursor> response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false,
+                        "sipActivity",
                         client -> extract(
-                            client.postJson(pathPrefix + "/sip/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor,
+                            client.postJson("/miru/wal/amza/sip/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor,
                                 null),
                             StreamBatch.class,
-                            new Class[] { MiruWALEntry.class, sipCursorClass },
+                            new Class[] { MiruWALEntry.class, AmzaSipCursor.class },
                             null));
                     if (response != null) {
                         return response;
@@ -277,19 +262,20 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     }
 
     @Override
-    public StreamBatch<MiruWALEntry, C> getActivity(MiruTenantId tenantId,
+    public StreamBatch<MiruWALEntry, AmzaCursor> getActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        C cursor,
+        AmzaCursor cursor,
         int batchSize,
         long stopAtTimestamp,
         MutableLong bytesCount) throws Exception {
         try {
-            String endpoint = pathPrefix + "/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize + "/" + stopAtTimestamp;
+            String endpoint = "/miru/wal/amza/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize + "/" + stopAtTimestamp;
             String jsonCursor = requestMapper.writeValueAsString(cursor);
             while (true) {
                 try {
                     @SuppressWarnings("unchecked")
-                    StreamBatch<MiruWALEntry, C> response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false, "getActivity",
+                    StreamBatch<MiruWALEntry, AmzaCursor> response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false,
+                        "getActivity",
                         client -> {
                             HttpResponse httpResponse = client.postJson(endpoint, jsonCursor, null);
                             if (bytesCount != null && httpResponse.getResponseBody() != null) {
@@ -298,7 +284,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                             return extract(
                                 httpResponse,
                                 StreamBatch.class,
-                                new Class[] { MiruWALEntry.class, cursorClass },
+                                new Class[] { MiruWALEntry.class, AmzaCursor.class },
                                 null);
                         });
                     if (response != null) {
@@ -319,20 +305,20 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     @Override
     @SuppressWarnings("unchecked")
-    public StreamBatch<MiruWALEntry, S> getRead(final MiruTenantId tenantId,
+    public StreamBatch<MiruWALEntry, AmzaSipCursor> getRead(final MiruTenantId tenantId,
         final MiruStreamId streamId,
-        S cursor,
+        AmzaSipCursor cursor,
         long oldestTimestamp,
         int batchSize,
         boolean createIfAbsent) throws Exception {
         final String jsonCursor = requestMapper.writeValueAsString(cursor);
-        return sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, createIfAbsent, "getRead",
+        return sendWithTenant(RoutingGroupType.readTracking, tenantId, createIfAbsent, "getRead",
             client -> extract(
-                client.postJson(pathPrefix + "/read/" + tenantId.toString() + "/" + streamId.toString() + "/" + oldestTimestamp + "/" + batchSize,
+                client.postJson("/miru/wal/amza/read/" + tenantId.toString() + "/" + streamId.toString() + "/" + oldestTimestamp + "/" + batchSize,
                     jsonCursor,
                     null),
                 StreamBatch.class,
-                new Class[] { MiruWALEntry.class, sipCursorClass },
+                new Class[] { MiruWALEntry.class, AmzaSipCursor.class },
                 null));
     }
 
@@ -385,21 +371,19 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         }
     }
 
-    //TODO the cardinality here is TOO HIGH! replace with prefixes against tenant-specific routing
-    private <R> R sendWithTenantStream(RoutingGroupType routingGroupType,
+    private <R> R sendWithTenant(RoutingGroupType routingGroupType,
         MiruTenantId tenantId,
-        MiruStreamId streamId,
         boolean createIfAbsent,
         String family,
         ClientCall<HttpClient, SendResult<R>, HttpClientException> call) throws Exception {
-        TenantRoutingGroup<MiruStreamId> routingGroup = new TenantRoutingGroup<>(routingGroupType, tenantId, streamId);
+        TenantRoutingGroup<Void> routingGroup = new TenantRoutingGroup<>(routingGroupType, tenantId, null);
         try {
             while (true) {
                 NextClientStrategy strategy = tenantRoutingCache.get(routingGroup,
                     () -> {
-                        HostPort[] hostPorts = getTenantStreamRoutingGroup(routingGroupType, tenantId, streamId, createIfAbsent);
+                        HostPort[] hostPorts = getTenantRoutingGroup(routingGroupType, tenantId, createIfAbsent);
                         if (hostPorts == null || hostPorts.length == 0) {
-                            throw new MiruRouteUnavailableException("No route available for tenant " + tenantId + " stream " + streamId);
+                            throw new MiruRouteUnavailableException("No route available for tenant " + tenantId);
                         }
                         return new ConnectionDescriptorSelectiveStrategy(hostPorts);
                     });

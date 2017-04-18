@@ -37,7 +37,6 @@ import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
-import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer.WALClientSickThreadsHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
@@ -53,8 +52,6 @@ import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCPauseHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.LoadAverageHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
-import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
-import com.jivesoftware.os.routing.bird.health.checkers.SickThreadsHealthCheck;
 import com.jivesoftware.os.routing.bird.health.checkers.SystemCpuHealthChecker;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
@@ -292,9 +289,6 @@ public class MiruCatwalkMain {
                 .build(); // TODO expose to conf
 
             deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("reader", readerClient));
-
-            SickThreads walClientSickThreads = new SickThreads();
-            deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
             Lifecycle amzaLifecycle = new MiruAmzaServiceInitializer().initialize(deployable,
                 clientHealthProvider,

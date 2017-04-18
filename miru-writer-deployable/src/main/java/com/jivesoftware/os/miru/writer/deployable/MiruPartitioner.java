@@ -201,27 +201,27 @@ public class MiruPartitioner {
         }
     }
 
-    public void writeReadEvent(MiruTenantId tenantId, MiruReadEvent readEvent) throws Exception {
+    public void writeReadEvents(MiruTenantId tenantId, List<MiruReadEvent> readEvents) throws Exception {
         synchronized (locks.lock(tenantId, 0)) {
-            //TODO this is dumb, split readEvents out of activityFactory
-            MiruPartitionedActivity currentActivity = partitionedActivityFactory.read(writerId, MiruPartitionId.of(-1), -1, readEvent);
-            walClient.writeReadTracking(tenantId, readEvent.streamId, Collections.singletonList(currentActivity));
+            walClient.writeReadTracking(tenantId,
+                readEvents,
+                readEvent -> partitionedActivityFactory.read(writerId, MiruPartitionId.of(-1), -1, readEvent));
         }
     }
 
-    public void writeUnreadEvent(MiruTenantId tenantId, MiruReadEvent readEvent) throws Exception {
+    public void writeUnreadEvents(MiruTenantId tenantId, List<MiruReadEvent> readEvents) throws Exception {
         synchronized (locks.lock(tenantId, 0)) {
-            //TODO this is dumb, split readEvents out of activityFactory
-            MiruPartitionedActivity currentActivity = partitionedActivityFactory.unread(writerId, MiruPartitionId.of(-1), -1, readEvent);
-            walClient.writeReadTracking(tenantId, readEvent.streamId, Collections.singletonList(currentActivity));
+            walClient.writeReadTracking(tenantId,
+                readEvents,
+                readEvent -> partitionedActivityFactory.unread(writerId, MiruPartitionId.of(-1), -1, readEvent));
         }
     }
 
-    public void writeAllReadEvent(MiruTenantId tenantId, MiruReadEvent readEvent) throws Exception {
+    public void writeAllReadEvents(MiruTenantId tenantId, List<MiruReadEvent> readEvents) throws Exception {
         synchronized (locks.lock(tenantId, 0)) {
-            //TODO this is dumb, split readEvents out of activityFactory
-            MiruPartitionedActivity currentActivity = partitionedActivityFactory.allread(writerId, MiruPartitionId.of(-1), -1, readEvent);
-            walClient.writeReadTracking(tenantId, readEvent.streamId, Collections.singletonList(currentActivity));
+            walClient.writeReadTracking(tenantId,
+                readEvents,
+                readEvent -> partitionedActivityFactory.allread(writerId, MiruPartitionId.of(-1), -1, readEvent));
         }
     }
 

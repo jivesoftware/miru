@@ -41,8 +41,9 @@ import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.Miru
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
-import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
+import com.jivesoftware.os.miru.wal.client.AmzaWALClientInitializer;
 import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer.WALClientSickThreadsHealthCheckConfig;
+import com.jivesoftware.os.miru.wal.client.RCVSWALClientInitializer;
 import com.jivesoftware.os.miru.writer.deployable.base.MiruActivityIngress;
 import com.jivesoftware.os.miru.writer.deployable.endpoints.MiruIngressEndpoints;
 import com.jivesoftware.os.miru.writer.partition.AmzaPartitionIdProvider;
@@ -69,7 +70,6 @@ import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
-import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.util.Arrays;
@@ -241,24 +241,26 @@ public class MiruWriterMain {
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
             MiruWALClient<?, ?> walClient;
             if (walConfig.getActivityWALType().equals("rcvs") || walConfig.getActivityWALType().equals("rcvs_amza")) {
-                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient,
+                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new RCVSWALClientInitializer().initialize("",
+                    walHttpClient,
                     tasExecutors,
                     100,
                     95,
                     1000,
                     mapper,
-                    walClientSickThreads, 10_000,
-                    "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
+                    walClientSickThreads,
+                    10_000);
                 walClient = rcvsWALClient;
             } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
-                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient,
+                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new AmzaWALClientInitializer().initialize("",
+                    walHttpClient,
                     tasExecutors,
                     100,
                     95,
                     1000,
                     mapper,
-                    walClientSickThreads, 10_000,
-                    "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
+                    walClientSickThreads,
+                    10_000);
                 walClient = amzaWALClient;
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());

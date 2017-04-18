@@ -93,8 +93,9 @@ import com.jivesoftware.os.miru.service.stream.MiruIndexCallbacks;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
-import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
+import com.jivesoftware.os.miru.wal.client.AmzaWALClientInitializer;
 import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer.WALClientSickThreadsHealthCheckConfig;
+import com.jivesoftware.os.miru.wal.client.RCVSWALClientInitializer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
@@ -133,8 +134,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.merlin.config.Config;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
@@ -382,14 +381,14 @@ public class MiruReaderMain {
 
             MiruLifecyle<MiruService> miruServiceLifecyle;
             if (walConfig.getActivityWALType().equals("rcvs") || walConfig.getActivityWALType().equals("rcvs_amza")) {
-                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient,
+                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new RCVSWALClientInitializer().initialize("", walHttpClient,
                     tasExecutors,
                     100,
                     95,
                     1000,
                     mapper,
-                    walClientSickThreads, 10_000,
-                    "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
+                    walClientSickThreads,
+                    10_000);
 
                 inboxReadTracker = new RCVSInboxReadTracker(rcvsWALClient);
                 miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
@@ -430,16 +429,16 @@ public class MiruReaderMain {
                     deployable.newBoundedExecutor(12, "on-disk-lab-scheduler"),
                     deployable.newBoundedExecutor(12, "on-disk-lab-compactor"),
                     deployable.newBoundedExecutor(12, "on-disk-lab-destroyer")
-                    );
+                );
             } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
-                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient,
+                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new AmzaWALClientInitializer().initialize("", walHttpClient,
                     tasExecutors,
                     100,
                     95,
                     1000,
                     mapper,
-                    walClientSickThreads, 10_000,
-                    "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
+                    walClientSickThreads,
+                    10_000);
 
                 inboxReadTracker = new AmzaInboxReadTracker(amzaWALClient);
                 miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,

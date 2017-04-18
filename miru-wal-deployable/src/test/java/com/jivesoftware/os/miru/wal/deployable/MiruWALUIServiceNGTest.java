@@ -32,6 +32,7 @@ import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.RCVSWALDirector;
+import com.jivesoftware.os.miru.wal.RCVSWALDirectorClient;
 import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALWriter;
@@ -154,13 +155,14 @@ public class MiruWALUIServiceNGTest {
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
         TenantRoutingProvider tenantRoutingProvider = new TenantRoutingProvider(Executors.newScheduledThreadPool(1), "1", (cdr, erg) -> null);
+        RCVSWALDirectorClient walClient = new RCVSWALDirectorClient(director);
         service = new MiruWALUIServiceInitializer().initialize("cluster",
             1,
             renderer,
             null,
             tenantRoutingProvider,
-            director,
-            new MiruWALDirector(walLookup, director, activityWALReader, activityWALWriter, clusterClient),
+            walClient,
+            new MiruWALDirector(walLookup, walClient, activityWALReader, activityWALWriter, clusterClient),
             director,
             null,
             activityWALReader,

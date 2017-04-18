@@ -16,7 +16,9 @@ import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
-import com.jivesoftware.os.miru.api.wal.MiruWALClient;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.RoutingGroupType;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALWriter;
@@ -35,7 +37,7 @@ import org.apache.commons.lang.mutable.MutableLong;
 /**
  *
  */
-public class AmzaWALDirector implements MiruWALClient<AmzaCursor, AmzaSipCursor> {
+public class AmzaWALDirector {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
@@ -181,12 +183,6 @@ public class AmzaWALDirector implements MiruWALClient<AmzaCursor, AmzaSipCursor>
         LOG.info("Finished repairing lookup for {} partitions", count[0]);
     }
 
-    @Override
-    public HostPort[] getTenantRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId) throws Exception {
-        throw new IllegalArgumentException("Type does not have tenant routing: " + routingGroupType.name());
-    }
-
-    @Override
     public HostPort[] getTenantPartitionRoutingGroup(RoutingGroupType routingGroupType,
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
@@ -198,24 +194,20 @@ public class AmzaWALDirector implements MiruWALClient<AmzaCursor, AmzaSipCursor>
         }
     }
 
-    @Override
-    public HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType,
+    public HostPort[] getTenantRoutingGroup(RoutingGroupType routingGroupType,
         MiruTenantId tenantId,
-        MiruStreamId streamId,
         boolean createIfAbsent) throws Exception {
         if (routingGroupType == RoutingGroupType.readTracking) {
-            return readTrackingWALReader.getRoutingGroup(tenantId, streamId, createIfAbsent);
+            return readTrackingWALReader.getRoutingGroup(tenantId, createIfAbsent);
         } else {
             throw new IllegalArgumentException("Type does not have tenant-stream routing: " + routingGroupType.name());
         }
     }
 
-    @Override
     public List<MiruTenantId> getAllTenantIds() throws Exception {
         return walLookup.allTenantIds(repairLookupCallback);
     }
 
-    @Override
     public void writeActivity(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         boolean onlyBoundaries = true;
 
@@ -235,37 +227,30 @@ public class AmzaWALDirector implements MiruWALClient<AmzaCursor, AmzaSipCursor>
         }
     }
 
-    @Override
     public void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         readTrackingWALWriter.write(tenantId, streamId, partitionedActivities);
     }
 
-    @Override
     public MiruPartitionId getLargestPartitionId(MiruTenantId tenantId) throws Exception {
         return walLookup.largestPartitionId(tenantId, repairLookupCallback);
     }
 
-    @Override
     public WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception {
         return activityWALReader.getCursorForWriterId(tenantId, partitionId, writerId);
     }
 
-    @Override
     public MiruActivityWALStatus getActivityWALStatusForTenant(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         return activityWALReader.getStatus(tenantId, partitionId);
     }
 
-    @Override
     public long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         return activityWALReader.oldestActivityClockTimestamp(tenantId, partitionId);
     }
 
-    @Override
     public List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, MiruPartitionId partitionId, Long[] timestamps) throws Exception {
         return activityWALReader.getVersionedEntries(tenantId, partitionId, timestamps);
     }
 
-    @Override
     public StreamBatch<MiruWALEntry, AmzaCursor> getActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         AmzaCursor cursor,
@@ -284,7 +269,6 @@ public class AmzaWALDirector implements MiruWALClient<AmzaCursor, AmzaSipCursor>
         return new StreamBatch<>(activities, nextCursor, false, null);
     }
 
-    @Override
     public StreamBatch<MiruWALEntry, AmzaSipCursor> sipActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         AmzaSipCursor cursor,
@@ -308,7 +292,6 @@ public class AmzaWALDirector implements MiruWALClient<AmzaCursor, AmzaSipCursor>
         return new StreamBatch<>(activities, nextCursor, endOfWAL[0], suppressed);
     }
 
-    @Override
     public StreamBatch<MiruWALEntry, AmzaSipCursor> getRead(MiruTenantId tenantId,
         MiruStreamId streamId,
         AmzaSipCursor sipCursor,

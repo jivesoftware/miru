@@ -54,22 +54,6 @@ public class RCVSWALEndpoints {
     }
 
     @GET
-    @Path("/routing/tenant/{type}/{tenantId}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getTenantRoutingGroup(@PathParam("type") RoutingGroupType routingGroupType,
-        @PathParam("tenantId") String tenantId) {
-        try {
-            long start = System.currentTimeMillis();
-            HostPort[] routingGroup = walDirector.getTenantRoutingGroup(routingGroupType, new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)));
-            stats.ingressed("/routing/tenant/" + routingGroupType.name() + "/" + tenantId, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse(routingGroup);
-        } catch (Exception x) {
-            log.error("Failed calling getTenantRoutingGroup({},{})", new Object[] { routingGroupType, tenantId }, x);
-            return responseHelper.errorResponse("Server error", x);
-        }
-    }
-
-    @GET
     @Path("/routing/tenantPartition/{type}/{tenantId}/{partitionId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getTenantPartitionRoutingGroup(@PathParam("type") RoutingGroupType routingGroupType,

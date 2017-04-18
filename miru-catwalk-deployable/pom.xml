@@ -151,10 +151,5 @@
             <artifactId>mockito-all</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-wal-client</artifactId>
-            <version>${project.version}</version>
-        </dependency>
     </dependencies>
 </project>
