@@ -73,7 +73,6 @@ import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndexInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker.PartitionErrorTrackerConfig;
 import com.jivesoftware.os.miru.service.realtime.NoOpRealtimeDelivery;
-import com.jivesoftware.os.miru.service.stream.cache.LabPluginCacheProvider;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
@@ -87,7 +86,9 @@ import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
+import com.jivesoftware.os.miru.service.stream.cache.LabPluginCacheProvider;
 import com.jivesoftware.os.miru.wal.RCVSWALDirector;
+import com.jivesoftware.os.miru.wal.RCVSWALDirectorClient;
 import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALWriter;
@@ -177,14 +178,14 @@ public class MiruLocalHostedPartitionTest {
         HealthFactory.initialize(
             BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
-            @Override
-            public void register(HealthChecker healthChecker) {
-            }
+                @Override
+                public void register(HealthChecker healthChecker) {
+                }
 
-            @Override
-            public void unregister(HealthChecker healthChecker) {
-            }
-        });
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                }
+            });
 
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(32);
@@ -251,8 +252,8 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionDeleteChunkStoreOnClose(),
             100,
             1_000,
-            new LABStats[]{labStats},
-            new LabHeapPressure[]{labHeapPressure},
+            new LABStats[] { labStats },
+            new LabHeapPressure[] { labHeapPressure },
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
@@ -268,8 +269,8 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionNumberOfChunkStores(),
             100,
             1_000,
-            new LABStats[]{labStats},
-            new LabHeapPressure[]{labHeapPressure},
+            new LABStats[] { labStats },
+            new LabHeapPressure[] { labHeapPressure },
             labHeapPressure,
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
@@ -308,9 +309,9 @@ public class MiruLocalHostedPartitionTest {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, hybridContextAllocator)
-            .put(MiruBackingStorage.disk, diskContextAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, hybridContextAllocator)
+                .put(MiruBackingStorage.disk, diskContextAllocator)
+                .build(),
             new RCVSSipIndexMarshaller(),
             resourceLocator,
             config.getPartitionAuthzCacheSize(),
@@ -387,7 +388,13 @@ public class MiruLocalHostedPartitionTest {
         MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector);
         replicaSetDirector.elect(host, tenantId, partitionId, System.currentTimeMillis());
 
-        walClient = new RCVSWALDirector(walLookup, activityWALReader, activityWALWriter, readTrackingWALReader, readTrackingWALWriter, clusterClient);
+        walClient = new RCVSWALDirectorClient(
+            new RCVSWALDirector(walLookup,
+                activityWALReader,
+                activityWALWriter,
+                readTrackingWALReader,
+                readTrackingWALWriter,
+                clusterClient));
 
         partitionEventHandler = new MiruPartitionHeartbeatHandler(clusterClient, new AtomicBoolean(false));
         rebuildDirector = new MiruRebuildDirector(Long.MAX_VALUE);
@@ -414,8 +421,8 @@ public class MiruLocalHostedPartitionTest {
 
     @DataProvider(name = "useLabIndexes")
     public Object[][] useLabIndexesDataProvider() {
-        return new Object[][]{
-            {true}
+        return new Object[][] {
+            { true }
         };
     }
 

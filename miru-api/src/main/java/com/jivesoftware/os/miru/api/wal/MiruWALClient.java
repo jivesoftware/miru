@@ -2,30 +2,20 @@ package com.jivesoftware.os.miru.api.wal;
 
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /**
  * @author jonathan.colt
  */
 public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> {
-
-    HostPort[] getTenantRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId) throws Exception;
-
-    HostPort[] getTenantPartitionRoutingGroup(RoutingGroupType routingGroupType,
-        MiruTenantId tenantId,
-        MiruPartitionId partitionId,
-        boolean createIfAbsent) throws Exception;
-
-    HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType,
-        MiruTenantId tenantId,
-        MiruStreamId streamId,
-        boolean createIfAbsent) throws Exception;
 
     enum RoutingGroupType {
         activity,
@@ -36,7 +26,9 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     void writeActivity(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
 
-    void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
+    void writeReadTracking(MiruTenantId tenantId,
+        List<MiruReadEvent> readEvents,
+        Function<MiruReadEvent, MiruPartitionedActivity> transformer) throws Exception;
 
     MiruPartitionId getLargestPartitionId(MiruTenantId tenantId) throws Exception;
 

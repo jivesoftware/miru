@@ -1,8 +1,11 @@
 package com.jivesoftware.os.miru.sync.deployable;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity.Type;
+import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -25,7 +28,6 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 /**
  *
@@ -58,17 +60,18 @@ public class MiruSyncReceiver<C extends MiruCursor<C, S>, S extends MiruSipCurso
         updateWriterCursors(tenantId, partitionId, activities);
         if (converter != null) {
             Map<MiruStreamId, List<MiruPartitionedActivity>> converted = converter.convert(tenantId, partitionId, activities);
-            if (converted != null) {
-                int readCount = 0;
-                for (Entry<MiruStreamId, List<MiruPartitionedActivity>> entry : converted.entrySet()) {
-                    MiruStreamId streamId = entry.getKey();
-                    List<MiruPartitionedActivity> readActivities = entry.getValue();
-                    if (!readActivities.isEmpty()) {
-                        walClient.writeReadTracking(tenantId, streamId, readActivities);
-                        readCount += readActivities.size();
+            if (converted != null && !converted.isEmpty()) {
+                List<MiruReadEvent> readEvents = Lists.newArrayList();
+                Map<MiruReadEvent, MiruPartitionedActivity> eventActivities = Maps.newHashMap();
+                for (List<MiruPartitionedActivity> streamActivities : converted.values()) {
+                    for (MiruPartitionedActivity activity : streamActivities) {
+                        MiruReadEvent readEvent = activity.getReadEventNullable();
+                        readEvents.add(readEvent);
+                        eventActivities.put(readEvent, activity);
                     }
                 }
-                LOG.info("Converted from tenantId:{} partitionId:{} readTracks:{}", tenantId, partitionId, readCount);
+                walClient.writeReadTracking(tenantId, readEvents, eventActivities::get);
+                LOG.info("Converted from tenantId:{} partitionId:{} readTracks:{}", tenantId, partitionId, readEvents.size());
             }
         }
     }

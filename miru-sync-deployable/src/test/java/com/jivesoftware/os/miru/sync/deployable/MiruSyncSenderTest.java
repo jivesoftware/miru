@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
+import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -55,6 +56,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -322,33 +324,14 @@ public class MiruSyncSenderTest {
         }
 
         @Override
-        public HostPort[] getTenantRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId) throws Exception {
-            return new HostPort[0];
-        }
-
-        @Override
-        public HostPort[] getTenantPartitionRoutingGroup(RoutingGroupType routingGroupType,
-            MiruTenantId tenantId,
-            MiruPartitionId partitionId,
-            boolean createIfAbsent) throws Exception {
-            return new HostPort[0];
-        }
-
-        @Override
-        public HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType,
-            MiruTenantId tenantId,
-            MiruStreamId streamId,
-            boolean createIfAbsent) throws Exception {
-            return new HostPort[0];
-        }
-
-        @Override
         public void writeActivity(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
 
         }
 
         @Override
-        public void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+        public void writeReadTracking(MiruTenantId tenantId,
+            List<MiruReadEvent> readEvents,
+            Function<MiruReadEvent, MiruPartitionedActivity> transformer) throws Exception {
 
         }
 

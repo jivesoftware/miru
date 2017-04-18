@@ -68,6 +68,7 @@ import com.jivesoftware.os.miru.service.partition.RCVSSipTrackerFactory;
 import com.jivesoftware.os.miru.service.realtime.NoOpRealtimeDelivery;
 import com.jivesoftware.os.miru.service.stream.MiruIndexCallbacks;
 import com.jivesoftware.os.miru.wal.RCVSWALDirector;
+import com.jivesoftware.os.miru.wal.RCVSWALDirectorClient;
 import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALWriter;
@@ -207,8 +208,9 @@ public class MiruPluginTestBootstrap {
 
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry,
             stream -> stream.descriptor("datacenter", "rack", miruHost), false);
-        MiruWALClient<RCVSCursor, RCVSSipCursor> walClient = new RCVSWALDirector(walLookup, activityWALReader, activityWALWriter, readTrackingWALReader,
+        RCVSWALDirector director = new RCVSWALDirector(walLookup, activityWALReader, activityWALWriter, readTrackingWALReader,
             readTrackingWALWriter, new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector));
+        RCVSWALDirectorClient walClient = new RCVSWALDirectorClient(director);
         MiruInboxReadTracker inboxReadTracker = new RCVSInboxReadTracker(walClient);
 
         MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector);

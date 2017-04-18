@@ -65,8 +65,9 @@ import com.jivesoftware.os.miru.sync.deployable.oauth.MiruSyncOAuthValidatorInit
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
-import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
+import com.jivesoftware.os.miru.wal.client.AmzaWALClientInitializer;
 import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer.WALClientSickThreadsHealthCheckConfig;
+import com.jivesoftware.os.miru.wal.client.RCVSWALClientInitializer;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
@@ -395,37 +396,13 @@ public class MiruSyncMain {
 
             boolean syncLoopback = false;
             if (syncConfig.getSyncLoopback().equals("rcvs")) {
-                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("",
-                    walHttpClient,
-                    tasExecutor,
-                    100,
-                    95,
-                    1000,
-                    mapper,
-                    walClientSickThreads,
-                    10_000,
-                    "/miru/wal/rcvs",
-                    RCVSCursor.class,
-                    RCVSSipCursor.class);
                 syncLoopback = true;
             } else if (syncConfig.getSyncLoopback().equals("amza")) {
-                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("",
-                    walHttpClient,
-                    tasExecutor,
-                    100,
-                    95,
-                    1000,
-                    mapper,
-                    walClientSickThreads,
-                    10_000,
-                    "/miru/wal/amza",
-                    AmzaCursor.class,
-                    AmzaSipCursor.class);
                 syncLoopback = true;
             }
 
             if (walConfig.getActivityWALType().equals("rcvs")) {
-                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("",
+                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new RCVSWALClientInitializer().initialize("",
                     walHttpClient,
                     tasExecutor,
                     100,
@@ -433,10 +410,7 @@ public class MiruSyncMain {
                     1000,
                     mapper,
                     walClientSickThreads,
-                    10_000,
-                    "/miru/wal/rcvs",
-                    RCVSCursor.class,
-                    RCVSSipCursor.class);
+                    10_000);
                 syncCopier = (MiruSyncCopier) new MiruSyncCopier<>(rcvsWALClient, syncConfig.getCopyBatchSize(), RCVSCursor.INITIAL, RCVSCursor.class);
 
                 MiruSyncReceiver<RCVSCursor, RCVSSipCursor> rcvsMiruSyncReceiver = new MiruSyncReceiver<>(rcvsWALClient,
@@ -488,17 +462,15 @@ public class MiruSyncMain {
                 }
 
             } else if (walConfig.getActivityWALType().equals("amza")) {
-                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("",
+                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new AmzaWALClientInitializer().initialize("",
                     walHttpClient,
                     tasExecutor,
                     100,
                     95,
                     1000,
                     mapper,
-                    walClientSickThreads, 10_000,
-                    "/miru/wal/amza",
-                    AmzaCursor.class,
-                    AmzaSipCursor.class);
+                    walClientSickThreads,
+                    10_000);
 
                 syncCopier = (MiruSyncCopier) new MiruSyncCopier<>(amzaWALClient, syncConfig.getCopyBatchSize(), null, AmzaCursor.class);
 

@@ -12,6 +12,7 @@ public class MiruStreamEvent {
     public final MiruTenantId tenantId;
     public final long time;
     public final String streamName;
+    public final String type;
     public final MiruStreamId streamId;
     public final MiruFilter filter;
 
@@ -20,12 +21,14 @@ public class MiruStreamEvent {
         @JsonProperty("tenantId") byte[] tenantId,
         @JsonProperty("time") long time,
         @JsonProperty("streamName") String streamName,
+        @JsonProperty("type") String type,
         @JsonProperty("streamId") byte[] streamId,
         @JsonProperty("filter") MiruFilter filter) {
 
         this.tenantId = new MiruTenantId(tenantId);
         this.time = time;
         this.streamName = streamName;
+        this.type = type;
         this.streamId = new MiruStreamId(streamId);
         this.filter = filter;
     }
@@ -38,6 +41,18 @@ public class MiruStreamEvent {
     @JsonGetter("streamId")
     public byte[] getStreamIdAsBytes() {
         return streamId.getBytes();
+    }
+
+    @Override
+    public String toString() {
+        return "MiruStreamEvent{" +
+            "tenantId=" + tenantId +
+            ", time=" + time +
+            ", streamName='" + streamName + '\'' +
+            ", type='" + type + '\'' +
+            ", streamId=" + streamId +
+            ", filter=" + filter +
+            '}';
     }
 
     @Override
@@ -54,16 +69,20 @@ public class MiruStreamEvent {
         if (time != that.time) {
             return false;
         }
-        if (filter != null ? !filter.equals(that.filter) : that.filter != null) {
+        if (tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null) {
             return false;
         }
         if (streamName != null ? !streamName.equals(that.streamName) : that.streamName != null) {
             return false;
         }
+        if (type != null ? !type.equals(that.type) : that.type != null) {
+            return false;
+        }
         if (streamId != null ? !streamId.equals(that.streamId) : that.streamId != null) {
             return false;
         }
-        return !(tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null);
+        return filter != null ? filter.equals(that.filter) : that.filter == null;
+
     }
 
     @Override
@@ -71,19 +90,9 @@ public class MiruStreamEvent {
         int result = tenantId != null ? tenantId.hashCode() : 0;
         result = 31 * result + (int) (time ^ (time >>> 32));
         result = 31 * result + (streamName != null ? streamName.hashCode() : 0);
+        result = 31 * result + (type != null ? type.hashCode() : 0);
         result = 31 * result + (streamId != null ? streamId.hashCode() : 0);
         result = 31 * result + (filter != null ? filter.hashCode() : 0);
         return result;
-    }
-
-    @Override
-    public String toString() {
-        return "MiruTrackingEvent{" +
-            "tenantId=" + tenantId +
-            ", time=" + time +
-            ", streamName=" + streamName +
-            ", streamId=" + streamId +
-            ", filter=" + filter +
-            '}';
     }
 }

@@ -63,7 +63,8 @@ import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALWriter;
-import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
+import com.jivesoftware.os.miru.wal.client.AmzaWALClientInitializer;
+import com.jivesoftware.os.miru.wal.client.RCVSWALClientInitializer;
 import com.jivesoftware.os.miru.wal.deployable.endpoints.AmzaWALEndpoints;
 import com.jivesoftware.os.miru.wal.deployable.endpoints.RCVSWALEndpoints;
 import com.jivesoftware.os.miru.wal.lookup.AmzaWALLookup;
@@ -365,14 +366,15 @@ public class MiruWALMain {
             boolean secondaryAmzaWAL = walConfig.getSecondaryAmzaWAL();
 
             if (primaryRCVSWAL) {
-                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient,
+                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new RCVSWALClientInitializer().initialize("",
+                    walHttpClient,
                     tasExecutors,
                     100,
                     95,
                     1000,
                     mapper,
-                    walClientSickThreads, 10_000,
-                    "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
+                    walClientSickThreads,
+                    10_000);
 
                 RCVSWALInitializer.RCVSWAL rcvsWAL = new RCVSWALInitializer().initialize(instanceConfig.getClusterName(),
                     rowColumnValueStoreInitializer,
@@ -422,14 +424,15 @@ public class MiruWALMain {
             }
 
             if (primaryAmzaWAL || secondaryAmzaWAL) {
-                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient,
+                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new AmzaWALClientInitializer().initialize("",
+                    walHttpClient,
                     tasExecutors,
                     100,
                     95,
                     1000,
                     mapper,
-                    walClientSickThreads, 10_000,
-                    "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
+                    walClientSickThreads,
+                    10_000);
 
                 AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil,
                     amzaServiceConfig.getReplicateTimeoutMillis(),
