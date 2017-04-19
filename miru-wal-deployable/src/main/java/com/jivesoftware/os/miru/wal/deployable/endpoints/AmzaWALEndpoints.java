@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.api.wal.SipAndLastSeen;
 import com.jivesoftware.os.miru.wal.AmzaWALDirector;
 import com.jivesoftware.os.miru.wal.MiruWALNotInitializedException;
 import com.jivesoftware.os.miru.wal.MiruWALWrongRouteException;
+import com.jivesoftware.os.miru.api.activity.StreamIdPartitionedActivities;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
@@ -182,29 +183,27 @@ public class AmzaWALEndpoints {
     }
 
     @POST
-    @Path("/write/reads/{tenantId}/{streamId}")
+    @Path("/write/reads/{tenantId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response writeReadTracking(@PathParam("tenantId") String tenantId,
-        @PathParam("streamId") String streamId,
-        List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+        List<StreamIdPartitionedActivities> streamActivities) throws Exception {
         try {
             long start = System.currentTimeMillis();
-            walDirector.writeReadTracking(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), new MiruStreamId(streamId.getBytes(Charsets.UTF_8)),
-                partitionedActivities);
+            walDirector.writeReadTracking(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), streamActivities);
             stats.ingressed("/write/reads/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("ok");
         } catch (MiruWALNotInitializedException x) {
             log.error("WAL not initialized calling writeReadTracking({},count:{})",
-                new Object[] { tenantId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
+                new Object[] { tenantId, streamActivities != null ? streamActivities.size() : null }, x);
             return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
         } catch (MiruWALWrongRouteException x) {
             log.error("Wrong route calling writeReadTracking({},count:{})",
-                new Object[] { tenantId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
+                new Object[] { tenantId, streamActivities != null ? streamActivities.size() : null }, x);
             return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
         } catch (Exception x) {
-            log.error("Failed calling writeReadTracking({},{},count:{})",
-                new Object[] { tenantId, streamId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
+            log.error("Failed calling writeReadTracking({},count:{})",
+                new Object[] { tenantId, streamActivities != null ? streamActivities.size() : null }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }

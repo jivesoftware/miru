@@ -5,6 +5,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.StreamIdPartitionedActivities;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -227,8 +228,8 @@ public class AmzaWALDirector {
         }
     }
 
-    public void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        readTrackingWALWriter.write(tenantId, streamId, partitionedActivities);
+    public void writeReadTracking(MiruTenantId tenantId, List<StreamIdPartitionedActivities> streamActivities) throws Exception {
+        readTrackingWALWriter.write(tenantId, streamActivities);
     }
 
     public MiruPartitionId getLargestPartitionId(MiruTenantId tenantId) throws Exception {

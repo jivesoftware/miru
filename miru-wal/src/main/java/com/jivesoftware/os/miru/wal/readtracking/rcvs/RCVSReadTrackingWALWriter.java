@@ -4,14 +4,13 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.rcvs.api.MultiAdd;
 import com.jivesoftware.os.rcvs.api.RowColumValueTimestampAdd;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import com.jivesoftware.os.rcvs.api.timestamper.ConstantTimestamper;
 import java.util.List;
 
-public class RCVSReadTrackingWALWriter implements MiruReadTrackingWALWriter {
+public class RCVSReadTrackingWALWriter {
 
     private final RowColumnValueStore<MiruTenantId, MiruReadTrackingWALRow, MiruReadTrackingWALColumnKey,
         MiruPartitionedActivity, ? extends Exception> readTrackingWAL;
@@ -26,7 +25,6 @@ public class RCVSReadTrackingWALWriter implements MiruReadTrackingWALWriter {
         this.readTrackingSipWAL = readTrackingSipWAL;
     }
 
-    @Override
     public void write(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         writeReadTracking(tenantId, streamId, partitionedActivities);
         writeReadTrackingSip(tenantId, streamId, partitionedActivities);
