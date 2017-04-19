@@ -3,11 +3,14 @@ package com.jivesoftware.os.miru.wal.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
+import com.jivesoftware.os.miru.api.activity.StreamIdPartitionedActivities;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -156,12 +159,19 @@ public class AmzaHttpWALClient implements MiruWALClient<AmzaCursor, AmzaSipCurso
     public void writeReadTracking(MiruTenantId tenantId,
         List<MiruReadEvent> readEvents,
         Function<MiruReadEvent, MiruPartitionedActivity> transformer) throws Exception {
-        List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayListWithCapacity(readEvents.size());
+
+        ListMultimap<MiruStreamId, MiruPartitionedActivity> partitionedActivities = ArrayListMultimap.create();
         for (MiruReadEvent readEvent : readEvents) {
-            partitionedActivities.add(transformer.apply(readEvent));
+            partitionedActivities.put(readEvent.streamId, transformer.apply(readEvent));
         }
+
+        List<StreamIdPartitionedActivities> streamActivities = Lists.newArrayList();
+        for (MiruStreamId streamId : partitionedActivities.keySet()) {
+            streamActivities.add(new StreamIdPartitionedActivities(streamId.getBytes(), partitionedActivities.get(streamId)));
+        }
+
         try {
-            final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
+            final String jsonActivities = requestMapper.writeValueAsString(streamActivities);
             while (true) {
                 try {
                     String result = sendWithTenant(RoutingGroupType.readTracking, tenantId, true, "writeReadTracking",
