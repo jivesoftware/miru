@@ -859,7 +859,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 status.add(new MiruTopologyStatus(miruPartition, lastIngressTimestampMillis, lastQueryTimestampMillis,
                     ingressStatusTimestamps.destroyAfterTimestamp,
                     ingressStatusTimestamps.cleanupAfterTimestamp,
-                    (int) lastTimestampAndEpoch[0],
+                    lastTimestampAndEpoch[0],
                     lastTimestampAndEpoch[1]));
             }
         }
@@ -896,7 +896,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                     status.add(new MiruTopologyStatus(miruPartition, lastIngressTimestampMillis, lastQueryTimestampMillis,
                         ingressStatusTimestamps.destroyAfterTimestamp,
                         ingressStatusTimestamps.cleanupAfterTimestamp,
-                        (int) lastTimestampAndEpoch[0],
+                        lastTimestampAndEpoch[0],
                         lastTimestampAndEpoch[1]));
                 }
             }

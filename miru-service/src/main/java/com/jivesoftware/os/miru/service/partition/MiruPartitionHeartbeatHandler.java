@@ -77,7 +77,7 @@ public class MiruPartitionHeartbeatHandler {
                     coord.partitionId.getId(),
                     Math.max(queryTimestamp, got.queryTimestamp),
                     info != null ? info : got.info,
-                    lastTimestamp);
+                    lastTimestamp == -1 ? got.lastTimestamp : lastTimestamp);
             }
         });
     }
