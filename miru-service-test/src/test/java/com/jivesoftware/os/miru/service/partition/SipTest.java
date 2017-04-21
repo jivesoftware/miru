@@ -264,7 +264,7 @@ public class SipTest {
         }
 
         @Override
-        public void updateLastId(MiruPartitionCoord coord, int lastId) throws Exception {
+        public void updateLastTimestamp(MiruPartitionCoord coord, long lastTimestamp) throws Exception {
 
         }
 

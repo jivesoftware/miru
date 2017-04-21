@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.service.partition;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -52,10 +51,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -335,8 +332,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             MiruPartitionCoordInfo info = new MiruPartitionCoordInfo(update.state, updateStorage);
             heartbeatHandler.updateInfo(coord, info);
             if (update.persistentContext.isPresent()) {
-                int lastId = update.persistentContext.get().activityIndex.lastId(new StackBuffer());
-                heartbeatHandler.updateLastId(coord, lastId);
+                long lastTimestamp = update.persistentContext.get().timeIndex.getLargestTimestamp();
+                heartbeatHandler.updateLastTimestamp(coord, lastTimestamp);
             }
 
             accessorRef.set(update);
@@ -1016,7 +1013,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
     protected class SipMigrateIndexRunnable implements Runnable {
 
         private final AtomicBoolean checkedObsolete = new AtomicBoolean(false);
-        private final AtomicLong updatedLastId = new AtomicLong(-1);
+        private final AtomicLong updatedLastTimestamp = new AtomicLong(-1);
 
         @Override
         public void run() {
@@ -1026,7 +1023,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 MiruPartitionState state = accessor.state;
                 if (state.isOnline()) {
                     checkObsolete(accessor);
-                    updateLastId(accessor, stackBuffer);
+                    updateLastTimestamp(accessor, stackBuffer);
 
                     boolean forceRebuild = false;
                     if (!accessor.persistentContext.isPresent() && !accessor.transientContext.isPresent()) {
@@ -1160,15 +1157,15 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
         }
 
-        private void updateLastId(MiruPartitionAccessor<BM, IBM, C, S> accessor, StackBuffer stackBuffer) throws Exception {
+        private void updateLastTimestamp(MiruPartitionAccessor<BM, IBM, C, S> accessor, StackBuffer stackBuffer) throws Exception {
             if (accessor.transientContext.isPresent()) {
                 return;
             }
 
-            if (accessor.persistentContext.isPresent() && updatedLastId.get() == -1) {
-                int lastId = accessor.persistentContext.get().activityIndex.lastId(stackBuffer);
-                heartbeatHandler.updateLastId(coord, lastId);
-                updatedLastId.set(lastId);
+            if (accessor.persistentContext.isPresent() && updatedLastTimestamp.get() == -1) {
+                long lastTimestamp = accessor.persistentContext.get().timeIndex.getLargestTimestamp();
+                heartbeatHandler.updateLastTimestamp(coord, lastTimestamp);
+                updatedLastTimestamp.set(lastTimestamp);
             }
         }
 
@@ -1273,10 +1270,10 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     trackError,
                     stackBuffer);
                 indexCallbacks.commit(coord);
-                int lastId = accessor.persistentContext.get().activityIndex.lastId(stackBuffer);
-                if (lastId != updatedLastId.get()) {
-                    heartbeatHandler.updateLastId(coord, lastId);
-                    updatedLastId.set(lastId);
+                long lastTimestamp = accessor.persistentContext.get().timeIndex.getLargestTimestamp();
+                if (lastTimestamp != updatedLastTimestamp.get()) {
+                    heartbeatHandler.updateLastTimestamp(coord, lastTimestamp);
+                    updatedLastTimestamp.set(lastTimestamp);
                 }
             }
 

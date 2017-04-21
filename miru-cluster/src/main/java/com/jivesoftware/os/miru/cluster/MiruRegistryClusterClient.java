@@ -121,8 +121,8 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     }
 
     @Override
-    public void updateLastId(MiruPartitionCoord coord, int lastId) throws Exception {
-        clusterRegistry.updateLastId(coord, lastId);
+    public void updateLastTimestamp(MiruPartitionCoord coord, long lastTimestamp) throws Exception {
+        clusterRegistry.updateLastTimestamp(coord, lastTimestamp);
     }
 
     @Override
@@ -145,9 +145,9 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
             })
             .collect(Collectors.toList()));
         for (PartitionInfo partitionInfo : heartbeatRequest.active) {
-            if (partitionInfo.lastId != -1) {
+            if (partitionInfo.lastTimestamp != -1) {
                 MiruPartitionCoord coord = new MiruPartitionCoord(partitionInfo.tenantId, MiruPartitionId.of(partitionInfo.partitionId), miruHost);
-                updateLastId(coord, partitionInfo.lastId);
+                updateLastTimestamp(coord, partitionInfo.lastTimestamp);
             }
         }
 

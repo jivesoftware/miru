@@ -50,7 +50,7 @@ public interface MiruClusterClient {
 
     void removeIngress(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
-    void updateLastId(MiruPartitionCoord coord, int lastId) throws Exception;
+    void updateLastTimestamp(MiruPartitionCoord coord, long lastTimestamp) throws Exception;
 
     void destroyPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 

@@ -90,14 +90,14 @@ public class MiruHttpClusterClient implements MiruClusterClient {
     }
 
     @Override
-    public void updateLastId(MiruPartitionCoord coord, int lastId) throws Exception {
-        send("updateLastId", client -> {
+    public void updateLastTimestamp(MiruPartitionCoord coord, long lastTimestamp) throws Exception {
+        send("updateLastTimestamp", client -> {
             long start = System.currentTimeMillis();
-            String endpointPrefix = "/miru/topology/update/lastId" +
+            String endpointPrefix = "/miru/topology/update/lastTimestamp" +
                 "/" + coord.tenantId.toString() +
                 "/" + coord.partitionId.toString() +
                 "/" + coord.host.toString();
-            HttpResponse response = client.postJson(endpointPrefix + "/" + lastId, "null", null);
+            HttpResponse response = client.postJson(endpointPrefix + "/" + lastTimestamp, "null", null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
             miruStats.egressed(endpointPrefix, 1, System.currentTimeMillis() - start);
             return new ClientResponse<>(r, true);
