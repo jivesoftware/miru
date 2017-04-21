@@ -76,14 +76,15 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
                     MiruPartitionState state = partition.info.state;
                     String lastIngress = timeAgo(System.currentTimeMillis() - topologyStatus.lastIngressTimestamp);
                     String lastQuery = timeAgo(System.currentTimeMillis() - topologyStatus.lastQueryTimestamp);
-                    String lastId = String.valueOf(topologyStatus.lastId);
-                    String lastIdTimeAgo = topologyStatus.lastIdTimestamp == -1 ? "-" : timeAgo(System.currentTimeMillis() - topologyStatus.lastIdTimestamp);
+                    String lastTimestamp = String.valueOf(topologyStatus.lastTimestamp);
+                    String lastTimestampTimeAgo = topologyStatus.lastTimestampEpoch == -1 ? "-"
+                        : timeAgo(System.currentTimeMillis() - topologyStatus.lastTimestampEpoch);
                     PartitionCoordBean partitionCoordBean = new PartitionCoordBean(partition.coord,
                         partition.info.storage,
                         lastIngress,
                         lastQuery,
-                        lastId,
-                        lastIdTimeAgo);
+                        lastTimestamp,
+                        lastTimestampTimeAgo);
                     if (state == MiruPartitionState.online) {
                         partitionBean.getOnline().add(partitionCoordBean);
                     } else if (state == MiruPartitionState.upgrading) {

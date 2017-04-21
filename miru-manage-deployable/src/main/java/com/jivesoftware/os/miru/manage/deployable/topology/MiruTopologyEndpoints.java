@@ -99,24 +99,24 @@ public class MiruTopologyEndpoints {
     }
 
     @POST
-    @Path("/update/lastId/{tenantId}/{partitionId}/{host}/{lastId}")
+    @Path("/update/lastTimestamp/{tenantId}/{partitionId}/{host}/{lastTimestamp}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response updateIngress(@PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId,
         @PathParam("host") String host,
-        @PathParam("lastId") int lastId) {
+        @PathParam("lastTimestamp") long lastTimestamp) {
         try {
             long start = System.currentTimeMillis();
             MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId),
                 new MiruHost(host));
-            registry.updateLastId(coord, lastId);
+            registry.updateLastTimestamp(coord, lastTimestamp);
             Response r = ResponseHelper.INSTANCE.jsonResponse("ok");
-            stats.ingressed("/update/lastId", 1, System.currentTimeMillis() - start);
+            stats.ingressed("/update/lastTimestamp", 1, System.currentTimeMillis() - start);
             return r;
         } catch (Exception x) {
-            String msg = "Failed to update lastId for " + tenantId + " " + partitionId + " " + host + " " + lastId;
+            String msg = "Failed to update lastTimestamp for " + tenantId + " " + partitionId + " " + host + " " + lastTimestamp;
             if (LOG.isDebugEnabled()) {
                 LOG.debug(msg, x);
             } else {

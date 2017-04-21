@@ -44,7 +44,7 @@
                         <th>Storage</th>
                         <th>Last Ingress</th>
                         <th>Last Query</th>
-                        <th>Last Id</th>
+                        <th>Last Timestamp</th>
                         <th>Logical name</th>
                         <th>Actions</th>
                     </tr>
@@ -129,7 +129,7 @@
             <td>{$partition.backingStorage}</td>
             <td>{$partition.lastIngress}</td>
             <td>{$partition.lastQuery}</td>
-            <td>{$partition.lastId} ({$partition.lastIdTimeAgo})</td>
+            <td>{$partition.lastTimestamp} ({$partition.lastTimestampTimeAgo})</td>
             <td>
                 <a href="/ui/hosts/{$partition.host.logicalName|escapeUri}#focus">
                     {$partition.host.logicalName}

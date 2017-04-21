@@ -45,21 +45,24 @@ public class MiruPartitionHeartbeatHandler {
     }
 
     public void updateInfo(MiruPartitionCoord coord, MiruPartitionCoordInfo info) throws Exception {
+        LOG.inc("update>count>info");
         updateHeartbeat(coord, info, -1, -1);
     }
 
     public void updateQueryTimestamp(MiruPartitionCoord coord, long queryTimestamp) throws Exception {
+        LOG.inc("update>count>queryTimestamp");
         updateHeartbeat(coord, null, queryTimestamp, -1);
     }
 
-    public void updateLastId(MiruPartitionCoord coord, int lastId) throws Exception {
-        updateHeartbeat(coord, null, -1, lastId);
+    public void updateLastTimestamp(MiruPartitionCoord coord, long lastTimestamp) throws Exception {
+        LOG.inc("update>count>lastTimestamp");
+        updateHeartbeat(coord, null, -1, lastTimestamp);
     }
 
     private void updateHeartbeat(MiruPartitionCoord coord,
         MiruPartitionCoordInfo info,
         long queryTimestamp,
-        int lastId)
+        long lastTimestamp)
         throws Exception {
 
         heartbeats.compute(coord, (key, got) -> {
@@ -68,13 +71,13 @@ public class MiruPartitionHeartbeatHandler {
                     coord.partitionId.getId(),
                     queryTimestamp,
                     info,
-                    lastId);
+                    lastTimestamp);
             } else {
                 return new PartitionInfo(coord.tenantId,
                     coord.partitionId.getId(),
                     Math.max(queryTimestamp, got.queryTimestamp),
                     info != null ? info : got.info,
-                    lastId);
+                    lastTimestamp);
             }
         });
     }
@@ -89,7 +92,7 @@ public class MiruPartitionHeartbeatHandler {
                     coord.partitionId.getId(),
                     Math.max(partitionInfo.queryTimestamp, got.queryTimestamp),
                     got.info != null ? got.info : partitionInfo.info,
-                    Math.max(partitionInfo.lastId, got.lastId));
+                    Math.max(partitionInfo.lastTimestamp, got.lastTimestamp));
             }
         });
     }

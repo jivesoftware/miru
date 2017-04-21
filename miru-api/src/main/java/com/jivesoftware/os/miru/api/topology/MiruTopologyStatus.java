@@ -12,23 +12,23 @@ public class MiruTopologyStatus {
     public final long lastQueryTimestamp;
     public final long destroyAfterTimestamp;
     public final long cleanupAfterTimestamp;
-    public final int lastId;
-    public final long lastIdTimestamp;
+    public final long lastTimestamp;
+    public final long lastTimestampEpoch;
 
     public MiruTopologyStatus(MiruPartition partition,
         long lastIngressTimestamp,
         long lastQueryTimestamp,
         long destroyAfterTimestamp,
         long cleanupAfterTimestamp,
-        int lastId,
-        long lastIdTimestamp) {
+        long lastTimestamp,
+        long lastTimestampEpoch) {
         this.partition = partition;
         this.lastIngressTimestamp = lastIngressTimestamp;
         this.lastQueryTimestamp = lastQueryTimestamp;
         this.destroyAfterTimestamp = destroyAfterTimestamp;
         this.cleanupAfterTimestamp = cleanupAfterTimestamp;
-        this.lastId = lastId;
-        this.lastIdTimestamp = lastIdTimestamp;
+        this.lastTimestamp = lastTimestamp;
+        this.lastTimestampEpoch = lastTimestampEpoch;
     }
 
     @Override
@@ -39,8 +39,8 @@ public class MiruTopologyStatus {
             ", lastQueryTimestamp=" + lastQueryTimestamp +
             ", destroyAfterTimestamp=" + destroyAfterTimestamp +
             ", cleanupAfterTimestamp=" + cleanupAfterTimestamp +
-            ", lastId=" + lastId +
-            ", lastIdTimestamp=" + lastIdTimestamp +
+            ", lastTimestamp=" + lastTimestamp +
+            ", lastTimestampEpoch=" + lastTimestampEpoch +
             '}';
     }
 }

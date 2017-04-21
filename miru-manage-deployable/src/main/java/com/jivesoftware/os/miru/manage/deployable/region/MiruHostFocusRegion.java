@@ -73,13 +73,13 @@ public class MiruHostFocusRegion implements MiruRegion<MiruHost> {
                 MiruBackingStorage storage = (partition != null) ? partition.info.storage : MiruBackingStorage.unknown;
                 String lastIngress = timeAgo(System.currentTimeMillis() - status.lastIngressTimestamp);
                 String lastQuery = timeAgo(System.currentTimeMillis() - status.lastQueryTimestamp);
-                String lastId = String.valueOf(status.lastId);
-                long lastIdTimestamp = status.lastId == -1 ? -1
-                    : idPacker.unpack(status.lastIdTimestamp)[0] + JiveEpochTimestampProvider.JIVE_EPOCH;
-                String lastIdTimeAgo = lastIdTimestamp == -1 ? "-" : timeAgo(System.currentTimeMillis() - lastIdTimestamp);
+                String lastTimestamp = String.valueOf(status.lastTimestamp);
+                long lastTimestampEpoch = status.lastTimestamp == -1 ? -1
+                    : idPacker.unpack(status.lastTimestampEpoch)[0] + JiveEpochTimestampProvider.JIVE_EPOCH;
+                String lastTimestampTimeAgo = lastTimestampEpoch == -1 ? "-" : timeAgo(System.currentTimeMillis() - lastTimestampEpoch);
                 PartitionCoordBean partitionCoordBean = new PartitionCoordBean(
                     partition != null ? partition.coord : null,
-                    storage, lastIngress, lastQuery, lastId, lastIdTimeAgo);
+                    storage, lastIngress, lastQuery, lastTimestamp, lastTimestampTimeAgo);
                 if (state == MiruPartitionState.online) {
                     tenantBean.getOnline().add(partitionCoordBean);
                 } else if (state == MiruPartitionState.upgrading) {

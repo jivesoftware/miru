@@ -94,7 +94,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     private static final byte[] EMPTY_BYTES = new byte[0];
     private static final byte[] CLUSTER_REGISTRY_RING_NAME = "clusterRegistry".getBytes(Charsets.UTF_8);
 
-    private static final String LASTID_PARTITION_NAME = "partition-lastid-v2";
+    private static final String LAST_TIMESTAMP_PARTITION_NAME = "partition-lastTimestamp";
     private static final String INGRESS_PARTITION_NAME = "partition-ingress";
     private static final String DESTRUCTION_PARTITION_NAME = "partition-destruction";
     private static final String HOSTS_PARTITION_NAME = "hosts";
@@ -167,8 +167,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         return ensureClient(HOSTS_PARTITION_NAME, EVENTUAL_PROPERTIES);
     }
 
-    private EmbeddedClient lastIdClient() throws Exception {
-        return ensureClient(LASTID_PARTITION_NAME, CONSISTENT_PROPERTIES);
+    private EmbeddedClient lastTimestampClient() throws Exception {
+        return ensureClient(LAST_TIMESTAMP_PARTITION_NAME, CONSISTENT_PROPERTIES);
     }
 
     private EmbeddedClient ingressClient() throws Exception {
@@ -307,11 +307,11 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     }
 
     @Override
-    public void updateLastId(MiruPartitionCoord coord, int lastId) throws Exception {
-        EmbeddedClient lastIdClient = lastIdClient();
+    public void updateLastTimestamp(MiruPartitionCoord coord, long lastTimestamp) throws Exception {
+        EmbeddedClient lastTimestampClient = lastTimestampClient();
         AmzaPartitionUpdates updates = new AmzaPartitionUpdates();
-        updates.set(toLastIdKey(coord.tenantId, coord.partitionId, coord.host), UIO.intBytes(lastId), -1);
-        lastIdClient.commit(Consistency.quorum, null, updates, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
+        updates.set(toLastTimestampKey(coord.tenantId, coord.partitionId, coord.host), UIO.longBytes(lastTimestamp), -1);
+        lastTimestampClient.commit(Consistency.quorum, null, updates, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -832,7 +832,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
 
     @Override
     public List<MiruTopologyStatus> getTopologyStatusForTenant(MiruTenantId tenantId) throws Exception {
-        Map<MiruPartitionCoord, long[]> lastIds = getLastIds(tenantId);
+        Map<MiruPartitionCoord, long[]> lastTimestamps = getLastTimestamps(tenantId);
 
         NavigableMap<MiruPartitionId, MinMaxPriorityQueue<HostAndTimestamp>> partitionIdToLatest = tenantLatestTopologies(tenantId);
         List<MiruTopologyStatus> status = new ArrayList<>();
@@ -854,13 +854,13 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hat.host);
                 MiruPartition miruPartition = new MiruPartition(coord, info);
 
-                long[] lastIdAndTimestamp = lastIds.getOrDefault(coord, NO_LASTID);
+                long[] lastTimestampAndEpoch = lastTimestamps.getOrDefault(coord, NO_LAST_TIMESTAMP);
                 IngressStatusTimestamps ingressStatusTimestamps = getIngressStatusTimestamps(coord.tenantId, coord.partitionId);
                 status.add(new MiruTopologyStatus(miruPartition, lastIngressTimestampMillis, lastQueryTimestampMillis,
                     ingressStatusTimestamps.destroyAfterTimestamp,
                     ingressStatusTimestamps.cleanupAfterTimestamp,
-                    (int) lastIdAndTimestamp[0],
-                    lastIdAndTimestamp[1]));
+                    (int) lastTimestampAndEpoch[0],
+                    lastTimestampAndEpoch[1]));
             }
         }
         return status;
@@ -868,7 +868,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
 
     @Override
     public List<MiruTopologyStatus> getTopologyStatusForTenantHost(MiruTenantId tenantId, MiruHost host) throws Exception {
-        Map<MiruPartitionCoord, long[]> lastIds = getLastIds(tenantId);
+        Map<MiruPartitionCoord, long[]> lastTimestamps = getLastTimestamps(tenantId);
 
         NavigableMap<MiruPartitionId, MinMaxPriorityQueue<HostAndTimestamp>> partitionIdToLatest = tenantLatestTopologies(tenantId);
         List<MiruTopologyStatus> status = new ArrayList<>();
@@ -891,34 +891,34 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                     MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hat.host);
                     MiruPartition miruPartition = new MiruPartition(coord, info);
 
-                    long[] lastIdAndTimestamp = lastIds.getOrDefault(coord, NO_LASTID);
+                    long[] lastTimestampAndEpoch = lastTimestamps.getOrDefault(coord, NO_LAST_TIMESTAMP);
                     IngressStatusTimestamps ingressStatusTimestamps = getIngressStatusTimestamps(coord.tenantId, coord.partitionId);
                     status.add(new MiruTopologyStatus(miruPartition, lastIngressTimestampMillis, lastQueryTimestampMillis,
                         ingressStatusTimestamps.destroyAfterTimestamp,
                         ingressStatusTimestamps.cleanupAfterTimestamp,
-                        (int) lastIdAndTimestamp[0],
-                        lastIdAndTimestamp[1]));
+                        (int) lastTimestampAndEpoch[0],
+                        lastTimestampAndEpoch[1]));
                 }
             }
         }
         return status;
     }
 
-    private static final long[] NO_LASTID = { -1, -1 };
+    private static final long[] NO_LAST_TIMESTAMP = { -1, -1 };
 
-    private Map<MiruPartitionCoord, long[]> getLastIds(MiruTenantId tenantId) throws Exception {
-        EmbeddedClient lastIdClient = lastIdClient();
-        byte[] tenantKey = toLastIdKey(tenantId, null, null);
-        Map<MiruPartitionCoord, long[]> lastIds = Maps.newHashMap();
-        lastIdClient.scan(Collections.singletonList(new ScanRange(null, tenantKey, null, WALKey.prefixUpperExclusive(tenantKey))),
+    private Map<MiruPartitionCoord, long[]> getLastTimestamps(MiruTenantId tenantId) throws Exception {
+        EmbeddedClient lastTimestampClient = lastTimestampClient();
+        byte[] tenantKey = toLastTimestampKey(tenantId, null, null);
+        Map<MiruPartitionCoord, long[]> lastTimestamps = Maps.newHashMap();
+        lastTimestampClient.scan(Collections.singletonList(new ScanRange(null, tenantKey, null, WALKey.prefixUpperExclusive(tenantKey))),
             (prefix, key, value, timestamp, version) -> {
                 if (value != null) {
-                    MiruPartitionCoord coord = lastIdKeyToCoord(key);
-                    lastIds.put(coord, new long[] { (long) UIO.bytesInt(value), timestamp });
+                    MiruPartitionCoord coord = lastTimestampKeyToCoord(key);
+                    lastTimestamps.put(coord, new long[] { UIO.bytesLong(value), timestamp });
                 }
                 return true;
             }, true);
-        return lastIds;
+        return lastTimestamps;
     }
 
     @Override
@@ -1258,7 +1258,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         return IngressType.fromType(keyBytes[keyBytes.length - 1]);
     }
 
-    private byte[] toLastIdKey(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) {
+    private byte[] toLastTimestampKey(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) {
         byte[] keyBytes;
         byte[] tenantBytes = tenantId.getBytes();
         if (partitionId != null) {
@@ -1296,7 +1296,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         return keyBytes;
     }
 
-    private MiruPartitionCoord lastIdKeyToCoord(byte[] keyBytes) {
+    private MiruPartitionCoord lastTimestampKeyToCoord(byte[] keyBytes) {
         // tenant
         int tenantLength = FilerIO.bytesInt(keyBytes, 0);
         byte[] tenantBytes = new byte[tenantLength];
