@@ -6,6 +6,11 @@ import java.nio.ByteBuffer;
 
 public class MiruActivityWALColumnKeyMarshaller implements TypeMarshaller<MiruActivityWALColumnKey> {
 
+    public static void main(String[] args) {
+        System.out.println(Long.toHexString(446611203385475072L).toUpperCase());
+        System.out.println(Long.toHexString(509896568015429636L).toUpperCase());
+    }
+
     @Override
     public MiruActivityWALColumnKey fromBytes(byte[] bytes) throws Exception {
         ByteBuffer buffer = ByteBuffer.wrap(bytes);

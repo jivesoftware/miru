@@ -86,7 +86,8 @@ public class MiruInspectRegion implements MiruPageRegion<InspectInput> {
                     modelId,
                     features,
                     partitionIds,
-                    deletableRanges);
+                    deletableRanges,
+                    0f);
 
                 List<Map<String, Object>> modelFeatures = Lists.newArrayList();
                 for (Entry<String, MergedScores> entry : scores.entrySet()) {

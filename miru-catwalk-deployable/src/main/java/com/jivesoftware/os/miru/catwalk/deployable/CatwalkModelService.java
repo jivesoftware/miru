@@ -8,13 +8,13 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import com.jivesoftware.os.amza.api.PartitionClient;
 import com.jivesoftware.os.amza.api.PartitionClientProvider;
+import com.jivesoftware.os.amza.api.filer.HeapFiler;
 import com.jivesoftware.os.amza.api.filer.UIO;
 import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionName;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.stream.RowType;
-import com.jivesoftware.os.amza.service.filer.HeapFiler;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -96,7 +96,8 @@ public class CatwalkModelService {
         String modelId,
         CatwalkFeature[] features,
         TreeSet<Integer> partitionIds,
-        List<FeatureRange> deletableRanges) throws Exception {
+        List<FeatureRange> deletableRanges,
+        float gatherMinFeatureScore) throws Exception {
 
         PartitionClient client = modelClient(tenantId);
         FeatureRange[] currentRange = { null };
@@ -104,7 +105,7 @@ public class CatwalkModelService {
         Map<String, MergedScores> fieldIdsToFeatureScores = new HashMap<>();
         AtomicLong count = new AtomicLong(0);
         AtomicLong bytesRead = new AtomicLong(0);
-        client.scan(Consistency.leader_quorum,
+        client.scanFiltered(Consistency.leader_quorum,
             useScanCompression,
             prefixedKeyRangeStream -> {
                 for (int i = 0; i < features.length; i++) {
@@ -117,6 +118,7 @@ public class CatwalkModelService {
                 }
                 return true;
             },
+            new CatwalkKeyValueFilter(gatherMinFeatureScore),
             (prefix, key, value, timestamp, version) -> {
                 count.incrementAndGet();
                 if (key != null) {
@@ -242,7 +244,14 @@ public class CatwalkModelService {
 
             CatwalkFeature[] features = catwalkQuery.definition.features;
             int numeratorsCount = catwalkQuery.definition.numeratorCount;
-            Map<String, MergedScores> featureNameToMergedScores = gatherModel(context, tenantId, catwalkId, modelId, features, partitionIds, deletableRanges);
+            Map<String, MergedScores> featureNameToMergedScores = gatherModel(context,
+                tenantId,
+                catwalkId,
+                modelId,
+                features,
+                partitionIds,
+                deletableRanges,
+                gatherMinFeatureScore);
 
             long[] modelCounts = new long[features.length];
             long totalCount = 0;
@@ -496,15 +505,15 @@ public class CatwalkModelService {
         List<FeatureScore> scores,
         MiruTimeRange timeRange) throws IOException {
 
+        byte[] lengthBuffer = new byte[8];
         HeapFiler filer = new HeapFiler(1 + 1 + 4 + 8 + 8 + 4 + scores.size() * (4 + 4 + 10 + 1 + (numeratorsCount * 8) + 8) + 8 + 8);
 
         UIO.writeByte(filer, (byte) 3, "version");
         UIO.writeByte(filer, partitionIsClosed ? (byte) 1 : (byte) 0, "partitionIsClosed");
 
-        UIO.writeLong(filer, modelCount, "modelCount");
-        UIO.writeLong(filer, totalCount, "totalCount");
+        UIO.writeLong(filer, modelCount, "modelCount", lengthBuffer);
+        UIO.writeLong(filer, totalCount, "totalCount", lengthBuffer);
 
-        byte[] lengthBuffer = new byte[4];
         UIO.writeInt(filer, scores.size(), "scoresLength", lengthBuffer);
         for (FeatureScore score : scores) {
             UIO.writeInt(filer, score.termIds.length, "termsLength", lengthBuffer);
@@ -513,14 +522,14 @@ public class CatwalkModelService {
             }
             UIO.writeByte(filer, (byte) score.numerators.length, "numeratorsCount");
             for (int i = 0; i < score.numerators.length; i++) {
-                UIO.writeLong(filer, score.numerators[i], "numerator");
+                UIO.writeLong(filer, score.numerators[i], "numerator", lengthBuffer);
             }
-            UIO.writeLong(filer, score.denominator, "denominator");
+            UIO.writeLong(filer, score.denominator, "denominator", lengthBuffer);
             UIO.writeInt(filer, score.numPartitions, "numPartitions", lengthBuffer);
         }
 
-        UIO.writeLong(filer, timeRange == null ? -1 : timeRange.smallestTimestamp, "smallestTimestamp");
-        UIO.writeLong(filer, timeRange == null ? -1 : timeRange.largestTimestamp, "largestTimestamp");
+        UIO.writeLong(filer, timeRange == null ? -1 : timeRange.smallestTimestamp, "smallestTimestamp", lengthBuffer);
+        UIO.writeLong(filer, timeRange == null ? -1 : timeRange.largestTimestamp, "largestTimestamp", lengthBuffer);
 
         return filer.getBytes();
     }
@@ -551,10 +560,10 @@ public class CatwalkModelService {
         }
 
         long totalCount = UIO.readLong(filer, "totalCount", lengthBuffer);
-        int scoresLength = UIO.readInt(filer, "scoresLength", value);
+        int scoresLength = UIO.readInt(filer, "scoresLength", lengthBuffer);
         List<FeatureScore> scores = new ArrayList<>(scoresLength);
         for (int i = 0; i < scoresLength; i++) {
-            MiruTermId[] terms = new MiruTermId[UIO.readInt(filer, "termsLength", value)];
+            MiruTermId[] terms = new MiruTermId[UIO.readInt(filer, "termsLength", lengthBuffer)];
             for (int j = 0; j < terms.length; j++) {
                 terms[j] = new MiruTermId(UIO.readByteArray(filer, "term", lengthBuffer));
             }

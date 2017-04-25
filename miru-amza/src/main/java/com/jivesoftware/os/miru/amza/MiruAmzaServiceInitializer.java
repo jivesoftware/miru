@@ -39,6 +39,7 @@ public class MiruAmzaServiceInitializer {
         SnowflakeIdPacker idPacker = new SnowflakeIdPacker();
         JiveEpochTimestampProvider timestampProvider = new JiveEpochTimestampProvider();
 
+        AmzaStats amzaSystemStats = new AmzaStats();
         AmzaStats amzaStats = new AmzaStats();
         AmzaInterner interner = new AmzaInterner();
 
@@ -85,6 +86,7 @@ public class MiruAmzaServiceInitializer {
             clusterName,
             amzaServiceConfig,
             amzaLabConfig,
+            amzaSystemStats,
             amzaStats,
             interner,
             idPacker,
