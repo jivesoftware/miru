@@ -97,7 +97,8 @@ public class CatwalkModelService {
         CatwalkFeature[] features,
         TreeSet<Integer> partitionIds,
         List<FeatureRange> deletableRanges,
-        float gatherMinFeatureScore) throws Exception {
+        float minFeatureScore,
+        int maxFeatureScoresPerFeature) throws Exception {
 
         PartitionClient client = modelClient(tenantId);
         FeatureRange[] currentRange = { null };
@@ -118,7 +119,7 @@ public class CatwalkModelService {
                 }
                 return true;
             },
-            new CatwalkKeyValueFilter(gatherMinFeatureScore),
+            new CatwalkKeyValueFilter(minFeatureScore, maxFeatureScoresPerFeature),
             (prefix, key, value, timestamp, version) -> {
                 count.incrementAndGet();
                 if (key != null) {
@@ -251,7 +252,8 @@ public class CatwalkModelService {
                 features,
                 partitionIds,
                 deletableRanges,
-                gatherMinFeatureScore);
+                gatherMinFeatureScore,
+                gatherMaxFeatureScoresPerFeature);
 
             long[] modelCounts = new long[features.length];
             long totalCount = 0;
