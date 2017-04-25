@@ -80,7 +80,8 @@ public class CatwalkKeyValueFilter implements KeyValueFilter {
                 fp[i] = (int) in.getFilePointer();
                 int ts = UIO.readInt(in, "termsLength", lengthBuffer);
                 for (int j = 0; j < ts; j++) {
-                    UIO.readByteArray(in, "term", lengthBuffer);
+                    int termLength = UIO.readInt(in, "termLength", lengthBuffer);
+                    in.skip(termLength);
                 }
 
                 long maxNumerator = 0;
