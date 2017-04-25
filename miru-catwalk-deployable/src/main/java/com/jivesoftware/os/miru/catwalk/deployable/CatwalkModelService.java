@@ -123,7 +123,7 @@ public class CatwalkModelService {
             (prefix, key, value, timestamp, version) -> {
                 count.incrementAndGet();
                 if (key != null) {
-                    bytesRead.addAndGet(value.length);
+                    bytesRead.addAndGet(key.length);
                 }
                 if (value != null) {
                     bytesRead.addAndGet(value.length);
@@ -287,13 +287,17 @@ public class CatwalkModelService {
                             .create();
 
                         if (gatherMinFeatureScore > 0f) {
-                            topFeatures.addAll(filterEligibleScores(mergedScores.mergedScores.featureScores, gatherMinFeatureScore));
+                            List<FeatureScore> filtered = filterEligibleScores(mergedScores.mergedScores.featureScores, gatherMinFeatureScore);
+                            topFeatures.addAll(filtered);
+                            LOG.inc("service>model>filtered>score", mergedScores.mergedScores.featureScores.size() - filtered.size());
                         } else {
                             topFeatures.addAll(mergedScores.mergedScores.featureScores);
                         }
                         featureScores[i] = Lists.newArrayList(topFeatures);
+                        LOG.inc("service>model>filtered>top", mergedScores.mergedScores.featureScores.size() - gatherMaxFeatureScoresPerFeature);
                     } else if (gatherMinFeatureScore > 0f) {
                         featureScores[i] = filterEligibleScores(mergedScores.mergedScores.featureScores, gatherMinFeatureScore);
+                        LOG.inc("service>model>filtered>score", mergedScores.mergedScores.featureScores.size() - featureScores[i].size());
                     } else {
                         featureScores[i] = mergedScores.mergedScores.featureScores;
                     }
@@ -763,10 +767,8 @@ public class CatwalkModelService {
     }
 
     private static final Comparator<FeatureScore> FEATURE_SCORES_PER_FEATURE_COMPARATOR = (o1, o2) -> {
-        long n1 = Longs.max(o1.numerators);
-        long n2 = Longs.max(o2.numerators);
-        float s1 = (float) n1 / o1.denominator;
-        float s2 = (float) n2 / o2.denominator;
+        float s1 = o1.getMaxScore();
+        float s2 = o2.getMaxScore();
         int c = Float.compare(s2, s1); // descending
         if (c != 0) {
             return c;
