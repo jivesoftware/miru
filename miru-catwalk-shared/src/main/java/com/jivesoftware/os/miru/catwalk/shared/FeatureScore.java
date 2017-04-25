@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.catwalk.shared;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.primitives.Longs;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.io.Serializable;
 import java.util.Arrays;
@@ -15,6 +16,8 @@ public class FeatureScore implements Serializable {
     public final long[] numerators;
     public final long denominator;
     public final int numPartitions;
+
+    private transient float maxScore = -1f;
 
     @JsonCreator
     public FeatureScore(
@@ -36,6 +39,13 @@ public class FeatureScore implements Serializable {
             + ", denominator=" + denominator
             + ", numPartitions=" + numPartitions
             + '}';
+    }
+
+    public float getMaxScore() {
+        if (maxScore == -1f) {
+            maxScore = (float) Longs.max(numerators) / denominator;
+        }
+        return maxScore;
     }
 
     @Override
