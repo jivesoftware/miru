@@ -317,6 +317,6 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
 
     @Override
     public String getTitle() {
-        return "RCVS Activity WAL";
+        return "Activity WAL";
     }
 }
