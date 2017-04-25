@@ -4,7 +4,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.catwalk.shared.FeatureScore;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.util.Arrays;
-import junit.framework.Assert;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 /**
