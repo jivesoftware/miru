@@ -26,11 +26,14 @@ public class CatwalkKeyValueFilter implements KeyValueFilter {
         long version,
         KeyValueStream stream) throws Exception {
 
-        HeapFiler in = HeapFiler.fromBytes(value, value.length);
-        HeapFiler out = new HeapFiler((int) in.length());
-        filterRewrite(in, out);
-
-        return stream.stream(prefix, key, out.getBytes(), timestamp, tombstoned, version);
+        if (value != null) {
+            HeapFiler in = HeapFiler.fromBytes(value, value.length);
+            HeapFiler out = new HeapFiler((int) in.length());
+            filterRewrite(in, out);
+            return stream.stream(prefix, key, out.getBytes(), timestamp, tombstoned, version);
+        } else {
+            return stream.stream(prefix, key, value, timestamp, tombstoned, version);
+        }
     }
 
     private void filterRewrite(HeapFiler in, HeapFiler out) throws IOException {
