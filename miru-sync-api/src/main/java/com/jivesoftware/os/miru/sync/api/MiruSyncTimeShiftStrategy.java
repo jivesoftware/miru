@@ -5,7 +5,8 @@ package com.jivesoftware.os.miru.sync.api;
  */
 public enum MiruSyncTimeShiftStrategy {
     none(0),
-    linear(1);
+    linear(1),
+    step(2);
 
     private final int id;
 

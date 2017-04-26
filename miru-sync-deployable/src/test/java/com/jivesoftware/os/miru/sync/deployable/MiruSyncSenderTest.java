@@ -46,7 +46,6 @@ import com.jivesoftware.os.miru.sync.api.MiruSyncTenantConfig;
 import com.jivesoftware.os.miru.sync.api.MiruSyncTenantTuple;
 import com.jivesoftware.os.miru.sync.api.MiruSyncTimeShiftStrategy;
 import com.jivesoftware.os.miru.sync.deployable.MiruSyncSender.ProgressType;
-import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
@@ -168,6 +167,8 @@ public class MiruSyncSenderTest {
             senderName -> ImmutableMap.of(new MiruSyncTenantTuple(tenantId, tenantId), new MiruSyncTenantConfig(
                 -1,
                 Long.MAX_VALUE,
+                0,
+                0,
                 0,
                 MiruSyncTimeShiftStrategy.none,
                 false)),
@@ -293,6 +294,15 @@ public class MiruSyncSenderTest {
             List<Integer> begins = Collections.singletonList(1);
             List<Integer> ends = (partitionId.getId() < largestPartitionId.get()) ? begins : Collections.emptyList();
             return new MiruActivityWALStatus(partitionId, Collections.emptyList(), begins, ends);
+        }
+
+        @Override
+        public long getActivityCount(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+            if (partitionId.getId() == largestPartitionId.get()) {
+                return 0;
+            } else {
+                return 1;
+            }
         }
 
         @Override

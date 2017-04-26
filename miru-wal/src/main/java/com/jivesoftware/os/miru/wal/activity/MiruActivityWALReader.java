@@ -19,6 +19,8 @@ public interface MiruActivityWALReader<C extends MiruCursor<C, S>, S extends Mir
 
     HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId, boolean createIfAbsent) throws Exception;
 
+    long count(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
     C stream(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         C afterCursor,

@@ -363,6 +363,32 @@ public class RCVSWALEndpoints {
     }
 
     @POST
+    @Path("/activityCount/{tenantId}/{partitionId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getActivityCount(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId)
+        throws Exception {
+        try {
+            long start = System.currentTimeMillis();
+            long count = walDirector.getActivityCount(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
+            stats.ingressed("/activityCount/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            return responseHelper.jsonResponse(count);
+        } catch (MiruWALNotInitializedException x) {
+            log.error("WAL not initialized calling getActivityCount({},{})",
+                new Object[] { tenantId, partitionId }, x);
+            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
+        } catch (MiruWALWrongRouteException x) {
+            log.error("Wrong route calling getActivityCount({},{})",
+                new Object[] { tenantId, partitionId }, x);
+            return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
+        } catch (Exception x) {
+            log.error("Failed calling getActivityCount({},{})", new Object[] { tenantId, partitionId }, x);
+            return responseHelper.errorResponse("Server error", x);
+        }
+    }
+
+    @POST
     @Path("/activity/{tenantId}/{partitionId}/{batchSize}/{stopAtTimestamp}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)

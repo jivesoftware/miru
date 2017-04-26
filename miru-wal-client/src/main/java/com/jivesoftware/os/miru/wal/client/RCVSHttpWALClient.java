@@ -274,6 +274,35 @@ public class RCVSHttpWALClient implements MiruWALClient<RCVSCursor, RCVSSipCurso
     }
 
     @Override
+    public long getActivityCount(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        try {
+            String endpoint = "/miru/wal/rcvs/activityCount/" + tenantId.toString() + "/" + partitionId.getId();
+            while (true) {
+                try {
+                    @SuppressWarnings("unchecked")
+                    Long response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false,
+                        "getActivityCount",
+                        client -> {
+                            HttpResponse httpResponse = client.postJson(endpoint, "{}", null);
+                            return extract(httpResponse, Long.class, null);
+                        });
+                    if (response != null) {
+                        return response;
+                    }
+                    sickThreads.sick(new Throwable("Empty response"));
+                    LOG.warn("Empty response while counting, will retry in {} ms", sleepOnFailureMillis);
+                } catch (Exception e) {
+                    sickThreads.sick(e);
+                    LOG.warn("Failure while counting, will retry in {} ms", new Object[] { sleepOnFailureMillis }, e);
+                }
+                Thread.sleep(sleepOnFailureMillis);
+            }
+        } finally {
+            sickThreads.recovered();
+        }
+    }
+
+    @Override
     public StreamBatch<MiruWALEntry, RCVSCursor> getActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         RCVSCursor cursor,
