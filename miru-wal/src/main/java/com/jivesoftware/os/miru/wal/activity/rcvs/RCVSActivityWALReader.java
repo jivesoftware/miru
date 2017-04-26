@@ -70,6 +70,21 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
     }
 
     @Override
+    public long count(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        RCVSCursor cursor = RCVSCursor.INITIAL;
+        long[] count = { 0 };
+        while (!cursor.endOfStream) {
+            cursor = stream(tenantId, partitionId, cursor, 10_000, 0L, (collisionId, partitionedActivity, timestamp) -> {
+                if (partitionedActivity.type.isActivityType()) {
+                    count[0]++;
+                }
+                return true;
+            });
+        }
+        return count[0];
+    }
+
+    @Override
     public RCVSCursor stream(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         RCVSCursor afterCursor,

@@ -83,6 +83,11 @@ public class RCVSWALDirectorClient implements MiruWALClient<RCVSCursor, RCVSSipC
     }
 
     @Override
+    public long getActivityCount(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return director.getActivityCount(tenantId, partitionId);
+    }
+
+    @Override
     public StreamBatch<MiruWALEntry, RCVSCursor> getActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         RCVSCursor cursor,

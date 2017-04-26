@@ -432,6 +432,8 @@ public class MiruSyncMain {
                             MiruSyncTenantConfig config = new MiruSyncTenantConfig(System.currentTimeMillis() - loopbackSyncDurationMillis,
                                 Long.MAX_VALUE,
                                 0,
+                                0,
+                                0,
                                 MiruSyncTimeShiftStrategy.none,
                                 false);
                             for (MiruTenantId tenantId : tenantIds) {
@@ -492,6 +494,8 @@ public class MiruSyncMain {
                             Map<MiruSyncTenantTuple, MiruSyncTenantConfig> tenantTupleConfigs = Maps.newHashMap();
                             MiruSyncTenantConfig config = new MiruSyncTenantConfig(System.currentTimeMillis() - loopbackSyncDurationMillis,
                                 Long.MAX_VALUE,
+                                0,
+                                0,
                                 0,
                                 MiruSyncTimeShiftStrategy.none,
                                 false);

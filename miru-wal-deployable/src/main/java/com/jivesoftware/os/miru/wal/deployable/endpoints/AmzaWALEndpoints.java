@@ -4,6 +4,7 @@ import com.google.common.base.Charsets;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.StreamIdPartitionedActivities;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
@@ -18,7 +19,6 @@ import com.jivesoftware.os.miru.api.wal.SipAndLastSeen;
 import com.jivesoftware.os.miru.wal.AmzaWALDirector;
 import com.jivesoftware.os.miru.wal.MiruWALNotInitializedException;
 import com.jivesoftware.os.miru.wal.MiruWALWrongRouteException;
-import com.jivesoftware.os.miru.api.activity.StreamIdPartitionedActivities;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
@@ -351,6 +351,32 @@ public class AmzaWALEndpoints {
             return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
         } catch (Exception x) {
             log.error("Failed calling sipActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, sipAndLastSeen }, x);
+            return responseHelper.errorResponse("Server error", x);
+        }
+    }
+
+    @POST
+    @Path("/activityCount/{tenantId}/{partitionId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getActivityCount(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId)
+        throws Exception {
+        try {
+            long start = System.currentTimeMillis();
+            long count = walDirector.getActivityCount(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
+            stats.ingressed("/activityCount/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            return responseHelper.jsonResponse(count);
+        } catch (MiruWALNotInitializedException x) {
+            log.error("WAL not initialized calling getActivityCount({},{})",
+                new Object[] { tenantId, partitionId }, x);
+            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
+        } catch (MiruWALWrongRouteException x) {
+            log.error("Wrong route calling getActivityCount({},{})",
+                new Object[] { tenantId, partitionId }, x);
+            return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
+        } catch (Exception x) {
+            log.error("Failed calling getActivityCount({},{})", new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }

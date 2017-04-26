@@ -252,6 +252,10 @@ public class RCVSWALDirector {
         return activityWALReader.getVersionedEntries(tenantId, partitionId, timestamps);
     }
 
+    public long getActivityCount(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return activityWALReader.count(tenantId, partitionId);
+    }
+
     public StreamBatch<MiruWALEntry, RCVSCursor> getActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         RCVSCursor cursor,

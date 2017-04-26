@@ -96,6 +96,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
     private final Set<TenantTuplePartition> maxAgeSet = Collections.newSetFromMap(Maps.newConcurrentMap());
     private final Set<TenantTuplePartition> forwardClosedSet = Collections.newSetFromMap(Maps.newConcurrentMap());
+    private final Set<TenantTuplePartition> forwardIgnoreSet = Collections.newSetFromMap(Maps.newConcurrentMap());
+    private final Set<MiruSyncTenantTuple> ensuredTenantIds = Collections.newSetFromMap(Maps.newConcurrentMap());
     private final SetMultimap<MiruTenantId, MiruTenantId> registeredSchemas = Multimaps.synchronizedSetMultimap(HashMultimap.create());
     private final AtomicBoolean running = new AtomicBoolean(false);
 
@@ -220,11 +222,19 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         registeredSchemas.removeAll(tenantId);
 
         PartitionClient cursorClient = cursorClient();
-        byte[] fromCursorKey = cursorKey(tenantId, null, null);
-        byte[] toCursorKey = WALKey.prefixUpperExclusive(fromCursorKey);
         List<byte[]> cursorKeys = Lists.newArrayList();
         cursorClient.scan(Consistency.leader_quorum, false,
-            prefixedKeyRangeStream -> prefixedKeyRangeStream.stream(null, fromCursorKey, null, toCursorKey),
+            prefixedKeyRangeStream -> {
+                byte[] fromCursorKey = tenantPartitionCursorKey(tenantId, null, null);
+                byte[] toCursorKey = WALKey.prefixUpperExclusive(fromCursorKey);
+                prefixedKeyRangeStream.stream(null, fromCursorKey, null, toCursorKey);
+
+                byte[] fromStateKey = tenantPartitionStateKey(tenantId, null, null);
+                byte[] toStateKey = WALKey.prefixUpperExclusive(fromStateKey);
+                prefixedKeyRangeStream.stream(null, fromCursorKey, null, toStateKey);
+
+                return true;
+            },
             (prefix, key, value, timestamp, version) -> {
                 if (value != null) {
                     cursorKeys.add(key);
@@ -335,6 +345,11 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     break;
                 }
 
+                ensureTenantPartitionState(tenantTuple, entry.getValue(), stripe);
+                if (!isElected(stripe)) {
+                    break;
+                }
+
                 int synced = syncTenant(tenantTuple, entry.getValue(), stripe, forward);
                 if (synced > 0) {
                     LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, tenantTuple.from, synced, forward);
@@ -363,6 +378,57 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             toSyncClient.registerSchema(toTenantId, schema);
             registeredSchemas.put(fromTenantId, toTenantId);
         }
+    }
+
+    private boolean ensureTenantPartitionState(MiruSyncTenantTuple tenantTuple, MiruSyncTenantConfig tenantConfig, int stripe) throws Exception {
+        if (ensuredTenantIds.contains(tenantTuple)) {
+            return true;
+        }
+        if (tenantConfig.timeShiftStrategy == MiruSyncTimeShiftStrategy.step) {
+            MiruPartitionId largestPartitionId = fromWALClient.getLargestPartitionId(tenantTuple.from);
+            if (!isElected(stripe)) {
+                return false;
+            }
+
+            MiruPartitionId smallestPartitionId = largestPartitionId;
+            for (MiruPartitionId partitionId = largestPartitionId; partitionId != null; partitionId = partitionId.prev()) {
+                MiruActivityWALStatus status = fromWALClient.getActivityWALStatusForTenant(tenantTuple.from, partitionId);
+                if (!isElected(stripe)) {
+                    return false;
+                }
+                long maxClockTimestamp = 0;
+                for (WriterCount count : status.counts) {
+                    maxClockTimestamp = Math.max(maxClockTimestamp, count.clockTimestamp);
+                }
+                if (maxClockTimestamp < tenantConfig.timeShiftStartTimestampMillis) {
+                    break;
+                } else {
+                    smallestPartitionId = partitionId;
+                }
+            }
+
+            int partitionCount = largestPartitionId.getId() - smallestPartitionId.getId() + 1;
+            long timeShiftRangeMillis = tenantConfig.timeShiftStopTimestampMillis - tenantConfig.timeShiftStartTimestampMillis;
+            long rangePerPartitionMillis = timeShiftRangeMillis / partitionCount;
+            long startTimestampMillis = tenantConfig.timeShiftStartTimestampMillis;
+            for (MiruPartitionId partitionId = smallestPartitionId; partitionId.compareTo(largestPartitionId) <= 0; partitionId = partitionId.next()) {
+                TenantPartitionState state = getTenantPartitionState(tenantTuple.from, tenantTuple.to, partitionId);
+                if (state == null) {
+                    long count = fromWALClient.getActivityCount(tenantTuple.from, partitionId);
+                    // at minimum, skip over deletion bit, this sucks because orderId bits are lower than writerId bits
+                    // so we can't safely leverage orderId space :(
+                    long timeShiftMillis = Math.max(rangePerPartitionMillis / count, 2);
+                    long stopTimestampMillis = startTimestampMillis + rangePerPartitionMillis;
+                    LOG.info("Initialized step state from:{} to:{} partitionId:{} count:{} timeShift:{} startTimestamp:{} stopTimestamp:{}",
+                        tenantTuple.from, tenantTuple.to, partitionId, count, timeShiftMillis, startTimestampMillis, stopTimestampMillis);
+                    state = new TenantPartitionState(timeShiftMillis, startTimestampMillis, stopTimestampMillis);
+                    saveTenantPartitionCursor(tenantTuple, partitionId, null, state);
+                }
+                startTimestampMillis += rangePerPartitionMillis;
+            }
+        }
+        ensuredTenantIds.add(tenantTuple);
+        return true;
     }
 
     private int syncTenant(MiruSyncTenantTuple tenantTuple, MiruSyncTenantConfig tenantConfig, int stripe, ProgressType type) throws Exception {
@@ -400,7 +466,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 LOG.error("Reverse sync encountered open partition from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
                 return 0;
             }
-        } else if (forwardClosedSet.contains(tenantTuplePartition)) {
+        } else if (forwardClosedSet.contains(tenantTuplePartition) || forwardIgnoreSet.contains(tenantTuplePartition)) {
             return 0;
         } else {
             return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status, progress.forwardTaking);
@@ -424,22 +490,45 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 tenantTuple.from, tenantTuple.to, partitionId);
         }
 
+        TenantTuplePartition tenantTuplePartition = new TenantTuplePartition(tenantTuple, partitionId);
         boolean closed = !status.begins.isEmpty() && status.ends.containsAll(status.begins);
         int numWriters = Math.max(status.begins.size(), 1);
         int lastIndex = -1;
 
-        AtomicLong clockTimestamp = new AtomicLong(-1);
-        MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(clockTimestamp::get);
         long timeShift = 0;
         long clockShift = 0;
+        long nextClockTimestamp = 0;
+        long nextActivityTimestamp = 0;
+        TenantPartitionState state = null;
         if (tenantConfig.timeShiftStrategy == MiruSyncTimeShiftStrategy.linear && tenantConfig.timeShiftMillis > 0) {
             timeShift = idPacker.pack(tenantConfig.timeShiftMillis, 0, 0); // packing with zeroes should preserve writerId, orderId on shift
             clockShift = tenantConfig.timeShiftMillis;
+        } else if (tenantConfig.timeShiftStrategy == MiruSyncTimeShiftStrategy.step) {
+            state = getTenantPartitionState(tenantTuple.from, tenantTuple.to, partitionId);
+            if (state != null) {
+                timeShift = idPacker.pack(state.timeShiftMillis, 0, 0); // packing with zeroes should preserve writerId, orderId on shift
+                clockShift = state.timeShiftMillis;
+
+                nextActivityTimestamp = orderIdProvider.getApproximateId(state.timeShiftStartTimestampMillis);
+                nextClockTimestamp = state.timeShiftStartTimestampMillis;
+            } else {
+                if (type == forward) {
+                    if (forwardIgnoreSet.add(tenantTuplePartition)) {
+                        LOG.info("Forward progress is missing step state from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
+                    }
+                } else {
+                    LOG.error("Reverse progress is missing step state from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
+                }
+                return 0;
+            }
         }
 
         String readableFromTo = tenantTuple.from.toString() + "/" + tenantTuple.to.toString();
         String statsBytes = "sender/sync/" + readableFromTo + "/bytes";
         String statsCount = "sender/sync/" + readableFromTo + "/count";
+
+        AtomicLong clockTimestamp = new AtomicLong(-1);
+        MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(clockTimestamp::get);
 
         C cursor = getTenantPartitionCursor(tenantTuple.from, tenantTuple.to, partitionId);
         if (cursor == null) {
@@ -478,17 +567,32 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                         activityTypes++;
                         if ((tenantConfig.startTimestampMillis == -1 || entry.activity.clockTimestamp > tenantConfig.startTimestampMillis)
                             && (tenantConfig.stopTimestampMillis == -1 || entry.activity.clockTimestamp < tenantConfig.stopTimestampMillis)) {
-                            //TODO rough estimate of index depth, wildly inaccurate if we skip most of a partition
-                            lastIndex = Math.max(lastIndex, numWriters * entry.activity.index);
-                            // copy to tenantId with time shift, and assign fake writerId
+
                             MiruActivity fromActivity = entry.activity.activity.get();
-                            MiruActivity toActivity = fromActivity.copyTo(tenantTuple.to, fromActivity.time + timeShift);
-                            // forge clock timestamp
-                            clockTimestamp.set(entry.activity.clockTimestamp + clockShift);
-                            activities.add(partitionedActivityFactory.activity(-1,
-                                partitionId,
-                                lastIndex,
-                                toActivity));
+                            long forgeClockTimestamp, forgeActivityTimestamp;
+                            if (tenantConfig.timeShiftStrategy == MiruSyncTimeShiftStrategy.step) {
+                                forgeClockTimestamp = nextClockTimestamp;
+                                forgeActivityTimestamp = nextActivityTimestamp;
+                                nextClockTimestamp = forgeClockTimestamp + clockShift;
+                                nextActivityTimestamp = forgeActivityTimestamp + timeShift;
+                            } else {
+                                forgeClockTimestamp = entry.activity.clockTimestamp + clockShift;
+                                forgeActivityTimestamp = fromActivity.time + timeShift;
+                            }
+
+                            if ((tenantConfig.stopTimestampMillis <= 0 || forgeClockTimestamp < tenantConfig.stopTimestampMillis)
+                                && (state == null || state.timeShiftStopTimestampMillis <= 0 || forgeClockTimestamp < state.timeShiftStopTimestampMillis)) {
+                                // copy to tenantId with time shift, and assign fake writerId
+                                MiruActivity toActivity = fromActivity.copyTo(tenantTuple.to, forgeActivityTimestamp);
+                                clockTimestamp.set(forgeClockTimestamp);
+
+                                //TODO rough estimate of index depth, wildly inaccurate if we skip most of a partition
+                                lastIndex = Math.max(lastIndex, numWriters * entry.activity.index);
+                                activities.add(partitionedActivityFactory.activity(-1,
+                                    partitionId,
+                                    lastIndex,
+                                    toActivity));
+                            }
                         }
                     }
                 }
@@ -511,7 +615,10 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     }
                 }
             }
-            saveTenantPartitionCursor(tenantTuple, partitionId, batch.cursor);
+            if (state != null) {
+                state = new TenantPartitionState(state.timeShiftMillis, nextClockTimestamp, state.timeShiftStopTimestampMillis);
+            }
+            saveTenantPartitionCursor(tenantTuple, partitionId, batch.cursor, state);
             cursor = batch.cursor;
             if (activityTypes == 0) {
                 break;
@@ -530,7 +637,6 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 partitionedActivityFactory.end(-1, partitionId, tenantTuple.to, lastIndex)));
             advanceTenantProgress(tenantTuple, partitionId, type);
         } else {
-            TenantTuplePartition tenantTuplePartition = new TenantTuplePartition(tenantTuple, partitionId);
             if (type == forward && tenantConfig.closed && forwardClosedSet.add(tenantTuplePartition)) {
                 LOG.info("Forward sync is closed from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
                 // close our fake writerId
@@ -635,7 +741,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
     public C getTenantPartitionCursor(MiruTenantId fromTenantId, MiruTenantId toTenantId, MiruPartitionId partitionId) throws Exception {
         PartitionClient cursorClient = cursorClient();
-        byte[] cursorKey = cursorKey(fromTenantId, toTenantId, partitionId);
+        byte[] cursorKey = tenantPartitionCursorKey(fromTenantId, toTenantId, partitionId);
         Object[] result = new Object[1];
         cursorClient.get(Consistency.leader_quorum, null,
             unprefixedWALKeyStream -> unprefixedWALKeyStream.stream(cursorKey),
@@ -652,12 +758,46 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         return (C) result[0];
     }
 
-    private void saveTenantPartitionCursor(MiruSyncTenantTuple tenantTuple, MiruPartitionId partitionId, C cursor) throws Exception {
+    public TenantPartitionState getTenantPartitionState(MiruTenantId fromTenantId, MiruTenantId toTenantId, MiruPartitionId partitionId) throws Exception {
         PartitionClient cursorClient = cursorClient();
-        byte[] cursorKey = cursorKey(tenantTuple.from, tenantTuple.to, partitionId);
-        byte[] value = mapper.writeValueAsBytes(cursor);
+        byte[] stateKey = tenantPartitionStateKey(fromTenantId, toTenantId, partitionId);
+        TenantPartitionState[] result = new TenantPartitionState[1];
+        cursorClient.get(Consistency.leader_quorum, null,
+            unprefixedWALKeyStream -> unprefixedWALKeyStream.stream(stateKey),
+            (prefix, key, value, timestamp, version) -> {
+                if (value != null) {
+                    result[0] = mapper.readValue(value, TenantPartitionState.class);
+                }
+                return true;
+            },
+            additionalSolverAfterNMillis,
+            abandonLeaderSolutionAfterNMillis,
+            abandonSolutionAfterNMillis,
+            Optional.empty());
+        return result[0];
+    }
+
+    private void saveTenantPartitionCursor(MiruSyncTenantTuple tenantTuple,
+        MiruPartitionId partitionId,
+        C cursor,
+        TenantPartitionState state) throws Exception {
+
+        PartitionClient cursorClient = cursorClient();
         cursorClient.commit(Consistency.leader_quorum, null,
-            commitKeyValueStream -> commitKeyValueStream.commit(cursorKey, value, -1, false),
+            commitKeyValueStream -> {
+                if (cursor != null) {
+                    byte[] cursorKey = tenantPartitionCursorKey(tenantTuple.from, tenantTuple.to, partitionId);
+                    byte[] cursorValue = mapper.writeValueAsBytes(cursor);
+                    commitKeyValueStream.commit(cursorKey, cursorValue, -1, false);
+                }
+
+                if (state != null) {
+                    byte[] stateKey = tenantPartitionStateKey(tenantTuple.from, tenantTuple.to, partitionId);
+                    byte[] stateValue = mapper.writeValueAsBytes(state);
+                    commitKeyValueStream.commit(stateKey, stateValue, -1, false);
+                }
+                return true;
+            },
             additionalSolverAfterNMillis,
             abandonSolutionAfterNMillis,
             Optional.empty());
@@ -726,15 +866,17 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         return (value.length >= 5 && value[4] == 1);
     }
 
-    private byte[] cursorKey(MiruTenantId fromTenantId, MiruTenantId toTenantId, MiruPartitionId partitionId) {
+    private byte[] tenantPartitionCursorKey(MiruTenantId fromTenantId, MiruTenantId toTenantId, MiruPartitionId partitionId) {
+        byte[] fromTenantBytes = fromTenantId.getBytes();
+        if (fromTenantBytes.length >= CURSOR_RESERVED_OFFSET) {
+            throw new IllegalArgumentException("Source tenant is too long");
+        }
         if (toTenantId == null) {
-            byte[] tenantBytes = fromTenantId.getBytes();
-            byte[] key = new byte[2 + tenantBytes.length];
-            UIO.unsignedShortBytes(tenantBytes.length, key, 0);
-            UIO.writeBytes(tenantBytes, key, 2);
+            byte[] key = new byte[2 + fromTenantBytes.length];
+            UIO.unsignedShortBytes(fromTenantBytes.length, key, 0);
+            UIO.writeBytes(fromTenantBytes, key, 2);
             return key;
         } else if (partitionId == null) {
-            byte[] fromTenantBytes = fromTenantId.getBytes();
             byte[] toTenantBytes = toTenantId.getBytes();
             byte[] key = new byte[2 + fromTenantBytes.length + 2 + toTenantBytes.length];
             UIO.unsignedShortBytes(fromTenantBytes.length, key, 0);
@@ -743,7 +885,6 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             UIO.writeBytes(toTenantBytes, key, 2 + fromTenantBytes.length + 2);
             return key;
         } else {
-            byte[] fromTenantBytes = fromTenantId.getBytes();
             byte[] toTenantBytes = toTenantId.getBytes();
             byte[] key = new byte[2 + fromTenantBytes.length + 2 + toTenantBytes.length + 4];
             UIO.unsignedShortBytes(fromTenantBytes.length, key, 0);
@@ -755,11 +896,47 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         }
     }
 
+    private static final int CURSOR_RESERVED_OFFSET = 32_768;
+    private static final int STATE_PREFIX = CURSOR_RESERVED_OFFSET;
+    //private static final int OTHER_PREFIX = CURSOR_RESERVED_OFFSET + 1;
+
+    private byte[] tenantPartitionStateKey(MiruTenantId fromTenantId, MiruTenantId toTenantId, MiruPartitionId partitionId) {
+        byte[] fromTenantBytes = fromTenantId.getBytes();
+        if (fromTenantBytes.length >= CURSOR_RESERVED_OFFSET) {
+            throw new IllegalArgumentException("Source tenant is too long");
+        }
+        if (toTenantId == null) {
+            byte[] key = new byte[2 + 2 + fromTenantBytes.length];
+            UIO.unsignedShortBytes(STATE_PREFIX, key, 0);
+            UIO.unsignedShortBytes(fromTenantBytes.length, key, 2);
+            UIO.writeBytes(fromTenantBytes, key, 2 + 2);
+            return key;
+        } else if (partitionId == null) {
+            byte[] toTenantBytes = toTenantId.getBytes();
+            byte[] key = new byte[2 + 2 + fromTenantBytes.length + 2 + toTenantBytes.length];
+            UIO.unsignedShortBytes(STATE_PREFIX, key, 0);
+            UIO.unsignedShortBytes(fromTenantBytes.length, key, 2);
+            UIO.writeBytes(fromTenantBytes, key, 2 + 2);
+            UIO.unsignedShortBytes(toTenantBytes.length, key, 2 + 2 + fromTenantBytes.length);
+            UIO.writeBytes(toTenantBytes, key, 2 + 2 + fromTenantBytes.length + 2);
+            return key;
+        } else {
+            byte[] toTenantBytes = toTenantId.getBytes();
+            byte[] key = new byte[2 + 2 + fromTenantBytes.length + 2 + toTenantBytes.length + 4];
+            UIO.unsignedShortBytes(STATE_PREFIX, key, 0);
+            UIO.unsignedShortBytes(fromTenantBytes.length, key, 2);
+            UIO.writeBytes(fromTenantBytes, key, 2 + 2);
+            UIO.unsignedShortBytes(toTenantBytes.length, key, 2 + 2 + fromTenantBytes.length);
+            UIO.writeBytes(toTenantBytes, key, 2 + 2 + fromTenantBytes.length + 2);
+            UIO.intBytes(partitionId.getId(), key, 2 + 2 + fromTenantBytes.length + 2 + toTenantBytes.length);
+            return key;
+        }
+    }
+
     public enum ProgressType {
         initial((byte) 0),
         reverse((byte) 1),
-        forward((byte) 2),
-        status((byte) 3);
+        forward((byte) 2);
 
         public final byte index;
 

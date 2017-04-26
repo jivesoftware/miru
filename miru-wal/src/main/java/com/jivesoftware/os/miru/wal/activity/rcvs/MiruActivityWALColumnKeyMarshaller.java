@@ -49,4 +49,8 @@ public class MiruActivityWALColumnKeyMarshaller implements TypeMarshaller<MiruAc
 
         return buffer.array();
     }
+
+    public byte getSort(byte[] key) {
+        return key[0];
+    }
 }

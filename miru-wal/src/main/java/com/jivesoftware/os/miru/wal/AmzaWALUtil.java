@@ -26,6 +26,7 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 /**
  *
@@ -196,6 +197,19 @@ public class AmzaWALUtil {
 
     public void destroyActivityPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         amzaService.destroyPartition(getActivityPartitionName(tenantId, partitionId));
+    }
+
+    public long count(EmbeddedClient client, Predicate<byte[]> acceptable) throws Exception {
+        long[] count = { 0 };
+        client.scan(Collections.singletonList(ScanRange.ROW_SCAN),
+            (prefix, key, value, timestamp, version) -> {
+                if (acceptable.test(key)) {
+                    count[0]++;
+                }
+                return true;
+            },
+            false);
+        return count[0];
     }
 
     public TakeCursors take(EmbeddedClient client, Map<String, NamedCursor> cursorsByName, TxKeyValueStream scan) throws Exception {
