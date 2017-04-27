@@ -1,0 +1,19 @@
+{namespace soy.wikimiru.page}
+
+/**
+ * WikMiru Query plugin page
+ * 
+ * @param? title
+ * @param? body
+ * @param? topics
+  */
+{template .wikiMiruWikiPlugin}
+    <div class="panel panel-default">
+        <div class="panel-heading">{$title}</div>
+        <div class="panel-body">
+            {if $topics}<div class="well">{$topics}</div>{/if}
+            {$body|noAutoescape}
+        </div>
+    </div>
+{/template}
+

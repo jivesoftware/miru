@@ -31,7 +31,7 @@ public class MiruSolvableFactory<Q, A, R> {
         this.question = question;
     }
 
-    public <BM extends IBM, IBM> MiruSolvable<A> create(final MiruQueryablePartition<BM, IBM> replica, final Optional<R> report) {
+    public <BM extends IBM, IBM> MiruSolvable<A> create(final MiruQueryablePartition<BM, IBM> replica, final Optional<R> report, MiruSolutionLog solutionLog) {
         Callable<MiruPartitionResponse<A>> callable = () -> {
             try (MiruRequestHandle<BM, IBM, ?> handle = replica.acquireQueryHandle()) {
                 if (handle.isLocal()) {
@@ -70,7 +70,7 @@ public class MiruSolvableFactory<Q, A, R> {
             }
 
         };
-        return new MiruSolvable<>(replica.getCoord(), callable, replica.isLocal());
+        return new MiruSolvable<>(replica.getCoord(), callable, replica.isLocal(), solutionLog);
     }
 
     public Question<Q, A, R> getQuestion() {
