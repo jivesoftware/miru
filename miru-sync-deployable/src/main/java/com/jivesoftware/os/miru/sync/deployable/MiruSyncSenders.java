@@ -10,6 +10,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
@@ -54,6 +55,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
     private final MiruSyncSenderConfigProvider syncSenderConfigProvider;
     private final MiruSyncConfigProvider syncConfigProvider;
     private final long ensureSendersInterval;
+    private final MiruClusterClient clusterClient;
     private final MiruWALClient<C, S> miruWALClient;
     private final boolean syncLoopback;
     private final MiruSyncConfigProvider loopbackSyncConfigProvider;
@@ -77,6 +79,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
         MiruSyncSenderConfigProvider syncSenderConfigProvider,
         MiruSyncConfigProvider syncConfigProvider,
         long ensureSendersInterval,
+        MiruClusterClient clusterClient,
         MiruWALClient<C, S> miruWALClient,
         boolean syncLoopback,
         MiruSyncConfigProvider loopbackSyncConfigProvider,
@@ -96,6 +99,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
         this.syncSenderConfigProvider = syncSenderConfigProvider;
         this.syncConfigProvider = syncConfigProvider;
         this.ensureSendersInterval = ensureSendersInterval;
+        this.clusterClient = clusterClient;
         this.miruWALClient = miruWALClient;
         this.syncLoopback = syncLoopback;
         this.loopbackSyncConfigProvider = loopbackSyncConfigProvider;
@@ -127,6 +131,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                     syncConfig.getSyncLoopbackRingStripes(),
                     executorService,
                     schemaProvider,
+                    clusterClient,
                     miruWALClient,
                     syncReceiver,
                     partitionClientProvider,
@@ -158,6 +163,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                                     idPacker, syncConfig.getSyncRingStripes(),
                                     executorService,
                                     schemaProvider,
+                                    clusterClient,
                                     miruWALClient,
                                     syncClient(senderConfig),
                                     partitionClientProvider,

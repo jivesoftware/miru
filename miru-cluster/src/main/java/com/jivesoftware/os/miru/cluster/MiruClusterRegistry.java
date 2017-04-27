@@ -94,6 +94,8 @@ public interface MiruClusterRegistry {
 
     List<PartitionRange> getIngressRanges(MiruTenantId tenantId) throws Exception;
 
+    PartitionRange getIngressRange(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
     class TopologyUpdate {
         public final MiruPartitionCoord coord;
         public final Optional<MiruPartitionCoordInfo> optionalInfo;

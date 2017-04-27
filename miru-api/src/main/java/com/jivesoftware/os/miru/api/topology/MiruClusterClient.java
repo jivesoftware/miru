@@ -38,6 +38,8 @@ public interface MiruClusterClient {
 
     List<PartitionRange> getIngressRanges(MiruTenantId tenantId) throws Exception;
 
+    PartitionRange getIngressRange(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
     void registerSchema(final MiruTenantId tenantId, final MiruSchema schema) throws Exception;
 
     void removeHost(final MiruHost host) throws Exception;
