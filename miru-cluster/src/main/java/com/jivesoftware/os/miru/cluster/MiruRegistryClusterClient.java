@@ -70,6 +70,11 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     }
 
     @Override
+    public PartitionRange getIngressRange(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return clusterRegistry.getIngressRange(tenantId, partitionId);
+    }
+
+    @Override
     public void registerSchema(MiruTenantId tenantId, MiruSchema schema) throws Exception {
         clusterRegistry.registerSchema(tenantId, schema);
     }

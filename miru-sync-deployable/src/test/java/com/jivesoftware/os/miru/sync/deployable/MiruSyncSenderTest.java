@@ -160,6 +160,7 @@ public class MiruSyncSenderTest {
             idPacker, 1,
             Executors.newScheduledThreadPool(1),
             schemaProvider,
+            new NoOpClusterClient(),
             testWALClient,
             syncClient,
             partitionClientProvider,

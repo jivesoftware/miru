@@ -1171,6 +1171,29 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         return partitionRanges;
     }
 
+    @Override
+    public PartitionRange getIngressRange(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        RangeMinMax lookupRange = new RangeMinMax();
+        streamRanges(tenantId, partitionId, (partitionId1, type, timestamp) -> {
+            if (type == IngressType.clockMin) {
+                lookupRange.clockMin = timestamp;
+            } else if (type == IngressType.clockMax) {
+                lookupRange.clockMax = timestamp;
+            } else if (type == IngressType.orderIdMin) {
+                lookupRange.orderIdMin = timestamp;
+            } else if (type == IngressType.orderIdMax) {
+                lookupRange.orderIdMax = timestamp;
+            }
+            return true;
+        });
+
+        IngressStatusTimestamps ingressStatusTimestamps = getIngressStatusTimestamps(tenantId, partitionId);
+        return new PartitionRange(partitionId,
+            lookupRange,
+            ingressStatusTimestamps.destroyAfterTimestamp,
+            ingressStatusTimestamps.cleanupAfterTimestamp);
+    }
+
     private long getIngressUpdate(MiruTenantId tenantId, MiruPartitionId partitionId, IngressType type, long defaultValue) throws Exception {
         long value = defaultValue;
         EmbeddedClient ingressClient = ingressClient();

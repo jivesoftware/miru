@@ -30,6 +30,8 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient.PartitionRange;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus.WriterCount;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
@@ -86,6 +88,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final ScheduledExecutorService executorService;
     private final ScheduledFuture[] syncFutures;
     private final MiruSchemaProvider schemaProvider;
+    private final MiruClusterClient clusterClient;
     private final MiruWALClient<C, S> fromWALClient;
     private final MiruSyncClient toSyncClient;
     private final PartitionClientProvider partitionClientProvider;
@@ -113,6 +116,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         int syncRingStripes,
         ScheduledExecutorService executorService,
         MiruSchemaProvider schemaProvider,
+        MiruClusterClient clusterClient,
         MiruWALClient<C, S> fromWALClient,
         MiruSyncClient toSyncClient,
         PartitionClientProvider partitionClientProvider,
@@ -130,6 +134,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         this.executorService = executorService;
         this.syncFutures = new ScheduledFuture[syncRingStripes];
         this.schemaProvider = schemaProvider;
+        this.clusterClient = clusterClient;
         this.fromWALClient = fromWALClient;
         this.toSyncClient = toSyncClient;
         this.partitionClientProvider = partitionClientProvider;
@@ -444,6 +449,10 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         MiruPartitionId partitionId = type == reverse ? progress.reversePartitionId : progress.forwardPartitionId;
         TenantTuplePartition tenantTuplePartition = new TenantTuplePartition(tenantTuple, partitionId);
         MiruActivityWALStatus status = fromWALClient.getActivityWALStatusForTenant(tenantTuple.from, partitionId);
+        if (status == null) {
+            LOG.warn("Failed to get status from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
+            return 0;
+        }
         if (!isElected(stripe)) {
             return 0;
         }
@@ -461,7 +470,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 }
                 return 0;
             } else if (status.ends.containsAll(status.begins)) {
-                return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status, progress.reverseTaking);
+                PartitionRange partitionRange = clusterClient.getIngressRange(tenantTuple.from, partitionId);
+                return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status, partitionRange, progress.reverseTaking);
             } else {
                 LOG.error("Reverse sync encountered open partition from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
                 return 0;
@@ -469,7 +479,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         } else if (forwardClosedSet.contains(tenantTuplePartition) || forwardIgnoreSet.contains(tenantTuplePartition)) {
             return 0;
         } else {
-            return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status, progress.forwardTaking);
+            return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status, null, progress.forwardTaking);
         }
     }
 
@@ -479,6 +489,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         MiruPartitionId partitionId,
         ProgressType type,
         MiruActivityWALStatus status,
+        PartitionRange partitionRange,
         boolean taking) throws Exception {
 
         if (!isElected(stripe)) {
@@ -537,9 +548,21 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             cursor = defaultCursor;
         }
 
+        boolean intersects = true;
+        if (partitionRange != null && partitionRange.rangeMinMax.clockMin > 0 && partitionRange.rangeMinMax.clockMax > 0) {
+            if (tenantConfig.startTimestampMillis > 0 && tenantConfig.startTimestampMillis > partitionRange.rangeMinMax.clockMax
+                || tenantConfig.stopTimestampMillis > 0 && tenantConfig.stopTimestampMillis < partitionRange.rangeMinMax.clockMin) {
+                LOG.info("No intersection from:{} to:{} partition:{} clockMin:{} clockMax:{} start:{} stop:{}",
+                    tenantTuple.from, tenantTuple.to, partitionId,
+                    partitionRange.rangeMinMax.clockMin, partitionRange.rangeMinMax.clockMax,
+                    tenantConfig.startTimestampMillis, tenantConfig.stopTimestampMillis);
+                intersects = false;
+            }
+        }
+
         boolean took = false;
         int synced = 0;
-        while (true) {
+        while (intersects) {
             MutableLong bytesCount = new MutableLong();
             long stopAtTimestamp = type == forward ? orderIdProvider.getApproximateId(System.currentTimeMillis() - config.forwardSyncDelayMillis) : -1;
             long start = System.currentTimeMillis();
