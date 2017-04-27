@@ -94,11 +94,17 @@ public class StrutModelCache {
             SnappyInputStream in = new SnappyInputStream(new BufferedInputStream(new ByteArrayInputStream(modelBytes), 8192));
             CatwalkModel catwalkModel = requestMapper.readValue(in, CatwalkModel.class);
             model = convert(catwalkQuery, catwalkModel);
+        } else {
+            LOG.inc("strut>model>cache>hit");
         }
 
         if (model == null) {
             try {
-                modelBytes = modelCache.get(key, () -> fetchModelBytes(nextClientStrategy, catwalkQuery, key, partitionId));
+                LOG.inc("strut>model>cache>miss");
+                modelBytes = modelCache.get(key, () -> {
+                    return fetchModelBytes(nextClientStrategy, catwalkQuery, key, partitionId);
+                });
+
                 SnappyInputStream in = new SnappyInputStream(new BufferedInputStream(new ByteArrayInputStream(modelBytes), 8192));
                 CatwalkModel catwalkModel = requestMapper.readValue(in, CatwalkModel.class);
                 model = convert(catwalkQuery, catwalkModel);
