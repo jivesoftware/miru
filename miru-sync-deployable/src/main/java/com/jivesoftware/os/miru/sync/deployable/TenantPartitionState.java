@@ -1,23 +1,25 @@
 package com.jivesoftware.os.miru.sync.deployable;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  *
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TenantPartitionState {
 
-    public final long timeShiftMillis;
-    public final long timeShiftStartTimestampMillis;
-    public final long timeShiftStopTimestampMillis;
+    public final long timeShiftOrderIds;
+    public final long timeShiftStartTimestampOrderId;
+    public final long timeShiftStopTimestampOrderId;
 
     @JsonCreator
-    public TenantPartitionState(@JsonProperty("timeShiftMillis") long timeShiftMillis,
-        @JsonProperty("timeShiftStartTimestampMillis") long timeShiftStartTimestampMillis,
-        @JsonProperty("timeShiftStopTimestampMillis") long timeShiftStopTimestampMillis) {
-        this.timeShiftMillis = timeShiftMillis;
-        this.timeShiftStartTimestampMillis = timeShiftStartTimestampMillis;
-        this.timeShiftStopTimestampMillis = timeShiftStopTimestampMillis;
+    public TenantPartitionState(@JsonProperty("timeShiftOrderIds") long timeShiftOrderIds,
+        @JsonProperty("timeShiftStartTimestampOrderId") long timeShiftStartTimestampOrderId,
+        @JsonProperty("timeShiftStopTimestampOrderId") long timeShiftStopTimestampOrderId) {
+        this.timeShiftOrderIds = timeShiftOrderIds;
+        this.timeShiftStartTimestampOrderId = timeShiftStartTimestampOrderId;
+        this.timeShiftStopTimestampOrderId = timeShiftStopTimestampOrderId;
     }
 }
