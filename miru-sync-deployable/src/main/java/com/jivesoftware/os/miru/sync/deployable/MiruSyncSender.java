@@ -180,7 +180,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     if (syncFutures[stripe] == null) {
                         LOG.info("Sync runnable {} was canceled", stripe);
                     } else {
-                        syncFutures[stripe] = executorService.schedule(this, reverseCount == 0 ? 0 : config.syncIntervalMillis, TimeUnit.MILLISECONDS);
+                        syncFutures[stripe] = executorService.schedule(this, reverseCount == 0 ? config.syncIntervalMillis : 0, TimeUnit.MILLISECONDS);
                     }
                 }
             }
