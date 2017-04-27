@@ -54,6 +54,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -87,7 +88,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final IdPacker idPacker;
     private final int syncRingStripes;
     private final ScheduledExecutorService executorService;
-    private final ScheduledFuture[] syncFutures;
+    private final Future[] syncFutures;
     private final MiruSchemaProvider schemaProvider;
     private final MiruClusterClient clusterClient;
     private final MiruWALClient<C, S> fromWALClient;
@@ -157,6 +158,35 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         return "miru-sync-" + config.name + "-stripe-" + syncStripe;
     }
 
+    private class SyncRunnable implements Runnable {
+
+        private final int stripe;
+
+        public SyncRunnable(int stripe) {
+            this.stripe = stripe;
+        }
+
+        @Override
+        public void run() {
+            int reverseCount = 0;
+            try {
+                reverseCount = syncStripe(stripe);
+            } catch (InterruptedException e) {
+                LOG.info("Sync thread {} was interrupted", stripe);
+            } catch (Throwable t) {
+                LOG.error("Failure in sync thread {}", new Object[] { stripe }, t);
+            } finally {
+                synchronized (syncFutures) {
+                    if (syncFutures[stripe] == null) {
+                        LOG.info("Sync runnable {} was canceled", stripe);
+                    } else {
+                        syncFutures[stripe] = executorService.schedule(this, reverseCount == 0 ? 0 : config.syncIntervalMillis, TimeUnit.MILLISECONDS);
+                    }
+                }
+            }
+        }
+    }
+
     public void start() {
         if (running.compareAndSet(false, true)) {
             for (int i = 0; i < syncRingStripes; i++) {
@@ -164,16 +194,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             }
 
             for (int i = 0; i < syncRingStripes; i++) {
-                int index = i;
-                syncFutures[i] = executorService.scheduleWithFixedDelay(() -> {
-                    try {
-                        syncStripe(index);
-                    } catch (InterruptedException e) {
-                        LOG.info("Sync thread {} was interrupted", index);
-                    } catch (Throwable t) {
-                        LOG.error("Failure in sync thread {}", new Object[] { index }, t);
-                    }
-                }, 0, config.syncIntervalMillis, TimeUnit.MILLISECONDS);
+                syncFutures[i] = executorService.submit(new SyncRunnable(i));
             }
         }
     }
@@ -181,7 +202,10 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     public void stop() {
         if (running.compareAndSet(true, false)) {
             for (int i = 0; i < syncRingStripes; i++) {
-                syncFutures[i].cancel(true);
+                synchronized (syncFutures) {
+                    syncFutures[i].cancel(true);
+                    syncFutures[i] = null;
+                }
             }
         }
     }
@@ -324,14 +348,15 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         return new PartitionName(false, nameBytes, nameBytes);
     }
 
-    private void syncStripe(int stripe) throws Exception {
+    private int syncStripe(int stripe) throws Exception {
         if (!isElected(stripe)) {
-            return;
+            return 0;
         }
 
         LOG.info("Syncing stripe:{}", stripe);
         int tenantCount = 0;
-        int activityCount = 0;
+        int forwardCount = 0;
+        int reverseCount = 0;
         Map<MiruSyncTenantTuple, MiruSyncTenantConfig> tenantTupleConfigs = syncConfigProvider.getAll(config.name);
         for (Entry<MiruSyncTenantTuple, MiruSyncTenantConfig> entry : tenantTupleConfigs.entrySet()) {
             if (!isElected(stripe)) {
@@ -360,7 +385,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 if (synced > 0) {
                     LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, tenantTuple.from, synced, forward);
                 }
-                activityCount += synced;
+                forwardCount += synced;
 
                 if (!isElected(stripe)) {
                     continue;
@@ -370,10 +395,13 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 if (synced > 0) {
                     LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, tenantTuple.from, synced, reverse);
                 }
-                activityCount += synced;
+                reverseCount += synced;
             }
         }
-        LOG.info("Synced stripe:{} tenants:{} activities:{}", stripe, tenantCount, activityCount);
+        LOG.info("Synced stripe:{} tenants:{} forward:{} reverse:{}", stripe, tenantCount, forwardCount, reverseCount);
+        // Reverse count implies the consumption of at least one partition, which we'll use to tighten the sync interval.
+        // Forward count is more relaxed to achieve better batching.
+        return reverseCount;
     }
 
     private void ensureSchema(MiruTenantId fromTenantId, MiruTenantId toTenantId) throws Exception {
@@ -434,7 +462,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     LOG.info("Initialized step state from:{} to:{} partitionId:{} count:{} timeShift:{}" +
                             " startTimestamp:{} stopTimestamp:{} startOrderId:{} stopOrderId:{}",
                         tenantTuple.from, tenantTuple.to, partitionId, count, timeShiftOrderIds,
-                        startTimestampMillis, stopTimestampMillis);
+                        startTimestampMillis, stopTimestampMillis, startTimestampOrderId, stopTimestampOrderId);
                     state = new TenantPartitionState(timeShiftOrderIds, startTimestampOrderId, stopTimestampOrderId);
                     saveTenantPartitionCursor(tenantTuple, partitionId, null, state);
                 }
