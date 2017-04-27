@@ -11,7 +11,7 @@
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>wiki-miru-deployable</artifactId>
     <properties>
-        <java.main>com.jivesoftware.os.wiki.miru.deployable.WikiMiruMain</java.main>
+        <java.main>com.jivesoftware.os.miru.siphon.deployable.WikiMiruMain</java.main>
         <assembly.home>${project.basedir}</assembly.home>
     </properties>
     <dependencies>

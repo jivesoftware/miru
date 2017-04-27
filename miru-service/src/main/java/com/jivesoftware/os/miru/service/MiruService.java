@@ -274,7 +274,7 @@ public class MiruService implements Miru {
         Optional<? extends MiruQueryablePartition<?, ?>> partition = getLocalTenantPartition(tenantId, partitionId);
 
         if (partition.isPresent()) {
-            Callable<MiruPartitionResponse<A>> callable = factory.create((MiruQueryablePartition) partition.get(), report);
+            Callable<MiruPartitionResponse<A>> callable = factory.create((MiruQueryablePartition) partition.get(), report, null);
             MiruPartitionResponse<A> answer = callable.call();
 
             LOG.inc("askImmediate");
@@ -411,7 +411,7 @@ public class MiruService implements Miru {
                 if (replica.isLocal()) {
                     solutionLog.log(MiruSolutionLogLevel.INFO, "Created local solvable for coord={}.", replica.getCoord());
                 }
-                return solvableFactory.create(replica, solvableFactory.getReport(Optional.absent()));
+                return solvableFactory.create(replica, solvableFactory.getReport(Optional.absent()), new MiruSolutionLog(solutionLog.getLevel()));
             });
 
             this.orderedPartitions = orderedPartitions;
@@ -488,7 +488,7 @@ public class MiruService implements Miru {
                 if (replica.isLocal()) {
                     solutionLog.log(MiruSolutionLogLevel.INFO, "Created local solvable for coord={}.", replica.getCoord());
                 }
-                return solvableFactory.create(replica, solvableFactory.getReport(lastAnswer));
+                return solvableFactory.create(replica, solvableFactory.getReport(lastAnswer), new MiruSolutionLog(solutionLog.getLevel()));
             });
 
             start = System.currentTimeMillis();

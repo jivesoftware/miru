@@ -101,6 +101,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
                 if (mayAddSolver) {
                     timeout = Math.min(timeout, addAnotherSolverAfterNMillis);
                 }
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Polling completion service for {} millis", timeout);
                 Future<MiruPartitionResponse<R>> future = completionService.poll(timeout, TimeUnit.MILLISECONDS);
                 if (future != null) {
                     try {
@@ -109,11 +110,12 @@ public class MiruLowestLatencySolver implements MiruSolver {
                             // should be few enough of these that we prefer a linear lookup
                             for (SolvableFuture<R> f : futures) {
                                 if (f.future == future) {
-                                    solutionLog.log(MiruSolutionLogLevel.INFO, "Got a solution coord={}.", f.solvable.getCoord());
+                                    MiruPartitionCoord coord = f.solvable.getCoord();
+                                    solutionLog.log(MiruSolutionLogLevel.INFO, "Got a solution coord={}.", coord);
                                     long usedResultElapsed = System.currentTimeMillis() - f.startTime;
                                     long totalElapsed = System.currentTimeMillis() - startTime;
                                     solved = new MiruSolved<>(
-                                        new MiruSolution(f.solvable.getCoord(),
+                                        new MiruSolution(coord,
                                             usedResultElapsed,
                                             totalElapsed,
                                             triedPartitions,
@@ -124,9 +126,15 @@ public class MiruLowestLatencySolver implements MiruSolver {
                                     String locality = f.solvable.isLocal() ? "local" : "remote";
                                     log.incBucket("solve>throughput>success>" + locality, 1_000L, 100);
                                     log.incBucket("solve>throughput>success>" + locality + ">" + requestName + ">" + queryKey, 1_000L, 100);
+                                    MiruSolutionLog solvableSolutionLog = f.solvable.getSolutionLog();
+                                    if (solvableSolutionLog != null) {
+                                        for (String l : solvableSolutionLog.asList()) {
+                                            solutionLog.log(MiruSolutionLogLevel.INFO, "[{}] {}", coord, l);
+                                        }
+                                    }
                                     if (response.log != null) {
                                         for (String l : response.log) {
-                                            solutionLog.log(MiruSolutionLogLevel.INFO, "[{}] {}", f.solvable.getCoord(), l);
+                                            solutionLog.log(MiruSolutionLogLevel.INFO, "[{}] {}", coord, l);
                                         }
                                     }
                                     solversSuccess++;
