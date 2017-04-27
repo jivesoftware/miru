@@ -427,13 +427,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     // at minimum, skip over deletion bit, this sucks because orderId bits are lower than writerId bits
                     // so we can't safely leverage orderId space :(
 
-                    long perActivityMillis = count == 0 ? 1 : rangePerPartitionMillis / count;
-                    long timeShiftOrderIds;
-                    if (perActivityMillis > 0) {
-                        timeShiftOrderIds = idPacker.pack(perActivityMillis, 0, 0);
-                    } else {
-                        timeShiftOrderIds = (rangePerPartitionMillis << (64 - idPacker.bitsPrecisionOfTimestamp())) / count;
-                    }
+                    long timeShiftOrderIds = idPacker.pack(rangePerPartitionMillis, 0, 0) / count;
                     long stopTimestampMillis = startTimestampMillis + rangePerPartitionMillis;
                     long startTimestampOrderId = orderIdProvider.getApproximateId(startTimestampMillis);
                     long stopTimestampOrderId = orderIdProvider.getApproximateId(stopTimestampMillis);
