@@ -91,11 +91,10 @@ public class StrutModelCache {
         StrutModel model = null;
         byte[] modelBytes = modelCache.getIfPresent(key);
         if (modelBytes != null) {
+            LOG.inc("strut>model>cache>hit");
             SnappyInputStream in = new SnappyInputStream(new BufferedInputStream(new ByteArrayInputStream(modelBytes), 8192));
             CatwalkModel catwalkModel = requestMapper.readValue(in, CatwalkModel.class);
             model = convert(catwalkQuery, catwalkModel);
-        } else {
-            LOG.inc("strut>model>cache>hit");
         }
 
         if (model == null) {
