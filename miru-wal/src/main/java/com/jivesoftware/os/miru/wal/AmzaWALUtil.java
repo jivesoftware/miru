@@ -9,6 +9,7 @@ import com.jivesoftware.os.amza.api.ring.RingMember;
 import com.jivesoftware.os.amza.api.stream.KeyValueTimestampStream;
 import com.jivesoftware.os.amza.api.stream.TxKeyValueStream;
 import com.jivesoftware.os.amza.api.take.TakeCursors;
+import com.jivesoftware.os.amza.api.wal.WALKey;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.CheckOnline;
@@ -26,7 +27,6 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 
 /**
  *
@@ -199,13 +199,13 @@ public class AmzaWALUtil {
         amzaService.destroyPartition(getActivityPartitionName(tenantId, partitionId));
     }
 
-    public long count(EmbeddedClient client, Predicate<byte[]> acceptable) throws Exception {
+    public long count(EmbeddedClient client, byte sort) throws Exception {
         long[] count = { 0 };
-        client.scan(Collections.singletonList(ScanRange.ROW_SCAN),
+        byte[] fromKey = { sort };
+        byte[] toKey = WALKey.prefixUpperExclusive(fromKey);
+        client.scan(Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
             (prefix, key, value, timestamp, version) -> {
-                if (acceptable.test(key)) {
-                    count[0]++;
-                }
+                count[0]++;
                 return true;
             },
             false);

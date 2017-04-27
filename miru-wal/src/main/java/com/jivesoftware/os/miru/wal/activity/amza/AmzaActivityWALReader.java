@@ -126,10 +126,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     @Override
     public long count(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         EmbeddedClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
-        return amzaWALUtil.count(client, key -> {
-            byte sort = columnKeyMarshaller.getSort(key);
-            return Type.valueOf(sort).isActivityType();
-        });
+        return amzaWALUtil.count(client, Type.ACTIVITY.getSort());
     }
 
     @Override
