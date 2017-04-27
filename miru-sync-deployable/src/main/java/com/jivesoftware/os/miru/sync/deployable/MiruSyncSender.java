@@ -19,6 +19,7 @@ import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
 import com.jivesoftware.os.aquarium.LivelyEndState;
 import com.jivesoftware.os.aquarium.State;
 import com.jivesoftware.os.jive.utils.ordered.id.IdPacker;
+import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
@@ -425,11 +426,22 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     long count = fromWALClient.getActivityCount(tenantTuple.from, partitionId);
                     // at minimum, skip over deletion bit, this sucks because orderId bits are lower than writerId bits
                     // so we can't safely leverage orderId space :(
-                    long timeShiftMillis = Math.max(rangePerPartitionMillis / count, 2);
+
+                    long perActivityMillis = count == 0 ? 1 : rangePerPartitionMillis / count;
+                    long timeShiftOrderIds;
+                    if (perActivityMillis > 0) {
+                        timeShiftOrderIds = idPacker.pack(perActivityMillis, 0, 0);
+                    } else {
+                        timeShiftOrderIds = (rangePerPartitionMillis << (64 - idPacker.bitsPrecisionOfTimestamp())) / count;
+                    }
                     long stopTimestampMillis = startTimestampMillis + rangePerPartitionMillis;
-                    LOG.info("Initialized step state from:{} to:{} partitionId:{} count:{} timeShift:{} startTimestamp:{} stopTimestamp:{}",
-                        tenantTuple.from, tenantTuple.to, partitionId, count, timeShiftMillis, startTimestampMillis, stopTimestampMillis);
-                    state = new TenantPartitionState(timeShiftMillis, startTimestampMillis, stopTimestampMillis);
+                    long startTimestampOrderId = orderIdProvider.getApproximateId(startTimestampMillis);
+                    long stopTimestampOrderId = orderIdProvider.getApproximateId(stopTimestampMillis);
+                    LOG.info("Initialized step state from:{} to:{} partitionId:{} count:{} timeShift:{}" +
+                            " startTimestamp:{} stopTimestamp:{} startOrderId:{} stopOrderId:{}",
+                        tenantTuple.from, tenantTuple.to, partitionId, count, timeShiftOrderIds,
+                        startTimestampMillis, stopTimestampMillis);
+                    state = new TenantPartitionState(timeShiftOrderIds, startTimestampOrderId, stopTimestampOrderId);
                     saveTenantPartitionCursor(tenantTuple, partitionId, null, state);
                 }
                 startTimestampMillis += rangePerPartitionMillis;
@@ -511,7 +523,6 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
         long timeShift = 0;
         long clockShift = 0;
-        long nextClockTimestamp = 0;
         long nextActivityTimestamp = 0;
         TenantPartitionState state = null;
         if (tenantConfig.timeShiftStrategy == MiruSyncTimeShiftStrategy.linear && tenantConfig.timeShiftMillis > 0) {
@@ -520,11 +531,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         } else if (tenantConfig.timeShiftStrategy == MiruSyncTimeShiftStrategy.step) {
             state = getTenantPartitionState(tenantTuple.from, tenantTuple.to, partitionId);
             if (state != null) {
-                timeShift = idPacker.pack(state.timeShiftMillis, 0, 0); // packing with zeroes should preserve writerId, orderId on shift
-                clockShift = state.timeShiftMillis;
-
-                nextActivityTimestamp = orderIdProvider.getApproximateId(state.timeShiftStartTimestampMillis);
-                nextClockTimestamp = state.timeShiftStartTimestampMillis;
+                timeShift = idPacker.pack(state.timeShiftOrderIds, 0, 0); // packing with zeroes should preserve writerId, orderId on shift
+                nextActivityTimestamp = state.timeShiftStartTimestampOrderId;
             } else {
                 if (type == forward) {
                     if (forwardIgnoreSet.add(tenantTuplePartition)) {
@@ -595,19 +603,20 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                             && (tenantConfig.stopTimestampMillis == -1 || entry.activity.clockTimestamp < tenantConfig.stopTimestampMillis)) {
 
                             MiruActivity fromActivity = entry.activity.activity.get();
-                            long forgeClockTimestamp, forgeActivityTimestamp;
+                            long forgeClockTimestamp, forgeActivityTimestamp, stopActivityTimestamp;
                             if (tenantConfig.timeShiftStrategy == MiruSyncTimeShiftStrategy.step) {
-                                forgeClockTimestamp = nextClockTimestamp;
+                                forgeClockTimestamp = idPacker.unpack(nextActivityTimestamp)[0] + JiveEpochTimestampProvider.JIVE_EPOCH;
                                 forgeActivityTimestamp = nextActivityTimestamp;
-                                nextClockTimestamp = forgeClockTimestamp + clockShift;
                                 nextActivityTimestamp = forgeActivityTimestamp + timeShift;
+                                stopActivityTimestamp = state.timeShiftStopTimestampOrderId;
                             } else {
                                 forgeClockTimestamp = entry.activity.clockTimestamp + clockShift;
                                 forgeActivityTimestamp = fromActivity.time + timeShift;
+                                stopActivityTimestamp = 0;
                             }
 
                             if ((tenantConfig.stopTimestampMillis <= 0 || forgeClockTimestamp < tenantConfig.stopTimestampMillis)
-                                && (state == null || state.timeShiftStopTimestampMillis <= 0 || forgeClockTimestamp < state.timeShiftStopTimestampMillis)) {
+                                && (stopActivityTimestamp <= 0 || forgeActivityTimestamp < stopActivityTimestamp)) {
                                 // copy to tenantId with time shift, and assign fake writerId
                                 MiruActivity toActivity = fromActivity.copyTo(tenantTuple.to, forgeActivityTimestamp);
                                 clockTimestamp.set(forgeClockTimestamp);
@@ -642,7 +651,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 }
             }
             if (state != null) {
-                state = new TenantPartitionState(state.timeShiftMillis, nextClockTimestamp, state.timeShiftStopTimestampMillis);
+                state = new TenantPartitionState(state.timeShiftOrderIds, nextActivityTimestamp, state.timeShiftStopTimestampOrderId);
             }
             saveTenantPartitionCursor(tenantTuple, partitionId, batch.cursor, state);
             cursor = batch.cursor;
