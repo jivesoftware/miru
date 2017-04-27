@@ -91,7 +91,6 @@ public class StrutModelCache {
         StrutModel model = null;
         byte[] modelBytes = modelCache.getIfPresent(key);
         if (modelBytes != null) {
-            LOG.inc("strut>model>cache>hit");
             SnappyInputStream in = new SnappyInputStream(new BufferedInputStream(new ByteArrayInputStream(modelBytes), 8192));
             CatwalkModel catwalkModel = requestMapper.readValue(in, CatwalkModel.class);
             model = convert(catwalkQuery, catwalkModel);
@@ -99,7 +98,6 @@ public class StrutModelCache {
 
         if (model == null) {
             try {
-                LOG.inc("strut>model>cache>miss");
                 modelBytes = modelCache.get(key, () -> {
                     return fetchModelBytes(nextClientStrategy, catwalkQuery, key, partitionId);
                 });
@@ -112,11 +110,13 @@ public class StrutModelCache {
                     LOG.info(ee.getCause().getMessage());
                     return null;
                 }
+                LOG.inc("strut>model>cache>failure");
                 throw ee;
             }
 
             if (model.model == null) {
                 LOG.info("Discarded null model for tenantId:{} partitionId:{} catwalkId:{} modelId:{}", tenantId, partitionId, catwalkId, modelId);
+                LOG.inc("strut>model>cache>discard");
                 modelCache.invalidate(key);
                 return null;
             } else {
@@ -129,12 +129,15 @@ public class StrutModelCache {
                 }
                 if (empty) {
                     LOG.info("Discarded empty model for tenantId:{} partitionId:{} catwalkId:{} modelId:{}", tenantId, partitionId, catwalkId, modelId);
+                    LOG.inc("strut>model>cache>empty");
                     modelCache.invalidate(key);
                     return null;
+                } else {
+                    LOG.inc("strut>model>cache>miss");
                 }
             }
         } else {
-
+            LOG.inc("strut>model>cache>hit");
             String json = requestMapper.writeValueAsString(catwalkQuery);
             catwalkClient.call("",
                 nextClientStrategy,
