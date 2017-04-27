@@ -405,7 +405,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 for (WriterCount count : status.counts) {
                     maxClockTimestamp = Math.max(maxClockTimestamp, count.clockTimestamp);
                 }
-                if (maxClockTimestamp < tenantConfig.timeShiftStartTimestampMillis) {
+                if (maxClockTimestamp < tenantConfig.startTimestampMillis) {
                     break;
                 } else {
                     smallestPartitionId = partitionId;
@@ -418,7 +418,10 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             long startTimestampMillis = tenantConfig.timeShiftStartTimestampMillis;
             for (MiruPartitionId partitionId = smallestPartitionId; partitionId.compareTo(largestPartitionId) <= 0; partitionId = partitionId.next()) {
                 TenantPartitionState state = getTenantPartitionState(tenantTuple.from, tenantTuple.to, partitionId);
-                if (state == null) {
+                if (state != null) {
+                    LOG.info("Skipped step state from:{} to:{} partitionId:{} because it was already initialized",
+                        tenantTuple.from, tenantTuple.to, partitionId);
+                } else {
                     long count = fromWALClient.getActivityCount(tenantTuple.from, partitionId);
                     // at minimum, skip over deletion bit, this sucks because orderId bits are lower than writerId bits
                     // so we can't safely leverage orderId space :(
