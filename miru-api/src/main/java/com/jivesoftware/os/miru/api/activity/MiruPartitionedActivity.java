@@ -27,14 +27,6 @@ public class MiruPartitionedActivity {
         private final boolean activityType;
         private final boolean readType;
 
-        private static Type[] types;
-        static {
-            types = new Type[Byte.MAX_VALUE + 1];
-            for (Type type : values()) {
-                types[type.sort] = type;
-            }
-        }
-
         Type(byte sort, boolean boundaryType, boolean activityType, boolean readType) {
             this.sort = sort;
             this.boundaryType = boundaryType;
@@ -56,10 +48,6 @@ public class MiruPartitionedActivity {
 
         public boolean isReadType() {
             return readType;
-        }
-
-        public static Type valueOf(byte sort) {
-            return types[sort];
         }
     }
 
