@@ -14,17 +14,13 @@ import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
-import com.jivesoftware.os.miru.api.wal.MiruCursor;
-import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
-import com.jivesoftware.os.miru.wal.AmzaWALDirector;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
-import com.jivesoftware.os.miru.wal.RCVSWALDirector;
 import com.jivesoftware.os.miru.wal.deployable.region.bean.WALBean;
 import com.jivesoftware.os.miru.wal.deployable.region.input.MiruActivityWALRegionInput;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -46,20 +42,20 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
     private final String template;
     private final MiruSoyRenderer renderer;
     private final AmzaWALUtil amzaWALUtil;
-    private final RCVSWALDirector rcvsWALDirector;
-    private final AmzaWALDirector amzaWALDirector;
+    private final MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient;
+    private final MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient;
 
     public MiruActivityWALRegion(String template,
         MiruSoyRenderer renderer,
         AmzaWALUtil amzaWALUtil,
-        RCVSWALDirector rcvsWALDirector,
-        AmzaWALDirector amzaWALDirector) {
+        MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient,
+        MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient) {
         this.template = template;
         this.renderer = renderer;
         this.amzaWALUtil = amzaWALUtil;
-        Preconditions.checkArgument(rcvsWALDirector != null || amzaWALDirector != null);
-        this.rcvsWALDirector = rcvsWALDirector;
-        this.amzaWALDirector = amzaWALDirector;
+        Preconditions.checkArgument(rcvsWALClient != null || amzaWALClient != null);
+        this.rcvsWALClient = rcvsWALClient;
+        this.amzaWALClient = amzaWALClient;
     }
 
     @Override
@@ -74,8 +70,8 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
             data.put("tenant", new String(tenantId.getBytes(), Charsets.UTF_8));
 
             try {
-                SortedMap<Integer, Map<String, String>> rcvsPartitions = getRCVSPartitions(tenantId, rcvsWALDirector);
-                SortedMap<Integer, Map<String, String>> amzaPartitions = getAmzaPartitions(tenantId, amzaWALDirector);
+                SortedMap<Integer, Map<String, String>> rcvsPartitions = getRCVSPartitions(tenantId, rcvsWALClient);
+                SortedMap<Integer, Map<String, String>> amzaPartitions = getAmzaPartitions(tenantId, amzaWALClient);
 
                 int minPartitionId = Math.min(firstKey(rcvsPartitions, Integer.MAX_VALUE), firstKey(amzaPartitions, Integer.MAX_VALUE));
                 int maxPartitionId = Math.max(lastKey(rcvsPartitions, Integer.MIN_VALUE), lastKey(amzaPartitions, Integer.MIN_VALUE));
@@ -102,23 +98,23 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
                         if (walType.equals("rcvs")) {
                             if (sip) {
                                 RCVSSipCursor cursor = new RCVSSipCursor(Type.ACTIVITY.getSort(), afterTimestamp, 0, false);
-                                addRCVSSipActivities(tenantId, partitionId, walActivities, limit, lastTimestamp, rcvsWALDirector, cursor,
+                                addRCVSSipActivities(tenantId, partitionId, walActivities, limit, lastTimestamp, rcvsWALClient, cursor,
                                     s -> s.clockTimestamp);
                             } else {
                                 RCVSCursor cursor = new RCVSCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, false, null);
-                                addRCVSActivities(tenantId, partitionId, walActivities, limit, lastTimestamp, rcvsWALDirector, cursor,
+                                addRCVSActivities(tenantId, partitionId, walActivities, limit, lastTimestamp, rcvsWALClient, cursor,
                                     c -> c.activityTimestamp);
                             }
                         } else if (walType.equals("amza")) {
                             if (sip) {
                                 AmzaSipCursor cursor = new AmzaSipCursor(
                                     Collections.singletonList(new NamedCursor(amzaWALUtil.getRingMemberName(), afterTimestamp)), false);
-                                addAmzaSipActivities(tenantId, partitionId, walActivities, limit, lastTimestamp, amzaWALDirector, cursor,
+                                addAmzaSipActivities(tenantId, partitionId, walActivities, limit, lastTimestamp, amzaWALClient, cursor,
                                     s -> amzaWALUtil.extractCursors(s.cursors).get(amzaWALUtil.getRingMemberName()).id);
                             } else {
                                 AmzaCursor cursor = new AmzaCursor(
                                     Collections.singletonList(new NamedCursor(amzaWALUtil.getRingMemberName(), afterTimestamp)), null);
-                                addAmzaActivities(tenantId, partitionId, walActivities, limit, lastTimestamp, amzaWALDirector, cursor,
+                                addAmzaActivities(tenantId, partitionId, walActivities, limit, lastTimestamp, amzaWALClient, cursor,
                                     c -> amzaWALUtil.extractCursors(c.cursors).get(amzaWALUtil.getRingMemberName()).id);
                             }
                         }
@@ -149,19 +145,19 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
         return !partitions.isEmpty() ? partitions.lastKey() : defaultValue;
     }
 
-    private <S extends MiruSipCursor<S>, C extends MiruCursor<C, S>> SortedMap<Integer, Map<String, String>> getAmzaPartitions(MiruTenantId tenantId,
-        AmzaWALDirector director) throws Exception {
+    private SortedMap<Integer, Map<String, String>> getAmzaPartitions(MiruTenantId tenantId,
+        MiruWALClient<AmzaCursor, AmzaSipCursor> client) throws Exception {
 
-        if (director == null) {
+        if (client == null) {
             return Collections.emptySortedMap();
         }
 
-        MiruPartitionId latestPartitionId = director.getLargestPartitionId(tenantId);
+        MiruPartitionId latestPartitionId = client.getLargestPartitionId(tenantId);
 
         List<MiruActivityWALStatus> partitionStatuses = Lists.newArrayList();
         if (latestPartitionId != null) {
             for (MiruPartitionId latest = latestPartitionId; latest != null; latest = latest.prev()) {
-                partitionStatuses.add(director.getActivityWALStatusForTenant(tenantId, latest));
+                partitionStatuses.add(client.getActivityWALStatusForTenant(tenantId, latest));
             }
         }
 
@@ -180,19 +176,19 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
         return partitions;
     }
 
-    private <S extends MiruSipCursor<S>, C extends MiruCursor<C, S>> SortedMap<Integer, Map<String, String>> getRCVSPartitions(MiruTenantId tenantId,
-        RCVSWALDirector director) throws Exception {
+    private SortedMap<Integer, Map<String, String>> getRCVSPartitions(MiruTenantId tenantId,
+        MiruWALClient<RCVSCursor, RCVSSipCursor> client) throws Exception {
 
-        if (director == null) {
+        if (client == null) {
             return Collections.emptySortedMap();
         }
 
-        MiruPartitionId latestPartitionId = director.getLargestPartitionId(tenantId);
+        MiruPartitionId latestPartitionId = client.getLargestPartitionId(tenantId);
 
         List<MiruActivityWALStatus> partitionStatuses = Lists.newArrayList();
         if (latestPartitionId != null) {
             for (MiruPartitionId latest = latestPartitionId; latest != null; latest = latest.prev()) {
-                partitionStatuses.add(director.getActivityWALStatusForTenant(tenantId, latest));
+                partitionStatuses.add(client.getActivityWALStatusForTenant(tenantId, latest));
             }
         }
 
@@ -216,11 +212,11 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
         List<WALBean> walActivities,
         int limit,
         AtomicLong lastTimestamp,
-        AmzaWALDirector director,
+        MiruWALClient<AmzaCursor, AmzaSipCursor> client,
         AmzaCursor cursor,
         Function<AmzaCursor, Long> extractLastTimestamp) throws Exception {
 
-        MiruWALClient.StreamBatch<MiruWALEntry, AmzaCursor> gopped = director.getActivity(tenantId,
+        MiruWALClient.StreamBatch<MiruWALEntry, AmzaCursor> gopped = client.getActivity(tenantId,
             partitionId,
             cursor,
             limit,
@@ -236,11 +232,11 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
         List<WALBean> walActivities,
         int limit,
         AtomicLong lastTimestamp,
-        RCVSWALDirector director,
+        MiruWALClient<RCVSCursor, RCVSSipCursor> client,
         RCVSCursor cursor,
         Function<RCVSCursor, Long> extractLastTimestamp) throws Exception {
 
-        MiruWALClient.StreamBatch<MiruWALEntry, RCVSCursor> gopped = director.getActivity(tenantId,
+        MiruWALClient.StreamBatch<MiruWALEntry, RCVSCursor> gopped = client.getActivity(tenantId,
             partitionId,
             cursor,
             limit,
@@ -256,11 +252,11 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
         List<WALBean> walActivities,
         int limit,
         AtomicLong lastTimestamp,
-        AmzaWALDirector director,
+        MiruWALClient<AmzaCursor, AmzaSipCursor> client,
         AmzaSipCursor cursor,
         Function<AmzaSipCursor, Long> extractLastTimestamp) throws Exception {
 
-        MiruWALClient.StreamBatch<MiruWALEntry, AmzaSipCursor> sipped = director.sipActivity(tenantId,
+        MiruWALClient.StreamBatch<MiruWALEntry, AmzaSipCursor> sipped = client.sipActivity(tenantId,
             partitionId,
             cursor,
             null,
@@ -275,11 +271,11 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
         List<WALBean> walActivities,
         int limit,
         AtomicLong lastTimestamp,
-        RCVSWALDirector director,
+        MiruWALClient<RCVSCursor, RCVSSipCursor> client,
         RCVSSipCursor cursor,
         Function<RCVSSipCursor, Long> extractLastTimestamp) throws Exception {
 
-        MiruWALClient.StreamBatch<MiruWALEntry, RCVSSipCursor> sipped = director.sipActivity(tenantId,
+        MiruWALClient.StreamBatch<MiruWALEntry, RCVSSipCursor> sipped = client.sipActivity(tenantId,
             partitionId,
             cursor,
             null,

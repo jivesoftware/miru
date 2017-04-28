@@ -348,17 +348,10 @@ public class MiruWALMain {
             MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(miruStats, "", manageHttpClient, mapper);
             SickThreads walClientSickThreads = new SickThreads();
 
-            /*
-            Class<?> walEndpointsClass = null;
-
-            MiruWALDirector<?, ?> secondaryWALDirector = null;
-            MiruWALClient<?, ?> secondaryWALClient = null;
-            Class<?> secondaryWALEndpointsClass = null;*/
-
             MiruWALClient<?, ?> miruWALClient = null;
             MiruWALDirector miruWALDirector = null;
-            RCVSWALDirector rcvsWALDirector = null;
-            AmzaWALDirector amzaWALDirector = null;
+            MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = null;
+            MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = null;
             MiruActivityWALReader<?, ?> activityWALReader = null;
 
             boolean primaryRCVSWAL = walConfig.getActivityWALType().equals("rcvs");
@@ -366,7 +359,7 @@ public class MiruWALMain {
             boolean secondaryAmzaWAL = walConfig.getSecondaryAmzaWAL();
 
             if (primaryRCVSWAL) {
-                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new RCVSWALClientInitializer().initialize("",
+                rcvsWALClient = new RCVSWALClientInitializer().initialize("",
                     walHttpClient,
                     tasExecutors,
                     100,
@@ -408,7 +401,7 @@ public class MiruWALMain {
                     rcvsWAL.getReadTrackingWAL(),
                     rcvsWAL.getReadTrackingSipWAL());
 
-                rcvsWALDirector = new RCVSWALDirector(rcvsWALLookup,
+                RCVSWALDirector rcvsWALDirector = new RCVSWALDirector(rcvsWALLookup,
                     rcvsActivityWALReader,
                     rcvsActivityWALWriter,
                     readTrackingWALReader,
@@ -424,7 +417,7 @@ public class MiruWALMain {
             }
 
             if (primaryAmzaWAL || secondaryAmzaWAL) {
-                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new AmzaWALClientInitializer().initialize("",
+                amzaWALClient = new AmzaWALClientInitializer().initialize("",
                     walHttpClient,
                     tasExecutors,
                     100,
@@ -446,7 +439,7 @@ public class MiruWALMain {
                     mapper);
                 AmzaReadTrackingWALReader readTrackingWALReader = new AmzaReadTrackingWALReader(amzaWALUtil, mapper);
 
-                amzaWALDirector = new AmzaWALDirector(amzaWALLookup,
+                AmzaWALDirector amzaWALDirector = new AmzaWALDirector(amzaWALLookup,
                     amzaActivityWALReader,
                     amzaActivityWALWriter,
                     readTrackingWALReader,
@@ -491,8 +484,8 @@ public class MiruWALMain {
                     tenantRoutingProvider,
                     miruWALClient,
                     miruWALDirector,
-                    rcvsWALDirector,
-                    amzaWALDirector,
+                    rcvsWALClient,
+                    amzaWALClient,
                     activityWALReader,
                     miruStats);
 

@@ -163,7 +163,7 @@ public class MiruWALUIServiceNGTest {
             tenantRoutingProvider,
             walClient,
             new MiruWALDirector(walLookup, walClient, activityWALReader, activityWALWriter, clusterClient),
-            director,
+            walClient,
             null,
             activityWALReader,
             new MiruStats());
