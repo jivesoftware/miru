@@ -594,6 +594,9 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     if (forwardIgnoreSet.add(tenantTuplePartition)) {
                         LOG.info("Forward progress is missing step state from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
                     }
+                    if (taking) {
+                        setTenantProgress(tenantTuple, partitionId, type, false);
+                    }
                     return new SyncResult(0, false);
                 }
             }
