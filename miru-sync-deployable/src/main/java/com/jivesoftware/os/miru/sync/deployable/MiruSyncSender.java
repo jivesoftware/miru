@@ -376,9 +376,12 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     break;
                 }
 
-                ensureTenantPartitionState(tenantTuple, entry.getValue(), stripe);
+                boolean ensured = ensureTenantPartitionState(tenantTuple, entry.getValue(), stripe);
                 if (!isElected(stripe)) {
                     break;
+                }
+                if (!ensured) {
+                    continue;
                 }
 
                 int synced = syncTenant(tenantTuple, entry.getValue(), stripe, forward);
@@ -388,7 +391,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 forwardCount += synced;
 
                 if (!isElected(stripe)) {
-                    continue;
+                    break;
                 }
 
                 synced = syncTenant(tenantTuple, entry.getValue(), stripe, reverse);
@@ -428,9 +431,11 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             for (MiruPartitionId partitionId = largestPartitionId; partitionId != null; partitionId = partitionId.prev()) {
                 PartitionRange range = clusterClient.getIngressRange(tenantTuple.from, partitionId);
                 if (range != null && range.rangeMinMax.clockMin > 0 && range.rangeMinMax.clockMax > 0) {
-                    if (range.rangeMinMax.clockMax < tenantConfig.startTimestampMillis) {
+                    if (tenantConfig.startTimestampMillis > 0 && range.rangeMinMax.clockMax < tenantConfig.startTimestampMillis) {
+                        LOG.info("Initialization of step state found terminal range from:{} to:{} partitionId:{} clockMax:{} startTimestamp:{}",
+                            tenantTuple.from, tenantTuple.to, partitionId, range.rangeMinMax.clockMax, tenantConfig.startTimestampMillis);
                         break;
-                    } else if (range.rangeMinMax.clockMin <= tenantConfig.stopTimestampMillis) {
+                    } else if (tenantConfig.stopTimestampMillis <= 0 || range.rangeMinMax.clockMin <= tenantConfig.stopTimestampMillis) {
                         partitionIds.add(partitionId);
                     }
                 } else {
@@ -438,11 +443,18 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     if (!isElected(stripe)) {
                         return false;
                     }
+                    if (status == null) {
+                        LOG.warn("Failed to initialize step state due to missing status from:{} to:{} partitionId:{}",
+                            tenantTuple.from, tenantTuple.to, partitionId);
+                        return false;
+                    }
                     long maxClockTimestamp = 0;
                     for (WriterCount count : status.counts) {
                         maxClockTimestamp = Math.max(maxClockTimestamp, count.clockTimestamp);
                     }
-                    if (maxClockTimestamp < tenantConfig.startTimestampMillis) {
+                    if (tenantConfig.startTimestampMillis > 0 && maxClockTimestamp < tenantConfig.startTimestampMillis || maxClockTimestamp == 0) {
+                        LOG.info("Initialization of step state found terminal status from:{} to:{} partitionId:{} clockMax:{} startTimestamp:{}",
+                            tenantTuple.from, tenantTuple.to, partitionId, maxClockTimestamp, tenantConfig.startTimestampMillis);
                         break;
                     } else {
                         partitionIds.add(partitionId);
