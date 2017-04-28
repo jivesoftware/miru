@@ -27,4 +27,8 @@ public class NoOpClientHealth implements ClientHealth {
     @Override
     public void stillDead() {
     }
+
+    @Override
+    public void interrupted(String s, Exception e) {
+    }
 }

@@ -6,9 +6,9 @@ import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 
 public class MiruSiphonServiceInitializer {
 
-    public MiruSiphonService initialize(MiruSoyRenderer renderer) throws Exception {
+    public MiruSiphonUIService initialize(MiruSoyRenderer renderer) throws Exception {
 
-        return new MiruSiphonService(
+        return new MiruSiphonUIService(
             renderer,
             new MiruSiphonHeaderRegion("soy.wikimiru.chrome.headerRegion", renderer),
             new MiruSiphonHomeRegion("soy.wikimiru.page.home", renderer)

@@ -114,5 +114,21 @@
             <groupId>org.reflections</groupId>
             <artifactId>reflections</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+        </dependency>
     </dependencies>
 </project>
