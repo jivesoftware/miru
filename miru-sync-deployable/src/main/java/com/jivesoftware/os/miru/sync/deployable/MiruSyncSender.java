@@ -376,9 +376,12 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     break;
                 }
 
-                ensureTenantPartitionState(tenantTuple, entry.getValue(), stripe);
+                boolean ensured = ensureTenantPartitionState(tenantTuple, entry.getValue(), stripe);
                 if (!isElected(stripe)) {
                     break;
+                }
+                if (!ensured) {
+                    continue;
                 }
 
                 int synced = syncTenant(tenantTuple, entry.getValue(), stripe, forward);
@@ -388,7 +391,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 forwardCount += synced;
 
                 if (!isElected(stripe)) {
-                    continue;
+                    break;
                 }
 
                 synced = syncTenant(tenantTuple, entry.getValue(), stripe, reverse);
@@ -424,38 +427,56 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 return false;
             }
 
-            MiruPartitionId smallestPartitionId = largestPartitionId;
+            List<MiruPartitionId> partitionIds = Lists.newArrayList();
             for (MiruPartitionId partitionId = largestPartitionId; partitionId != null; partitionId = partitionId.prev()) {
-                MiruActivityWALStatus status = fromWALClient.getActivityWALStatusForTenant(tenantTuple.from, partitionId);
-                if (!isElected(stripe)) {
-                    return false;
-                }
-                long maxClockTimestamp = 0;
-                for (WriterCount count : status.counts) {
-                    maxClockTimestamp = Math.max(maxClockTimestamp, count.clockTimestamp);
-                }
-                if (maxClockTimestamp < tenantConfig.startTimestampMillis) {
-                    break;
+                PartitionRange range = clusterClient.getIngressRange(tenantTuple.from, partitionId);
+                if (range != null && range.rangeMinMax.clockMin > 0 && range.rangeMinMax.clockMax > 0) {
+                    if (tenantConfig.startTimestampMillis > 0 && range.rangeMinMax.clockMax < tenantConfig.startTimestampMillis) {
+                        LOG.info("Initialization of step state found terminal range from:{} to:{} partitionId:{} clockMax:{} startTimestamp:{}",
+                            tenantTuple.from, tenantTuple.to, partitionId, range.rangeMinMax.clockMax, tenantConfig.startTimestampMillis);
+                        break;
+                    } else if (tenantConfig.stopTimestampMillis <= 0 || range.rangeMinMax.clockMin <= tenantConfig.stopTimestampMillis) {
+                        partitionIds.add(partitionId);
+                    }
                 } else {
-                    smallestPartitionId = partitionId;
+                    MiruActivityWALStatus status = fromWALClient.getActivityWALStatusForTenant(tenantTuple.from, partitionId);
+                    if (!isElected(stripe)) {
+                        return false;
+                    }
+                    if (status == null) {
+                        LOG.warn("Failed to initialize step state due to missing status from:{} to:{} partitionId:{}",
+                            tenantTuple.from, tenantTuple.to, partitionId);
+                        return false;
+                    }
+                    long maxClockTimestamp = 0;
+                    for (WriterCount count : status.counts) {
+                        maxClockTimestamp = Math.max(maxClockTimestamp, count.clockTimestamp);
+                    }
+                    if (tenantConfig.startTimestampMillis > 0 && maxClockTimestamp < tenantConfig.startTimestampMillis || maxClockTimestamp == 0) {
+                        LOG.info("Initialization of step state found terminal status from:{} to:{} partitionId:{} clockMax:{} startTimestamp:{}",
+                            tenantTuple.from, tenantTuple.to, partitionId, maxClockTimestamp, tenantConfig.startTimestampMillis);
+                        break;
+                    } else {
+                        partitionIds.add(partitionId);
+                    }
                 }
             }
 
-            int partitionCount = largestPartitionId.getId() - smallestPartitionId.getId() + 1;
+            Lists.reverse(partitionIds);
+
+            int partitionCount = partitionIds.size();
             long timeShiftRangeMillis = tenantConfig.timeShiftStopTimestampMillis - tenantConfig.timeShiftStartTimestampMillis;
             long rangePerPartitionMillis = timeShiftRangeMillis / partitionCount;
             long startTimestampMillis = tenantConfig.timeShiftStartTimestampMillis;
-            for (MiruPartitionId partitionId = smallestPartitionId; partitionId.compareTo(largestPartitionId) <= 0; partitionId = partitionId.next()) {
+
+            for (MiruPartitionId partitionId : partitionIds) {
                 TenantPartitionState state = getTenantPartitionState(tenantTuple.from, tenantTuple.to, partitionId);
                 if (state != null) {
                     LOG.info("Skipped step state from:{} to:{} partitionId:{} because it was already initialized",
                         tenantTuple.from, tenantTuple.to, partitionId);
                 } else {
                     long count = fromWALClient.getActivityCount(tenantTuple.from, partitionId);
-                    // at minimum, skip over deletion bit, this sucks because orderId bits are lower than writerId bits
-                    // so we can't safely leverage orderId space :(
-
-                    long timeShiftOrderIds = idPacker.pack(rangePerPartitionMillis, 0, 0) / count;
+                    long timeShiftOrderIds = count == 0 ? 1 : idPacker.pack(rangePerPartitionMillis, 0, 0) / count;
                     long stopTimestampMillis = startTimestampMillis + rangePerPartitionMillis;
                     long startTimestampOrderId = orderIdProvider.getApproximateId(startTimestampMillis);
                     long stopTimestampOrderId = orderIdProvider.getApproximateId(stopTimestampMillis);
@@ -560,10 +581,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     if (forwardIgnoreSet.add(tenantTuplePartition)) {
                         LOG.info("Forward progress is missing step state from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
                     }
-                } else {
-                    LOG.error("Reverse progress is missing step state from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
+                    return 0;
                 }
-                return 0;
             }
         }
 
@@ -582,7 +601,10 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         }
 
         boolean intersects = true;
-        if (partitionRange != null && partitionRange.rangeMinMax.clockMin > 0 && partitionRange.rangeMinMax.clockMax > 0) {
+        if (tenantConfig.timeShiftStrategy == MiruSyncTimeShiftStrategy.step && state == null) {
+            LOG.info("Reverse sync skipped missing step state from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
+            intersects = false;
+        } else if (partitionRange != null && partitionRange.rangeMinMax.clockMin > 0 && partitionRange.rangeMinMax.clockMax > 0) {
             if (tenantConfig.startTimestampMillis > 0 && tenantConfig.startTimestampMillis > partitionRange.rangeMinMax.clockMax
                 || tenantConfig.stopTimestampMillis > 0 && tenantConfig.stopTimestampMillis < partitionRange.rangeMinMax.clockMin) {
                 LOG.info("No intersection from:{} to:{} partition:{} clockMin:{} clockMax:{} start:{} stop:{}",
