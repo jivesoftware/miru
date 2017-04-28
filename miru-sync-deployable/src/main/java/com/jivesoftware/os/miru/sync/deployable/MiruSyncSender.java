@@ -611,11 +611,12 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                         LOG.info("Forward progress is missing step state from:{} to:{} partition:{} type:{}",
                             tenantTuple.from, tenantTuple.to, partitionId, type);
                     }
+                    return new SyncResult(0, 0, 0, false);
                 } else {
                     LOG.info("Reverse sync skipped missing step state from:{} to:{} partition:{} type:{}", tenantTuple.from, tenantTuple.to, partitionId, type);
                     advanceTenantProgress(tenantTuple, partitionId, type);
+                    return new SyncResult(0, 0, 0, true);
                 }
-                return new SyncResult(0, 0, 0, false);
             }
         }
 
