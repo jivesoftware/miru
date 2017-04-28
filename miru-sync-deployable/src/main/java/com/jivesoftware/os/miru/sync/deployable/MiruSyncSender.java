@@ -465,7 +465,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 }
             }
 
-            Lists.reverse(partitionIds);
+            Collections.reverse(partitionIds);
 
             int partitionCount = partitionIds.size();
             long timeShiftRangeMillis = tenantConfig.timeShiftStopTimestampMillis - tenantConfig.timeShiftStartTimestampMillis;
