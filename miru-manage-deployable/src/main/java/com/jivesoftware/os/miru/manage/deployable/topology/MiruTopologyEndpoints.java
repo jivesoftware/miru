@@ -102,7 +102,7 @@ public class MiruTopologyEndpoints {
     @Path("/update/lastTimestamp/{tenantId}/{partitionId}/{host}/{lastTimestamp}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response updateIngress(@PathParam("tenantId") String tenantId,
+    public Response updateLastTimestamp(@PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId,
         @PathParam("host") String host,
         @PathParam("lastTimestamp") long lastTimestamp) {
