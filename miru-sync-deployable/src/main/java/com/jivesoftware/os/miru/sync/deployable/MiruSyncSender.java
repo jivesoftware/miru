@@ -389,7 +389,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
                 SyncResult syncResult = syncTenant(tenantTuple, entry.getValue(), stripe, forward);
                 if (syncResult.count > 0) {
-                    LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, tenantTuple.from, syncResult.count, forward);
+                    LOG.info("Synced stripe:{} tenantId:{} activities:{} skipped:{} ignored:{} type:{}",
+                        stripe, tenantTuple.from, syncResult.count, syncResult.skipped, syncResult.ignored, forward);
                 }
                 count += syncResult.count;
                 skipped += syncResult.skipped;
@@ -402,7 +403,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
                 syncResult = syncTenant(tenantTuple, entry.getValue(), stripe, reverse);
                 if (syncResult.count > 0) {
-                    LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, tenantTuple.from, syncResult.count, reverse);
+                    LOG.info("Synced stripe:{} tenantId:{} activities:{} skipped:{} ignored:{} type:{}",
+                        stripe, tenantTuple.from, syncResult.count, syncResult.skipped, syncResult.ignored, reverse);
                 }
                 count += syncResult.count;
                 skipped += syncResult.skipped;
@@ -410,7 +412,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 progress |= syncResult.advanced;
             }
         }
-        LOG.info("Synced stripe:{} tenants:{} activities:{}", stripe, tenantCount, count);
+        LOG.info("Synced stripe:{} tenants:{} activities:{} skipped:{} ignored:{}", stripe, tenantCount, count, skipped, ignored);
         // Reverse count implies the consumption of at least one partition, which we'll use to tighten the sync interval.
         // Forward count is more relaxed to achieve better batching.
         return new SyncResult(count, skipped, ignored, progress);
@@ -677,19 +679,22 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                             && (tenantConfig.stopTimestampMillis == -1 || entry.activity.clockTimestamp < tenantConfig.stopTimestampMillis)) {
 
                             MiruActivity fromActivity = entry.activity.activity.get();
-                            long forgeClockTimestamp, forgeActivityTimestamp, stopActivityTimestamp;
+                            long forgeClockTimestamp, forgeActivityTimestamp, startActivityTimestamp, stopActivityTimestamp;
                             if (tenantConfig.timeShiftStrategy == MiruSyncTimeShiftStrategy.step) {
                                 forgeClockTimestamp = idPacker.unpack(nextActivityTimestamp)[0] + JiveEpochTimestampProvider.JIVE_EPOCH;
                                 forgeActivityTimestamp = nextActivityTimestamp;
                                 nextActivityTimestamp = forgeActivityTimestamp + timeShift;
+                                startActivityTimestamp = state.timeShiftStartTimestampOrderId;
                                 stopActivityTimestamp = state.timeShiftStopTimestampOrderId;
                             } else {
                                 forgeClockTimestamp = entry.activity.clockTimestamp + clockShift;
                                 forgeActivityTimestamp = fromActivity.time + timeShift;
+                                //TODO correct start/stop for linear shift
+                                startActivityTimestamp = 0;
                                 stopActivityTimestamp = 0;
                             }
 
-                            if ((tenantConfig.stopTimestampMillis <= 0 || forgeClockTimestamp < tenantConfig.stopTimestampMillis)
+                            if ((startActivityTimestamp <= 0 || forgeActivityTimestamp >= startActivityTimestamp)
                                 && (stopActivityTimestamp <= 0 || forgeActivityTimestamp < stopActivityTimestamp)) {
                                 // copy to tenantId with time shift, and assign fake writerId
                                 MiruActivity toActivity = fromActivity.copyTo(tenantTuple.to, forgeActivityTimestamp);
