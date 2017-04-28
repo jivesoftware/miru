@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.siphon.deployable.endpoints;
 
-import com.jivesoftware.os.miru.siphon.deployable.MiruSiphonService;
+import com.jivesoftware.os.miru.siphon.deployable.MiruSiphonUIService;
 import com.jivesoftware.os.miru.siphon.deployable.region.MiruSiphonPluginRegion;
 import com.jivesoftware.os.miru.siphon.deployable.region.MiruSiphonPluginRegionInput;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -24,11 +24,11 @@ public class MiruSiphonUIPluginEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruSiphonService miruSiphonService;
+    private final MiruSiphonUIService miruSiphonUIService;
     private final MiruSiphonPluginRegion pluginRegion;
 
-    public MiruSiphonUIPluginEndpoints(@Context MiruSiphonService miruSiphonService, @Context MiruSiphonPluginRegion pluginRegion) {
-        this.miruSiphonService = miruSiphonService;
+    public MiruSiphonUIPluginEndpoints(@Context MiruSiphonUIService miruSiphonUIService, @Context MiruSiphonPluginRegion pluginRegion) {
+        this.miruSiphonUIService = miruSiphonUIService;
         this.pluginRegion = pluginRegion;
     }
 
@@ -46,7 +46,7 @@ public class MiruSiphonUIPluginEndpoints {
     ) {
 
         try {
-            String rendered = miruSiphonService.renderPlugin(pluginRegion, new MiruSiphonPluginRegionInput(tenantId, query, folderGuids, userGuids, querier,
+            String rendered = miruSiphonUIService.renderPlugin(pluginRegion, new MiruSiphonPluginRegionInput(tenantId, query, folderGuids, userGuids, querier,
                 numberOfResult, wildcardExpansion));
             return Response.ok(rendered).build();
         } catch (Exception x) {

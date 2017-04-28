@@ -1,20 +1,20 @@
 package com.jivesoftware.os.miru.siphon.api;
 
+import com.google.common.collect.ListMultimap;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import java.util.List;
 
 /**
  * Created by jonathan.colt on 4/27/17.
  */
-public interface MiruSiphon {
+public interface MiruSiphonPlugin {
 
     String name();
 
     MiruSchema schema(MiruTenantId tenantId) throws Exception;
 
-    List<MiruActivity> siphon(MiruTenantId tenantId,
+    ListMultimap<MiruTenantId, MiruActivity> siphon(MiruTenantId tenantId,
         long rowTxId,
         byte[] prefix,
         byte[] key,

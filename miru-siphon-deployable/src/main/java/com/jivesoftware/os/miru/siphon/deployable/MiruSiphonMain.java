@@ -144,11 +144,11 @@ public class MiruSiphonMain {
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
-            MiruSiphonService miruSiphonService = new MiruSiphonServiceInitializer().initialize(renderer);
+            MiruSiphonUIService miruSiphonUIService = new MiruSiphonServiceInitializer().initialize(renderer);
 
 
             MiruSiphonPluginRegion miruSiphonPluginRegion = new MiruSiphonPluginRegion("soy.wikimiru.page.wikiMiruQueryPlugin",
-                miruSiphonService,
+                miruSiphonUIService,
                 renderer);
 
 
@@ -186,10 +186,10 @@ public class MiruSiphonMain {
             deployable.addInjectables(ObjectMapper.class, mapper);
 
             deployable.addEndpoints(MiruSiphonEndpoints.class);
-            deployable.addInjectables(MiruSiphonService.class, miruSiphonService);
+            deployable.addInjectables(MiruSiphonUIService.class, miruSiphonUIService);
 
             for (MiruSiphonUIPlugin plugin : plugins) {
-                miruSiphonService.registerPlugin(plugin);
+                miruSiphonUIService.registerPlugin(plugin);
                 deployable.addEndpoints(plugin.endpointsClass);
                 deployable.addInjectables(plugin.region.getClass(), plugin.region);
             }

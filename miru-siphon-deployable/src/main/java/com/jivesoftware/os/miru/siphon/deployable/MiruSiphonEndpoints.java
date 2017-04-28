@@ -20,10 +20,10 @@ public class MiruSiphonEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruSiphonService miruSiphonService;
+    private final MiruSiphonUIService miruSiphonUIService;
 
-    public MiruSiphonEndpoints(@Context MiruSiphonService miruSiphonService) {
-        this.miruSiphonService = miruSiphonService;
+    public MiruSiphonEndpoints(@Context MiruSiphonUIService miruSiphonUIService) {
+        this.miruSiphonUIService = miruSiphonUIService;
     }
 
     @GET
@@ -31,7 +31,7 @@ public class MiruSiphonEndpoints {
     @Produces(MediaType.TEXT_HTML)
     public Response get(@Context UriInfo uriInfo) {
         try {
-            String rendered = miruSiphonService.render();
+            String rendered = miruSiphonUIService.render();
             return Response.ok(rendered).build();
         } catch (Exception x) {
             LOG.error("Failed to generating ui.", x);

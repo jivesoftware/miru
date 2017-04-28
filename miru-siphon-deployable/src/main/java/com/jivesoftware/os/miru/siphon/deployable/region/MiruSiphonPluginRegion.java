@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.siphon.deployable.region;
 
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.miru.siphon.deployable.MiruSiphonService;
+import com.jivesoftware.os.miru.siphon.deployable.MiruSiphonUIService;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -17,14 +17,14 @@ public class MiruSiphonPluginRegion implements MiruPageRegion<MiruSiphonPluginRe
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final MiruSiphonService miruSiphonService;
+    private final MiruSiphonUIService miruSiphonUIService;
 
     public MiruSiphonPluginRegion(String template,
-        MiruSiphonService miruSiphonService,
+        MiruSiphonUIService miruSiphonUIService,
         MiruSoyRenderer renderer) {
 
         this.template = template;
-        this.miruSiphonService = miruSiphonService;
+        this.miruSiphonUIService = miruSiphonUIService;
         this.renderer = renderer;
     }
 
