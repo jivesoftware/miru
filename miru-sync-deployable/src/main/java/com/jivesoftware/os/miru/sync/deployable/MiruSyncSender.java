@@ -351,12 +351,14 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
     private SyncResult syncStripe(int stripe) throws Exception {
         if (!isElected(stripe)) {
-            return new SyncResult(0, false);
+            return new SyncResult(0, 0, 0, false);
         }
 
         LOG.info("Syncing stripe:{}", stripe);
         int tenantCount = 0;
-        int activityCount = 0;
+        long count = 0;
+        long skipped = 0;
+        long ignored = 0;
         boolean progress = false;
         Map<MiruSyncTenantTuple, MiruSyncTenantConfig> tenantTupleConfigs = syncConfigProvider.getAll(config.name);
         for (Entry<MiruSyncTenantTuple, MiruSyncTenantConfig> entry : tenantTupleConfigs.entrySet()) {
@@ -389,7 +391,9 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 if (syncResult.count > 0) {
                     LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, tenantTuple.from, syncResult.count, forward);
                 }
-                activityCount += syncResult.count;
+                count += syncResult.count;
+                skipped += syncResult.skipped;
+                ignored += syncResult.ignored;
                 progress |= syncResult.advanced;
 
                 if (!isElected(stripe)) {
@@ -400,14 +404,16 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 if (syncResult.count > 0) {
                     LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, tenantTuple.from, syncResult.count, reverse);
                 }
-                activityCount += syncResult.count;
+                count += syncResult.count;
+                skipped += syncResult.skipped;
+                ignored += syncResult.ignored;
                 progress |= syncResult.advanced;
             }
         }
-        LOG.info("Synced stripe:{} tenants:{} activities:{}", stripe, tenantCount, activityCount);
+        LOG.info("Synced stripe:{} tenants:{} activities:{}", stripe, tenantCount, count);
         // Reverse count implies the consumption of at least one partition, which we'll use to tighten the sync interval.
         // Forward count is more relaxed to achieve better batching.
-        return new SyncResult(activityCount, progress);
+        return new SyncResult(count, skipped, ignored, progress);
     }
 
     private void ensureSchema(MiruTenantId fromTenantId, MiruTenantId toTenantId) throws Exception {
@@ -500,11 +506,11 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private SyncResult syncTenant(MiruSyncTenantTuple tenantTuple, MiruSyncTenantConfig tenantConfig, int stripe, ProgressType type) throws Exception {
         TenantProgress progress = getTenantProgress(tenantTuple.from, tenantTuple.to, stripe);
         if (!isElected(stripe)) {
-            return new SyncResult(0, false);
+            return new SyncResult(0, 0, 0, false);
         }
         if (type == reverse && progress.reversePartitionId == null) {
             // all done
-            return new SyncResult(0, false);
+            return new SyncResult(0, 0, 0, false);
         }
 
         MiruPartitionId partitionId = type == reverse ? progress.reversePartitionId : progress.forwardPartitionId;
@@ -512,10 +518,10 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         MiruActivityWALStatus status = fromWALClient.getActivityWALStatusForTenant(tenantTuple.from, partitionId);
         if (status == null) {
             LOG.warn("Failed to get status from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
-            return new SyncResult(0, false);
+            return new SyncResult(0, 0, 0, false);
         }
         if (!isElected(stripe)) {
-            return new SyncResult(0, false);
+            return new SyncResult(0, 0, 0, false);
         }
         if (type == reverse) {
             long maxClockTimestamp = -1;
@@ -529,16 +535,16 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     setTenantProgress(tenantTuple, partitionId, type, false);
                     maxAgeSet.add(tenantTuplePartition);
                 }
-                return new SyncResult(0, false);
+                return new SyncResult(0, 0, 0, false);
             } else if (status.ends.containsAll(status.begins)) {
                 PartitionRange partitionRange = clusterClient.getIngressRange(tenantTuple.from, partitionId);
                 return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status, partitionRange, progress.reverseTaking);
             } else {
                 LOG.error("Reverse sync encountered open partition from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
-                return new SyncResult(0, false);
+                return new SyncResult(0, 0, 0, false);
             }
         } else if (forwardClosedSet.contains(tenantTuplePartition) || forwardIgnoreSet.contains(tenantTuplePartition)) {
-            return new SyncResult(0, false);
+            return new SyncResult(0, 0, 0, false);
         } else {
             return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status, null, progress.forwardTaking);
         }
@@ -546,10 +552,14 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
     private static class SyncResult {
         private final long count;
+        private final long skipped;
+        private final long ignored;
         private final boolean advanced;
 
-        public SyncResult(long count, boolean advanced) {
+        public SyncResult(long count, long skipped, long ignored, boolean advanced) {
             this.count = count;
+            this.skipped = skipped;
+            this.ignored = ignored;
             this.advanced = advanced;
         }
     }
@@ -564,12 +574,12 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         boolean taking) throws Exception {
 
         if (!isElected(stripe)) {
-            return new SyncResult(0, false);
+            return new SyncResult(0, 0, 0, false);
         }
 
         if (status.begins.isEmpty()) {
-            LOG.warn("Source partition has no open writers, progress will not advance from:{} to:{} partition:{}",
-                tenantTuple.from, tenantTuple.to, partitionId);
+            LOG.warn("Source partition has no open writers, progress will not advance from:{} to:{} partition:{} type:{}",
+                tenantTuple.from, tenantTuple.to, partitionId, type);
         }
 
         TenantTuplePartition tenantTuplePartition = new TenantTuplePartition(tenantTuple, partitionId);
@@ -589,15 +599,19 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             if (state != null) {
                 timeShift = idPacker.pack(state.timeShiftOrderIds, 0, 0); // packing with zeroes should preserve writerId, orderId on shift
                 nextActivityTimestamp = state.timeShiftStartTimestampOrderId;
+                long nextClockTimestamp = idPacker.unpack(nextActivityTimestamp)[0] + JiveEpochTimestampProvider.JIVE_EPOCH;
+                LOG.info("Sync step with state from:{} to:{} partitionId:{} type:{} timeShift:{} nextActivityTime:{} nextClockTime:{}",
+                    tenantTuple.from, tenantTuple.to, partitionId, type, timeShift, nextActivityTimestamp, nextClockTimestamp);
             } else {
                 if (type == forward) {
                     if (forwardIgnoreSet.add(tenantTuplePartition)) {
-                        LOG.info("Forward progress is missing step state from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
+                        LOG.info("Forward progress is missing step state from:{} to:{} partition:{} type:{}",
+                            tenantTuple.from, tenantTuple.to, partitionId, type);
                     }
                     if (taking) {
                         setTenantProgress(tenantTuple, partitionId, type, false);
                     }
-                    return new SyncResult(0, false);
+                    return new SyncResult(0, 0, 0, false);
                 }
             }
         }
@@ -618,13 +632,13 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
         boolean intersects = true;
         if (tenantConfig.timeShiftStrategy == MiruSyncTimeShiftStrategy.step && state == null) {
-            LOG.info("Reverse sync skipped missing step state from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
+            LOG.info("Reverse sync skipped missing step state from:{} to:{} partition:{} type:{}", tenantTuple.from, tenantTuple.to, partitionId, type);
             intersects = false;
         } else if (partitionRange != null && partitionRange.rangeMinMax.clockMin > 0 && partitionRange.rangeMinMax.clockMax > 0) {
             if (tenantConfig.startTimestampMillis > 0 && tenantConfig.startTimestampMillis > partitionRange.rangeMinMax.clockMax
                 || tenantConfig.stopTimestampMillis > 0 && tenantConfig.stopTimestampMillis < partitionRange.rangeMinMax.clockMin) {
-                LOG.info("No intersection from:{} to:{} partition:{} clockMin:{} clockMax:{} start:{} stop:{}",
-                    tenantTuple.from, tenantTuple.to, partitionId,
+                LOG.info("No intersection from:{} to:{} partition:{} type:{} clockMin:{} clockMax:{} start:{} stop:{}",
+                    tenantTuple.from, tenantTuple.to, partitionId, type,
                     partitionRange.rangeMinMax.clockMin, partitionRange.rangeMinMax.clockMax,
                     tenantConfig.startTimestampMillis, tenantConfig.stopTimestampMillis);
                 intersects = false;
@@ -633,6 +647,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
         boolean took = false;
         int synced = 0;
+        int skipped = 0;
+        int ignored = 0;
         while (intersects) {
             MutableLong bytesCount = new MutableLong();
             long stopAtTimestamp = type == forward ? orderIdProvider.getApproximateId(System.currentTimeMillis() - config.forwardSyncDelayMillis) : -1;
@@ -644,7 +660,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 stopAtTimestamp,
                 bytesCount);
             if (!isElected(stripe)) {
-                return new SyncResult(synced, false);
+                return new SyncResult(synced, skipped, ignored, false);
             }
             int activityTypes = 0;
             if (batch.activities != null && !batch.activities.isEmpty()) {
@@ -688,7 +704,11 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                                     lastIndex,
                                     toActivity));
                             }
+                        } else {
+                            skipped++;
                         }
+                    } else {
+                        ignored++;
                     }
                 }
                 if (!activities.isEmpty()) {
@@ -746,7 +766,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 setTenantProgress(tenantTuple, partitionId, type, false);
             }
         }
-        return new SyncResult(synced, closed);
+        return new SyncResult(synced, skipped, ignored, closed);
     }
 
     private void advanceTenantProgress(MiruSyncTenantTuple tenantTuple, MiruPartitionId partitionId, ProgressType type) throws Exception {
