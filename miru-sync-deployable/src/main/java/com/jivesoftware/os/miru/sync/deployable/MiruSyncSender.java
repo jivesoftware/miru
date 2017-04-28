@@ -611,8 +611,11 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                         LOG.info("Forward progress is missing step state from:{} to:{} partition:{} type:{}",
                             tenantTuple.from, tenantTuple.to, partitionId, type);
                     }
-                    return new SyncResult(0, 0, 0, false);
+                } else {
+                    LOG.info("Reverse sync skipped missing step state from:{} to:{} partition:{} type:{}", tenantTuple.from, tenantTuple.to, partitionId, type);
+                    advanceTenantProgress(tenantTuple, partitionId, type);
                 }
+                return new SyncResult(0, 0, 0, false);
             }
         }
 
@@ -632,7 +635,6 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
         boolean intersects = true;
         if (tenantConfig.timeShiftStrategy == MiruSyncTimeShiftStrategy.step && state == null) {
-            LOG.info("Reverse sync skipped missing step state from:{} to:{} partition:{} type:{}", tenantTuple.from, tenantTuple.to, partitionId, type);
             intersects = false;
         } else if (partitionRange != null && partitionRange.rangeMinMax.clockMin > 0 && partitionRange.rangeMinMax.clockMax > 0) {
             if (tenantConfig.startTimestampMillis > 0 && tenantConfig.startTimestampMillis > partitionRange.rangeMinMax.clockMax
