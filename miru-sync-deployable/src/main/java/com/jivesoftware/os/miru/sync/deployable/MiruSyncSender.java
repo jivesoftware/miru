@@ -597,19 +597,17 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         } else if (tenantConfig.timeShiftStrategy == MiruSyncTimeShiftStrategy.step) {
             state = getTenantPartitionState(tenantTuple.from, tenantTuple.to, partitionId);
             if (state != null) {
-                timeShift = idPacker.pack(state.timeShiftOrderIds, 0, 0); // packing with zeroes should preserve writerId, orderId on shift
+                timeShift = state.timeShiftOrderIds;
                 nextActivityTimestamp = state.timeShiftStartTimestampOrderId;
                 long nextClockTimestamp = idPacker.unpack(nextActivityTimestamp)[0] + JiveEpochTimestampProvider.JIVE_EPOCH;
                 LOG.info("Sync step with state from:{} to:{} partitionId:{} type:{} timeShift:{} nextActivityTime:{} nextClockTime:{}",
                     tenantTuple.from, tenantTuple.to, partitionId, type, timeShift, nextActivityTimestamp, nextClockTimestamp);
             } else {
                 if (type == forward) {
+                    setTenantProgress(tenantTuple, partitionId, type, false);
                     if (forwardIgnoreSet.add(tenantTuplePartition)) {
                         LOG.info("Forward progress is missing step state from:{} to:{} partition:{} type:{}",
                             tenantTuple.from, tenantTuple.to, partitionId, type);
-                    }
-                    if (taking) {
-                        setTenantProgress(tenantTuple, partitionId, type, false);
                     }
                     return new SyncResult(0, 0, 0, false);
                 }
