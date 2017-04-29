@@ -19,18 +19,16 @@ import com.jivesoftware.os.amza.api.wal.WALHighwater;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.siphon.api.MiruSiphonPlugin;
-import com.jivesoftware.os.miru.siphon.deployable.MiruSiphonSchemaService;
+import com.jivesoftware.os.miru.siphon.deployable.MiruSiphonActivityFlusher;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
-import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
@@ -46,56 +44,71 @@ public class AmzaSiphoner {
 
     private static final AmzaSiphonCursor DEFAULT_CURSOR = new AmzaSiphonCursor(Maps.newHashMap());
 
-    private final RoundRobinStrategy robinStrategy = new RoundRobinStrategy(); // TODO tail at scale?
 
     private final long additionalSolverAfterNMillis = 10_000; //TODO expose to conf?
     private final long abandonLeaderSolutionAfterNMillis = 30_000; //TODO expose to conf?
     private final long abandonSolutionAfterNMillis = 60_000; //TODO expose to conf?
 
-    private final PartitionClientProvider partitionClientProvider;
-    private final MiruSiphonSchemaService miruSiphonSchemaService;
-    private final String miruIngressEndpoint;
-    private final ObjectMapper mapper;
-    private final TenantAwareHttpClient<String> miruWriter;
+    private final AtomicReference<Callable<Boolean>> runnable = new AtomicReference<>(null);
+    public final LongAdder called = new LongAdder();
+    public final LongAdder failed = new LongAdder();
+    public final LongAdder siphoned = new LongAdder();
+    public final LongAdder flushed = new LongAdder();
 
-    public AmzaSiphoner(PartitionClientProvider partitionClientProvider,
-        MiruSiphonSchemaService miruSiphonSchemaService,
-        String miruIngressEndpoint,
-        ObjectMapper mapper,
-        TenantAwareHttpClient<String> miruWriter) {
+    public final AmzaSiphonerConfig siphonerConfig;
+    private final MiruSiphonPlugin miruSiphonPlugin;
+    public final PartitionName partitionName;
+    public final String siphonInstancName;
+    public final MiruTenantId destinationTenantId;
+    public final int batchSize;
+    private final PartitionClientProvider partitionClientProvider;
+    private final ObjectMapper mapper;
+
+    public AmzaSiphoner(AmzaSiphonerConfig siphonerConfig,
+        MiruSiphonPlugin miruSiphonPlugin,
+        PartitionName partitionName,
+        String siphonInstancName,
+        MiruTenantId destinationTenantId,
+        int batchSize,
+        PartitionClientProvider partitionClientProvider,
+        ObjectMapper mapper) {
+
+        this.siphonerConfig = siphonerConfig;
+        this.miruSiphonPlugin = miruSiphonPlugin;
+        this.partitionName = partitionName;
+        this.siphonInstancName = siphonInstancName;
+        this.destinationTenantId = destinationTenantId;
+        this.batchSize = batchSize;
 
         this.partitionClientProvider = partitionClientProvider;
-        this.miruSiphonSchemaService = miruSiphonSchemaService;
-        this.miruIngressEndpoint = miruIngressEndpoint;
         this.mapper = mapper;
-        this.miruWriter = miruWriter;
+    }
+
+    public void stop() {
+        runnable.set(() -> false);
     }
 
     public boolean configHasChanged(AmzaSiphonerConfig siphonerConfig) {
         return false;
     }
 
-    public void start() {
+    public boolean runnable() {
+        return runnable.get() == null;
     }
 
-    public void stop() {
-    }
+    public boolean siphon(Callable<Boolean> runnable, MiruSiphonActivityFlusher miruSiphonActivityFlusher) throws Exception {
+        if (!this.runnable.compareAndSet(null, runnable)) {
+            return true;
+        }
+        called.increment();
 
-    private long siphon(MiruSiphonPlugin miruSiphonPlugin,
-        String siphonInstancName,
-        PartitionName partitionName,
-        MiruTenantId destinationTenantId,
-        int batchSize) throws Exception {
+        try {
+            String siphonerName = miruSiphonPlugin.name() + "-" + siphonInstancName;
+            AmzaSiphonCursor existingCursor = getPartitionCursor(siphonerName, partitionName, DEFAULT_CURSOR);
+            PartitionClient partitionClient = partitionClientProvider.getPartition(partitionName);
+            Map<RingMember, Long> cursorMemberTxIds = Maps.newHashMap(existingCursor.memberTxIds);
 
-        String siphonerName = miruSiphonPlugin.name() + "-" + siphonInstancName;
-        AmzaSiphonCursor existingCursor = getPartitionCursor(siphonerName, partitionName, DEFAULT_CURSOR);
-        PartitionClient partitionClient = partitionClientProvider.getPartition(partitionName);
-
-        Map<RingMember, Long> cursorMemberTxIds = Maps.newHashMap(existingCursor.memberTxIds);
-
-        LongAdder synced = new LongAdder();
-        boolean taking = true;
-        while (taking) {
+            boolean tookToEnd = false;
             ListMultimap<MiruTenantId, MiruActivity> tenantPartitionedActivites = ArrayListMultimap.create();
 
             TakeResult takeResult = partitionClient.takeFromTransactionId(null,
@@ -119,8 +132,7 @@ public class AmzaSiphoner {
                         valueTombstoned,
                         valueVersion);
 
-                    synced.increment();
-
+                    siphoned.increment();
                     tenantPartitionedActivites.putAll(activities);
                     return TxResult.MORE;
                 },
@@ -128,57 +140,37 @@ public class AmzaSiphoner {
                 abandonSolutionAfterNMillis,
                 Optional.empty());
 
+            if (runnable.call()) {
 
-            for (Entry<MiruTenantId, Collection<MiruActivity>> tenantsActivities : tenantPartitionedActivites.asMap().entrySet()) {
-                flushActivities(miruSiphonPlugin, tenantsActivities.getKey(), tenantsActivities.getValue());
-            }
-
-
-            cursorMemberTxIds.merge(takeResult.tookFrom, takeResult.lastTxId, Math::max);
-            if (takeResult.tookToEnd != null) {
-                for (WALHighwater.RingMemberHighwater ringMemberHighwater : takeResult.tookToEnd.ringMemberHighwater) {
-                    cursorMemberTxIds.merge(ringMemberHighwater.ringMember, ringMemberHighwater.transactionId, Math::max);
+                for (Entry<MiruTenantId, Collection<MiruActivity>> tenantsActivities : tenantPartitionedActivites.asMap().entrySet()) {
+                    miruSiphonActivityFlusher.flushActivities(miruSiphonPlugin, tenantsActivities.getKey(), tenantsActivities.getValue());
+                    flushed.add(tenantsActivities.getValue().size());
                 }
-                taking = false;
-            }
 
-            AmzaSiphonCursor cursor = new AmzaSiphonCursor(cursorMemberTxIds);
-            if (!existingCursor.equals(cursor)) {
-                savePartitionCursor(siphonerName, partitionName, cursor);
-                existingCursor = cursor;
-            }
-        }
-
-        return synced.longValue();
-    }
-
-    private void flushActivities(MiruSiphonPlugin miruSiphonPlugin, MiruTenantId tenantId, Collection<MiruActivity> activities) throws Exception {
-
-        if (!miruSiphonSchemaService.ensured(tenantId)) {
-            miruSiphonSchemaService.ensureSchema(tenantId, miruSiphonPlugin.schema(tenantId));
-        }
-
-        String jsonActivities = mapper.writeValueAsString(activities);
-        while (true && !activities.isEmpty()) {
-            try {
-                HttpResponse response = miruWriter.call("", robinStrategy, "flushActivities",
-                    client -> new ClientCall.ClientResponse<>(client.postJson(miruIngressEndpoint, jsonActivities, null), true));
-                if (response.getStatusCode() < 200 || response.getStatusCode() >= 300) {
-                    throw new RuntimeException("Failed to post " + activities.size() + " to " + miruIngressEndpoint);
+                cursorMemberTxIds.merge(takeResult.tookFrom, takeResult.lastTxId, Math::max);
+                if (takeResult.tookToEnd != null) {
+                    for (WALHighwater.RingMemberHighwater ringMemberHighwater : takeResult.tookToEnd.ringMemberHighwater) {
+                        cursorMemberTxIds.merge(ringMemberHighwater.ringMember, ringMemberHighwater.transactionId, Math::max);
+                    }
+                    tookToEnd = true;
                 }
-                LOG.inc("flushed");
-                break;
-            } catch (Exception x) {
-                try {
-                    LOG.error("Failed to flush activities. Will retry shortly....", x);
-                    Thread.sleep(5000);
-                } catch (InterruptedException ex) {
-                    Thread.interrupted();
-                    return;
+
+                AmzaSiphonCursor cursor = new AmzaSiphonCursor(cursorMemberTxIds);
+                if (!existingCursor.equals(cursor)) {
+                    savePartitionCursor(siphonerName, partitionName, cursor);
                 }
+                return tookToEnd;
+            } else {
+                return true;
             }
+        } catch (Throwable t) {
+            failed.increment();
+            throw t;
+        } finally {
+            this.runnable.set(null);
         }
     }
+
 
     private AmzaSiphonCursor getPartitionCursor(String siphonerName, PartitionName partitionName, AmzaSiphonCursor defaultCursor) throws Exception {
         return null;
