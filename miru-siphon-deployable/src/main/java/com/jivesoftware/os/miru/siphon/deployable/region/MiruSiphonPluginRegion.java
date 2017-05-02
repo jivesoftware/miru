@@ -62,9 +62,9 @@ public class MiruSiphonPluginRegion implements MiruPageRegion<MiruSiphonPluginRe
         Map<String, Object> data = Maps.newHashMap();
         try {
 
-
             if (input.action.equals("add")) {
-                amzaSiphonerConfigStorage.multiPut(ImmutableMap.of(String.valueOf(input.uniqueId), new AmzaSiphonerConfig(orderIdProvider.nextId(),
+                long uniqueId = orderIdProvider.nextId();
+                amzaSiphonerConfigStorage.multiPut(ImmutableMap.of(String.valueOf(uniqueId), new AmzaSiphonerConfig(uniqueId,
                     input.name,
                     input.description,
                     input.siphonPluginName,
