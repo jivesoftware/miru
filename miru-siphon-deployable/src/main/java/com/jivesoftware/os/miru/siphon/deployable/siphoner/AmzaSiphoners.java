@@ -123,6 +123,7 @@ public class AmzaSiphoners {
                             if (!siphoner.runnable()) {
                                 int stripe = Math.abs(siphonerConfig.partitionName.hashCode()) % siphonStripeCount;
                                 if (isStripeElected[stripe].call()) {
+                                    LOG.info("Submited SigonRunnable for {}", siphoner);
                                     sigonerThreads.submit(
                                         new SigonRunnable(sigonerThreads, siphonerConfig, siphoner, miruSiphonActivityFlusher, isStripeElected[stripe]));
                                 }

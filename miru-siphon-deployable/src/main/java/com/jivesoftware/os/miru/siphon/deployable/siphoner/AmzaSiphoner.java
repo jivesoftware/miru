@@ -84,6 +84,16 @@ public class AmzaSiphoner {
         this.mapper = mapper;
     }
 
+    @Override
+    public String toString() {
+        return "AmzaSiphoner{" +
+            "partitionName=" + partitionName +
+            ", siphonInstancName='" + siphonInstancName + '\'' +
+            ", destinationTenantId=" + destinationTenantId +
+            ", batchSize=" + batchSize +
+            '}';
+    }
+
     public void stop() {
         runnable.set(() -> false);
     }
