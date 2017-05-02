@@ -5,27 +5,35 @@ package com.jivesoftware.os.miru.siphon.deployable.region;
  */
 public class MiruSiphonPluginRegionInput {
 
-    final String tenantId;
-    final String query;
-    final String folderGuids;
-    final String userGuids;
-    final String querier;
-    final int numberOfResult;
-    final boolean wildcardExpansion;
+    final long uniqueId;
+    final String name;
+    final String description;
+    final String siphonPluginName;
+    final String ringName;
+    final String partitionName;
+    final String destinationTenantId;
+    final int batchSize;
+    final String action;
 
-    public MiruSiphonPluginRegionInput(String tenantId,
-        String query,
-        String folderIds,
-        String userIds,
-        String querier,
-        int numberOfResult,
-        boolean wildcardExpansion) {
-        this.tenantId = tenantId;
-        this.query = query;
-        this.folderGuids = folderIds;
-        this.userGuids = userIds;
-        this.querier = querier;
-        this.numberOfResult = numberOfResult;
-        this.wildcardExpansion = wildcardExpansion;
+
+    public MiruSiphonPluginRegionInput(long uniqueId,
+        String name,
+        String description,
+        String siphonPluginName,
+        String ringName,
+        String partitionName,
+        String destinationTenantId,
+        int batchSize,
+        String action) {
+
+        this.uniqueId = uniqueId;
+        this.name = name;
+        this.description = description;
+        this.siphonPluginName = siphonPluginName;
+        this.ringName = ringName;
+        this.partitionName = partitionName;
+        this.destinationTenantId = destinationTenantId;
+        this.batchSize = batchSize;
+        this.action = action;
     }
 }

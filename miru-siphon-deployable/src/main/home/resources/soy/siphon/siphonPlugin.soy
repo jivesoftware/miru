@@ -7,6 +7,81 @@
  */
 {template .siphonPlugin}
     <div class="panel panel-default">
+        <div class="panel-heading">Siphon Config</div>
+        <div class="panel-body">
+            <form id="siphon-config" class="form-inline  j-form" data-active-class="btn-default" method="get" name="requestPickerForm">
+                <table>
+                    <tr>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            name
+                        </td>
+                        <td>
+                            <input type="text"  class="form-control" placeholder="name" value=""
+                                name="name" id="namePicker"  title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            description
+                        </td>
+                        <td>
+                            <input type="text" class="form-control" placeholder="description" value=""
+                                name="description" id="descriptionPicker" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            siphonPluginName
+                        </td>
+                        <td>
+                            <input type="text" class="form-control" placeholder="siphonPluginName" value=""
+                                name="siphonPluginName" id="siphonPluginNamePicker" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            ringName
+                        </td>
+                        <td>
+                            <input type="text" class="form-control" placeholder="ringName" value=""
+                                name="ringName" id="ringNamePicker" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            partitionName
+                        </td>
+                        <td>
+                            <input type="text" class="form-control" placeholder="partitionName" value=""
+                                name="partitionName" id="partitionNamePicker" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            destinationTenantId
+                        </td>
+                        <td>
+                            <input type="text" class="form-control" placeholder="destinationTenantId" value=""
+                                name="destinationTenantId" id="destinationTenantIdPicker" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            batchSize
+                        </td>
+                        <td>
+                            <input type="number" class="form-control" placeholder="1000" value=""
+                                name="batchSize" id="batchSizePicker" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                             <input class="form-control btn btn-primary"  name="action" type="submit" value="add"/>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
 
         <div class="panel-heading">Siphoners</div>
         <div class="panel-body">
