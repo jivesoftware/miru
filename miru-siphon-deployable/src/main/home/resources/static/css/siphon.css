@@ -11,7 +11,7 @@ li.j-listitem {
 /* theme */
 body {
     background-image: url(/ui/static/img/bkg.jpg);
-    background-repeat: no-repeat;
+    background-repeat: repeat;
     background-position: center center;
     background-size: cover;
     background-color: #d0d0d0;
@@ -43,7 +43,7 @@ div.container {
   margin-right: 1em;
 }
 
-div.wiki-hs-selector {
+div.siphon-hs-selector {
     display: none;
     z-index: 2000;
     position: absolute;
@@ -53,14 +53,14 @@ div.wiki-hs-selector {
     border-radius: 4px;
 }
 
-div.wiki-hs-choice {
+div.siphon-hs-choice {
     border-radius: 2px;
     background-color: #999;
     color: #fff;
     padding: 2px;
 }
 
-input.wiki-hs-field-broken {
+input.siphon-hs-field-broken {
     border-color: red;
     border-style: solid;
 }

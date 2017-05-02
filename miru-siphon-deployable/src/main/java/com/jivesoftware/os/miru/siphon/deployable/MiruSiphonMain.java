@@ -333,7 +333,7 @@ public class MiruSiphonMain {
 
             List<MiruSiphonUIPlugin> plugins = Lists.newArrayList();
 
-            plugins.add(new MiruSiphonUIPlugin("search", "Siphon", "/ui/siphon",
+            plugins.add(new MiruSiphonUIPlugin("tint", "Siphon", "/ui/siphon",
                 MiruSiphonUIPluginEndpoints.class,
                 miruSiphonPluginRegion));
 
