@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.siphon.api;
+package com.jivesoftware.os.miru.query.siphon;
 
 import com.google.common.collect.ListMultimap;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;

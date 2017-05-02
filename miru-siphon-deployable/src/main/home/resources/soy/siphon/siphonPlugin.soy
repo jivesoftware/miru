@@ -1,0 +1,94 @@
+{namespace soy.siphon.page}
+
+/**
+ * 
+ * @param? siphons
+ * @param? siphonPlugins
+ */
+{template .siphonPlugin}
+    <div class="panel panel-default">
+
+        <div class="panel-heading">Siphoners</div>
+        <div class="panel-body">
+             <table class="table table-hover float-table-head table-condensed table-responsive">
+                <thead >
+                    <tr>
+                        <th>Id</th>
+                        <th>plugin</th>
+                        <th>partition</th>
+                        <th>called</th>
+                        <th>failed</th>
+                        <th>siphoned</th>
+                        <th>flushed</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                    {foreach $s in $siphons}
+                        <form id="edit-siphon" class="j-form" data-active-class="btn-default" method="get" name="editHost">
+                            <tr>
+                                <td>
+                                    {$s.id}
+                                </td>
+                                <td>
+                                    <span>{$s.plugin}</span>
+                                </td>
+                                <td>
+                                    <span>{$s.partition}</span>
+                                </td>
+                                <td>
+                                    {$s.called}
+                                </td>
+                                <td>
+                                    {$s.failed}
+                                </td>
+                                <td>
+                                    {$s.siphoned}
+                                </td>
+                                <td>
+                                    {$s.flushed}
+                                </td>
+                                <td>
+                                    <input type="hidden" name="siphonId" value="{$s.id}">
+                                    <button title="Stop" type="submit" name="action" value="stop" class="btn btn-default">
+                                        <span class="glyphicon glyphicon-stop ladda-button"  data-spinner-color="#222" data-style="expand-right">
+                                            &nbspStop
+                                        </span>
+                                    </button>
+                                    <button onclick="return confirm('Are you sure you want to delete?')" title="Remove" type="submit" name="action" value="remove" class="btn btn-default">
+                                        <span class="glyphicon glyphicon-trash">
+                                            &nbspRemove
+                                        </span>
+                                    </button>
+                                <td>
+                            </tr>
+                        </form>
+                    {/foreach}
+             </table>
+        </div>
+    </div>
+
+     <div class="panel-heading">Siphon Plugins</div>
+        <div class="panel-body">
+             <table class="table table-hover float-table-head table-condensed table-responsive">
+                <thead >
+                    <tr>
+                        <th>name</th>
+                        <th>schema</th>
+                    </tr>
+                </thead>
+                    {foreach $s in $siphonPlugins}
+                        <form id="edit-siphon" class="j-form" data-active-class="btn-default" method="get" name="editHost">
+                            <tr>
+                                <td>
+                                    {$s.name}
+                                </td>
+                                <td>
+                                    <span>{$s.schema}</span>
+                                </td>
+                            </tr>
+                        </form>
+                    {/foreach}
+             </table>
+        </div>
+    </div>
+{/template}
