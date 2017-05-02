@@ -40,7 +40,7 @@ public class MiruSiphonUIService {
     }
 
     private <I, R extends MiruPageRegion<I>> MiruSiphonChromeRegion<I, R> chrome(R region) {
-        return new MiruSiphonChromeRegion<>("soy.wikimiru.chrome.chromeRegion", renderer, headerRegion, plugins, region);
+        return new MiruSiphonChromeRegion<>("soy.siphon.chrome.chromeRegion", renderer, headerRegion, plugins, region);
     }
 
     public <I> String renderPlugin(MiruPageRegion<I> pluginRegion, I input) {

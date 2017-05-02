@@ -56,5 +56,6 @@
         <module>miru-syslog-deployable</module>
         <module>miru-siphon-api</module>
         <module>miru-siphon-deployable</module>
+        <module>miru-edge-siphon</module>
   </modules>
 </project>

@@ -42,8 +42,8 @@ import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
-import com.jivesoftware.os.miru.siphon.api.MiruSiphonLifecycle;
-import com.jivesoftware.os.miru.siphon.api.MiruSiphonPlugin;
+import com.jivesoftware.os.miru.query.siphon.MiruSiphonLifecycle;
+import com.jivesoftware.os.miru.query.siphon.MiruSiphonPlugin;
 import com.jivesoftware.os.miru.siphon.deployable.endpoints.MiruSiphonUIPluginEndpoints;
 import com.jivesoftware.os.miru.siphon.deployable.region.MiruSiphonPluginRegion;
 import com.jivesoftware.os.miru.siphon.deployable.region.MiruSiphonUIPlugin;
@@ -323,13 +323,15 @@ public class MiruSiphonMain {
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
             MiruSiphonUIService miruSiphonUIService = new MiruSiphonServiceInitializer().initialize(renderer);
 
-            MiruSiphonPluginRegion miruSiphonPluginRegion = new MiruSiphonPluginRegion("soy.wikimiru.page.wikiMiruQueryPlugin",
+            MiruSiphonPluginRegion miruSiphonPluginRegion = new MiruSiphonPluginRegion("soy.siphon.page.siphonPlugin",
+                siphonPluginRegistry,
                 amzaSiphoners,
-                renderer);
+                renderer,
+                mapper);
 
             List<MiruSiphonUIPlugin> plugins = Lists.newArrayList();
 
-            plugins.add(new MiruSiphonUIPlugin("search", "Query", "/ui/query",
+            plugins.add(new MiruSiphonUIPlugin("search", "Siphon", "/ui/siphon",
                 MiruSiphonUIPluginEndpoints.class,
                 miruSiphonPluginRegion));
 
@@ -350,7 +352,6 @@ public class MiruSiphonMain {
             }
 
             deployable.addInjectables(ObjectMapper.class, mapper);
-
             deployable.addEndpoints(MiruSiphonEndpoints.class);
             deployable.addInjectables(MiruSiphonUIService.class, miruSiphonUIService);
 
@@ -360,6 +361,7 @@ public class MiruSiphonMain {
                 deployable.addInjectables(plugin.region.getClass(), plugin.region);
             }
 
+            amzaSiphoners.start();
 
             deployable.addResource(sourceTree);
             deployable.addEndpoints(LoadBalancerHealthCheckEndpoints.class);

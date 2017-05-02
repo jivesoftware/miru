@@ -10,8 +10,8 @@ public class MiruSiphonServiceInitializer {
 
         return new MiruSiphonUIService(
             renderer,
-            new MiruSiphonHeaderRegion("soy.wikimiru.chrome.headerRegion", renderer),
-            new MiruSiphonHomeRegion("soy.wikimiru.page.home", renderer)
+            new MiruSiphonHeaderRegion("soy.siphon.chrome.headerRegion", renderer),
+            new MiruSiphonHomeRegion("soy.siphon.page.home", renderer)
         );
     }
 

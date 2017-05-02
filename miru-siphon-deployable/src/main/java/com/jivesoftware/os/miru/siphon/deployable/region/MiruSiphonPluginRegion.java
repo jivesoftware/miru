@@ -1,10 +1,15 @@
 package com.jivesoftware.os.miru.siphon.deployable.region;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.api.partition.PartitionName;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.query.siphon.MiruSiphonPlugin;
 import com.jivesoftware.os.miru.siphon.deployable.siphoner.AmzaSiphoner;
 import com.jivesoftware.os.miru.siphon.deployable.siphoner.AmzaSiphoners;
+import com.jivesoftware.os.miru.siphon.deployable.siphoner.MiruSiphonPluginRegistry;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -22,15 +27,21 @@ public class MiruSiphonPluginRegion implements MiruPageRegion<MiruSiphonPluginRe
 
     private final String template;
     private final MiruSoyRenderer renderer;
+    private final MiruSiphonPluginRegistry siphonPluginRegistry;
     private final AmzaSiphoners siphoners;
+    private final ObjectMapper mapper;
 
     public MiruSiphonPluginRegion(String template,
+        MiruSiphonPluginRegistry siphonPluginRegistry,
         AmzaSiphoners siphoners,
-        MiruSoyRenderer renderer) {
+        MiruSoyRenderer renderer,
+        ObjectMapper mapper) {
 
         this.template = template;
+        this.siphonPluginRegistry = siphonPluginRegistry;
         this.siphoners = siphoners;
         this.renderer = renderer;
+        this.mapper = mapper;
     }
 
     @Override
@@ -55,6 +66,22 @@ public class MiruSiphonPluginRegion implements MiruPageRegion<MiruSiphonPluginRe
                 siphonsData.add(siphonData);
             }
             data.put("siphons", siphonsData);
+
+            List<Map<String, String>> siphonPluginsData = Lists.newArrayList();
+            for (String siphonPluginName : siphonPluginRegistry.allPluginNames()) {
+                Map<String, String> siphonPluginData = Maps.newHashMap();
+                siphonPluginData.put("name", siphonPluginName);
+
+                MiruSiphonPlugin miruSiphonPlugin = siphonPluginRegistry.get(siphonPluginName);
+                MiruSchema schema = miruSiphonPlugin.schema(new MiruTenantId("*".getBytes()));
+
+                siphonPluginData.put("schema", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(schema));
+
+
+                siphonPluginsData.add(siphonPluginData);
+            }
+            data.put("siphonPlugins", siphonPluginsData);
+
 
         } catch (Exception e) {
             LOG.error("Unable to retrieve data", e);

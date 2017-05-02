@@ -18,7 +18,7 @@ import com.jivesoftware.os.amza.api.take.TakeResult;
 import com.jivesoftware.os.amza.api.wal.WALHighwater;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.siphon.api.MiruSiphonPlugin;
+import com.jivesoftware.os.miru.query.siphon.MiruSiphonPlugin;
 import com.jivesoftware.os.miru.siphon.deployable.MiruSiphonActivityFlusher;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;

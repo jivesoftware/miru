@@ -1,6 +1,6 @@
 window.$ = window.jQuery;
 
-window.wiki = {};
+window.siphon = {};
 
 
 /*
@@ -11,7 +11,7 @@ window.wiki = {};
 </div>
 
 */
-wiki.hs = {
+siphon.hs = {
     installed: null,
     queuedUninstall: null,
     init: function () {
@@ -23,36 +23,36 @@ wiki.hs = {
             endpoint = endpoint+tenant;
 
             $inputName.focus(function () {
-                wiki.hs.install($inputKey, $inputName, function (key, name) {
+                siphon.hs.install($inputKey, $inputName, function (key, name) {
                     $inputKey.val(key);
                     $inputName.val(name);
                 });
-                wiki.hs.lookup(endpoint, $inputName.val());
+                siphon.hs.lookup(endpoint, $inputName.val());
             });
             $inputName.on('input', function () {
                 //$inputKey.val('');
-                wiki.hs.lookup(endpoint, $inputName.val());
+                siphon.hs.lookup(endpoint, $inputName.val());
             });
             $inputName.blur(function () {
-                wiki.hs.queuedUninstall = setTimeout(function () {
-                    wiki.hs.uninstall($inputName);
+                siphon.hs.queuedUninstall = setTimeout(function () {
+                    siphon.hs.uninstall($inputName);
                 }, 200);
             });
         });
     },
     install: function ($inputKey, $inputName, callback) {
-        wiki.hs.cancelUninstall();
-        wiki.hs.uninstall();
-        var $selector = wiki.hs.makeSelector();
+        siphon.hs.cancelUninstall();
+        siphon.hs.uninstall();
+        var $selector = siphon.hs.makeSelector();
         $('body').append($selector);
-        wiki.hs.installed = {
+        siphon.hs.installed = {
             selector: $selector,
             inputKey: $inputKey,
             inputName: $inputName,
             callback: callback,
             ready: false
         };
-        $inputName.removeClass('wiki-hs-field-broken');
+        $inputName.removeClass('siphon-hs-field-broken');
         var offset = $inputName.offset();
         var height = $inputName.height();
         $selector.show();
@@ -62,64 +62,64 @@ wiki.hs = {
         });
     },
     uninstall: function ($inputName) {
-        if (!wiki.hs.installed || $inputName && wiki.hs.installed.inputName != $inputName) {
+        if (!siphon.hs.installed || $inputName && siphon.hs.installed.inputName != $inputName) {
             return;
         }
 
-        $inputName = $inputName || wiki.hs.installed.inputName;
-        var $inputKey = wiki.hs.installed.inputKey;
+        $inputName = $inputName || siphon.hs.installed.inputName;
+        var $inputKey = siphon.hs.installed.inputKey;
         var name = $inputName.val();
         var found = false;
-        var $selector = wiki.hs.installed.selector;
+        var $selector = siphon.hs.installed.selector;
         $selector.find('a').each(function (i) {
             var $a = $(this);
-            if ($a.data('wikiName') == name) {
-                var key = $a.data('wikiKey');
+            if ($a.data('siphonName') == name) {
+                var key = $a.data('siphonKey');
                 $inputKey.val(key);
                 found = true;
                 return false;
             }
         });
         if (!found) {
-            $inputName.addClass('wiki-hs-field-broken');
-            wiki.hs.installed.inputKey.val('');
+            $inputName.addClass('siphon-hs-field-broken');
+            siphon.hs.installed.inputKey.val('');
         }
 
         $selector.remove();
-        wiki.hs.installed = null;
+        siphon.hs.installed = null;
     },
     makeSelector: function () {
-        var $selector = $('<div>').addClass("wiki-hs-selector");
+        var $selector = $('<div>').addClass("siphon-hs-selector");
         $selector.focus(function () {
-            if (selector == wiki.hs.installed.selector) {
-                wiki.hs.cancelUninstall();
+            if (selector == siphon.hs.installed.selector) {
+                siphon.hs.cancelUninstall();
             }
         });
         $selector.blur(function () {
-            wiki.hs.uninstall();
+            siphon.hs.uninstall();
         });
         return $selector;
     },
     cancelUninstall: function () {
-        if (wiki.hs.queuedUninstall) {
-            clearTimeout(wiki.hs.queuedUninstall);
+        if (siphon.hs.queuedUninstall) {
+            clearTimeout(siphon.hs.queuedUninstall);
         }
     },
     picked: function (key, name) {
-        if (wiki.hs.installed) {
-            wiki.hs.installed.callback(key, name);
-            wiki.hs.uninstall();
+        if (siphon.hs.installed) {
+            siphon.hs.installed.callback(key, name);
+            siphon.hs.uninstall();
         }
     },
     lookup: function (endpoint, contains) {
 
-        var $selector = wiki.hs.installed.selector;
+        var $selector = siphon.hs.installed.selector;
         $.ajax(endpoint, {
             data: {
                 'contains': contains
             }
         }).done(function (data) {
-            if (!wiki.hs.installed || wiki.hs.installed.selector != $selector) {
+            if (!siphon.hs.installed || siphon.hs.installed.selector != $selector) {
                 // selector changed during the query
                 return;
             }
@@ -128,12 +128,12 @@ wiki.hs = {
                 for (var i = 0; i < data.length; i++) {
                     $selector.append(
                             "<a href='#'" +
-                            " class='wiki-hs-choice'" +
-                            " data-wiki-key='" + data[i].key + "'" +
-                            " data-wiki-name='" + data[i].name + "'>" + data[i].name + "</a><br/>");
+                            " class='siphon-hs-choice'" +
+                            " data-siphon-key='" + data[i].key + "'" +
+                            " data-siphon-name='" + data[i].name + "'>" + data[i].name + "</a><br/>");
                 }
-                wiki.hs.link($selector);
-                wiki.hs.installed.ready = true;
+                siphon.hs.link($selector);
+                siphon.hs.installed.ready = true;
             } else {
                 $selector.html("<em>No matches</em>");
             }
@@ -142,10 +142,10 @@ wiki.hs = {
     link: function ($selector) {
         $selector.find('a').each(function (i) {
             var $a = $(this);
-            var key = $a.data('wikiKey');
-            var name = $a.data('wikiName');
+            var key = $a.data('siphonKey');
+            var name = $a.data('siphonName');
             $a.click(function () {
-                wiki.hs.picked(key, name);
+                siphon.hs.picked(key, name);
                 return false;
             });
         });
@@ -154,25 +154,25 @@ wiki.hs = {
 
 
 $(document).ready(function () {
-    wiki.windowFocused = true;
-    wiki.onWindowFocus = [];
-    wiki.onWindowBlur = [];
+    siphon.windowFocused = true;
+    siphon.onWindowFocus = [];
+    siphon.onWindowBlur = [];
 
     if ($('.typeahead-field').length) {
-        wiki.hs.init();
+        siphon.hs.init();
     }
 
 });
 
 
 $(window).focus(function () {
-    wiki.windowFocused = true;
-    for (var i = 0; i < wiki.onWindowFocus.length; i++) {
-        wiki.onWindowFocus[i]();
+    siphon.windowFocused = true;
+    for (var i = 0; i < siphon.onWindowFocus.length; i++) {
+        siphon.onWindowFocus[i]();
     }
 }).blur(function () {
-    wiki.windowFocused = false;
-    for (var i = 0; i < wiki.onWindowBlur.length; i++) {
-        wiki.onWindowBlur[i]();
+    siphon.windowFocused = false;
+    for (var i = 0; i < siphon.onWindowBlur.length; i++) {
+        siphon.onWindowBlur[i]();
     }
 });

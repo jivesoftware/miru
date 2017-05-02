@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.siphon.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.siphon.api.MiruSiphonPlugin;
+import com.jivesoftware.os.miru.query.siphon.MiruSiphonPlugin;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;

@@ -7,7 +7,7 @@ import com.jivesoftware.os.amza.api.PartitionClientProvider;
 import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
 import com.jivesoftware.os.aquarium.LivelyEndState;
 import com.jivesoftware.os.aquarium.State;
-import com.jivesoftware.os.miru.siphon.api.MiruSiphonPlugin;
+import com.jivesoftware.os.miru.query.siphon.MiruSiphonPlugin;
 import com.jivesoftware.os.miru.siphon.deployable.MiruSiphonActivityFlusher;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -196,6 +196,4 @@ public class AmzaSiphoners {
             }
         }
     }
-
-
 }
