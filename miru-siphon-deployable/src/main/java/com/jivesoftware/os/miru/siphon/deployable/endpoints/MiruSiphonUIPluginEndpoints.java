@@ -27,7 +27,9 @@ public class MiruSiphonUIPluginEndpoints {
     private final MiruSiphonUIService miruSiphonUIService;
     private final MiruSiphonPluginRegion pluginRegion;
 
-    public MiruSiphonUIPluginEndpoints(@Context MiruSiphonUIService miruSiphonUIService, @Context MiruSiphonPluginRegion pluginRegion) {
+    public MiruSiphonUIPluginEndpoints(@Context MiruSiphonUIService miruSiphonUIService,
+        @Context MiruSiphonPluginRegion pluginRegion) {
+
         this.miruSiphonUIService = miruSiphonUIService;
         this.pluginRegion = pluginRegion;
     }
@@ -36,18 +38,20 @@ public class MiruSiphonUIPluginEndpoints {
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response query(
-        @QueryParam("tenantId") @DefaultValue("") String tenantId,
-        @QueryParam("query") @DefaultValue("") String query,
-        @QueryParam("folderGuids") @DefaultValue("") String folderGuids,
-        @QueryParam("userGuids") @DefaultValue("") String userGuids,
-        @QueryParam("querier") @DefaultValue("miru") String querier,
-        @QueryParam("numberOfResult") @DefaultValue("100") int numberOfResult,
-        @QueryParam("wildcardExpansion") @DefaultValue("false") boolean wildcardExpansion
+        @QueryParam("uniqueId") @DefaultValue("-1") long uniqueId,
+        @QueryParam("name") @DefaultValue("") String name,
+        @QueryParam("description") @DefaultValue("") String description,
+        @QueryParam("siphonPluginName") @DefaultValue("") String siphonPluginName,
+        @QueryParam("ringName") @DefaultValue("") String ringName,
+        @QueryParam("partitionName") @DefaultValue("") String partitionName,
+        @QueryParam("destinationTenantId") @DefaultValue("") String destinationTenantId,
+        @QueryParam("batchSize") @DefaultValue("100") int batchSize,
+        @QueryParam("action") @DefaultValue("") String action
     ) {
 
         try {
-            String rendered = miruSiphonUIService.renderPlugin(pluginRegion, new MiruSiphonPluginRegionInput(tenantId, query, folderGuids, userGuids, querier,
-                numberOfResult, wildcardExpansion));
+            String rendered = miruSiphonUIService.renderPlugin(pluginRegion,
+                new MiruSiphonPluginRegionInput(uniqueId, name, description, siphonPluginName, ringName, partitionName, destinationTenantId, batchSize, action));
             return Response.ok(rendered).build();
         } catch (Exception x) {
             LOG.error("Failed to generating query ui.", x);

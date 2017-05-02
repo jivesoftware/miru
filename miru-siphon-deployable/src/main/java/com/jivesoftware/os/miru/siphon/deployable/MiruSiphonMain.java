@@ -112,7 +112,7 @@ public class MiruSiphonMain {
             final Deployable deployable = new Deployable(args);
             HealthFactory.initialize(deployable::config, new DeployableHealthCheckRegistry(deployable));
             InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
-            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new UI("Wiki", "main", "/ui/query"))));
+            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new UI("Siphon", "main", "/ui/siphon"))));
             deployable.addHealthCheck(new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(new SystemCpuHealthChecker(deployable.config(SystemCpuHealthChecker.SystemCpuHealthCheckerConfig.class)));
@@ -323,8 +323,10 @@ public class MiruSiphonMain {
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
             MiruSiphonUIService miruSiphonUIService = new MiruSiphonServiceInitializer().initialize(renderer);
 
-            MiruSiphonPluginRegion miruSiphonPluginRegion = new MiruSiphonPluginRegion("soy.siphon.page.siphonPlugin",
+            MiruSiphonPluginRegion miruSiphonPluginRegion = new MiruSiphonPluginRegion(orderIdProvider,
+                "soy.siphon.page.siphonPlugin",
                 siphonPluginRegistry,
+                senderConfigStorage,
                 amzaSiphoners,
                 renderer,
                 mapper);
