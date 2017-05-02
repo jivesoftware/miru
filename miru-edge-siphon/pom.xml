@@ -9,7 +9,7 @@
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
-    <artifactId>miru-query-siphon</artifactId>
+    <artifactId>miru-edge-siphon</artifactId>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
