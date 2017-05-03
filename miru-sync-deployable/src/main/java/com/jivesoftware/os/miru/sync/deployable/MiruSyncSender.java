@@ -546,6 +546,9 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 return new SyncResult(0, 0, 0, false);
             }
         } else if (forwardClosedSet.contains(tenantTuplePartition) || forwardIgnoreSet.contains(tenantTuplePartition)) {
+            if (progress.forwardTaking) {
+                setTenantProgress(tenantTuple, partitionId, type, false);
+            }
             return new SyncResult(0, 0, 0, false);
         } else {
             return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status, null, progress.forwardTaking);

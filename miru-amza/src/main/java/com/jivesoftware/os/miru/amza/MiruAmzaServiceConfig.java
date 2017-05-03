@@ -25,6 +25,9 @@ public interface MiruAmzaServiceConfig extends Config {
     @IntDefault(8)
     int getDeltaMaxValueSizeInIndex();
 
+    @BooleanDefault(false)
+    boolean getDeltaUseHighwaterTxId();
+
     @IntDefault(100)
     int getCorruptionParanoiaFactor();
 
