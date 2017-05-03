@@ -32,9 +32,8 @@ public class MiruReaderUIEndpoints {
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
-    public Response get(@HeaderParam("rb_session_redir_ssl") @DefaultValue("true") String redirSsl,
-        @HeaderParam("rb_session_redir_port") @DefaultValue("1175") String redirPort) {
-        String rendered = service.render(redirSsl, redirPort);
+    public Response get(@HeaderParam("rb_session_redir_url") @DefaultValue("") String redirUrl) {
+        String rendered = service.render(redirUrl);
         return Response.ok(rendered).build();
     }
 
