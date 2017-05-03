@@ -20,7 +20,7 @@
         <lab-version>0.218</lab-version>
         <amza-version>0.815</amza-version>
         <aquarium-version>0.31</aquarium-version>
-        <routing-bird-version>0.201</routing-bird-version>
+        <routing-bird-version>0.202</routing-bird-version>
         <jackson-version>2.8.1</jackson-version>
         <jersey-version>2.13</jersey-version>
         <jetty-version>9.1.1.v20140108</jetty-version>
