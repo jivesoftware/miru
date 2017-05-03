@@ -4,7 +4,9 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import javax.inject.Singleton;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -30,8 +32,9 @@ public class MiruReaderUIEndpoints {
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
-    public Response get() {
-        String rendered = service.render();
+    public Response get(@HeaderParam("rb_session_redir_ssl") @DefaultValue("true") String redirSsl,
+        @HeaderParam("rb_session_redir_port") @DefaultValue("1175") String redirPort) {
+        String rendered = service.render(redirSsl, redirPort);
         return Response.ok(rendered).build();
     }
 
@@ -39,7 +42,7 @@ public class MiruReaderUIEndpoints {
     @Path("/partitions")
     @Produces(MediaType.TEXT_HTML)
     public Response getPartitions() {
-        String rendered = service.renderPartitions(Optional.<String>absent());
+        String rendered = service.renderPartitions(Optional.absent());
         return Response.ok(rendered).build();
     }
 
