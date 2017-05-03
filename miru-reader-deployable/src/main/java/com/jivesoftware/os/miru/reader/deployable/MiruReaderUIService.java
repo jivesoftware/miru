@@ -43,9 +43,8 @@ public class MiruReaderUIService {
         return new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion, plugins, region);
     }
 
-    public String render(String redirSsl, String redirPort) {
-        headerRegion.setRedirSsl(redirSsl);
-        headerRegion.setRedirPort(redirPort);
+    public String render(String redirUrl) {
+        headerRegion.setRedirUrl(redirUrl);
         return chrome(adminRegion).render(null);
     }
 

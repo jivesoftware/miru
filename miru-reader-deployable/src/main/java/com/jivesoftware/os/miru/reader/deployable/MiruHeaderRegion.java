@@ -27,8 +27,7 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
     private final MiruSoyRenderer renderer;
     private final TenantRoutingProvider tenantRoutingProvider;
 
-    private String redirSsl;
-    private String redirPort;
+    private String redirUrl;
 
     public MiruHeaderRegion(String cluster,
         int instance,
@@ -87,7 +86,7 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
                 if (port != null) {
                     instances.add(ImmutableMap.of(
                         "name", instanceDescriptor.serviceName + " " + instanceDescriptor.instanceName,
-                        "redirect", (redirSsl.equalsIgnoreCase("true") ? "https" : "http" ) + "://" + instanceDescriptor.publicHost + ":" + redirPort,
+                        "redirect", redirUrl,
                         "instanceKey", instanceDescriptor.instanceKey,
                         "portName", portName,
                         "path", path));
@@ -103,8 +102,6 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
         return 0;
     }
 
-    void setRedirSsl(String redirSsl) { this.redirSsl = redirSsl; }
-
-    void setRedirPort(String redirPort) { this.redirPort = redirPort; }
+    void setRedirUrl(String redirUrl) { this.redirUrl = redirUrl; }
 
 }
