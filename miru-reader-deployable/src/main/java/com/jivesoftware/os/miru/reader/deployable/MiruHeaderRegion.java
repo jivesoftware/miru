@@ -20,11 +20,15 @@ import java.util.Map;
 public class MiruHeaderRegion implements MiruRegion<Void> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+
     private final String cluster;
     private final int instance;
     private final String template;
     private final MiruSoyRenderer renderer;
     private final TenantRoutingProvider tenantRoutingProvider;
+
+    private String redirSsl;
+    private String redirPort;
 
     public MiruHeaderRegion(String cluster,
         int instance,
@@ -44,8 +48,8 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
             Map<String, Object> data = Maps.newHashMap();
             data.put("cluster", cluster);
             data.put("instance", String.valueOf(instance));
-            try {
 
+            try {
                 List<Map<String, Object>> services = new ArrayList<>();
                 data.put("total", String.valueOf(addPeers(services, "miru-reader", "main", "/ui")));
                 addPeers(services, "miru-writer", "main", "/ui");
@@ -54,19 +58,21 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
                 addPeers(services, "miru-catwalk", "main", "/ui");
                 addPeers(services, "miru-tools", "main", "/ui");
                 data.put("services", services);
-
             } catch (Exception x) {
                 LOG.warn("Failed to build out peers.", x);
             }
 
             return renderer.render(template, data);
         } catch (Exception x) {
-            LOG.error("Faild to render header.", x);
+            LOG.error("Failed to render header.", x);
             return x.getMessage();
         }
     }
 
-    private int addPeers(List<Map<String, Object>> services, String name, String portName, String path) {
+    private int addPeers(List<Map<String, Object>> services,
+        String name,
+        String portName,
+        String path) {
         TenantsServiceConnectionDescriptorProvider readers = tenantRoutingProvider.getConnections(name, portName, 10_000); // TODO config
         ConnectionDescriptors connectionDescriptors = readers.getConnections("");
         if (connectionDescriptors != null) {
@@ -79,12 +85,12 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
                 InstanceDescriptor instanceDescriptor = connectionDescriptor.getInstanceDescriptor();
                 InstanceDescriptor.InstanceDescriptorPort port = instanceDescriptor.ports.get(portName);
                 if (port != null) {
-                    instances.add(ImmutableMap.of("name", instanceDescriptor.serviceName + " " + instanceDescriptor.instanceName,
-                        "host", instanceDescriptor.publicHost,
-                        "port", String.valueOf(port.port),
-                        "path", path
-                    ));
-
+                    instances.add(ImmutableMap.of(
+                        "name", instanceDescriptor.serviceName + " " + instanceDescriptor.instanceName,
+                        "redirect", (redirSsl.equalsIgnoreCase("true") ? "https" : "http" ) + "://" + instanceDescriptor.publicHost + ":" + redirPort,
+                        "instanceKey", instanceDescriptor.instanceKey,
+                        "portName", portName,
+                        "path", path));
                 }
             }
             if (!instances.isEmpty()) {
@@ -96,4 +102,9 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
         }
         return 0;
     }
+
+    void setRedirSsl(String redirSsl) { this.redirSsl = redirSsl; }
+
+    void setRedirPort(String redirPort) { this.redirPort = redirPort; }
+
 }
