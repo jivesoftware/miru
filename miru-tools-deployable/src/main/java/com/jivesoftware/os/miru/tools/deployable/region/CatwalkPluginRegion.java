@@ -20,7 +20,7 @@ import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkModelQuery;
 import com.jivesoftware.os.miru.catwalk.shared.FeatureScore;
 import com.jivesoftware.os.miru.catwalk.shared.Strategy;
-import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
+import com.jivesoftware.os.miru.plugin.query.MiruRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -50,15 +50,15 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final MiruTenantQueryRouting miruTenantQueryRouting;
+    private final MiruRouting routing;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public CatwalkPluginRegion(String template,
         MiruSoyRenderer renderer,
-        MiruTenantQueryRouting miruTenantQueryRouting) {
+        MiruRouting routing) {
         this.template = template;
         this.renderer = renderer;
-        this.miruTenantQueryRouting = miruTenantQueryRouting;
+        this.routing = routing;
     }
 
     public static class CatwalkPluginRegionInput {
@@ -197,7 +197,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
 
-                    MiruResponse<CatwalkAnswer> catwalkResponse = miruTenantQueryRouting.query("", "catwalkPluginRegion",
+                    MiruResponse<CatwalkAnswer> catwalkResponse = routing.query("", "catwalkPluginRegion",
                         miruRequest, endpoint, CatwalkAnswer.class);
 
                     if (catwalkResponse != null && catwalkResponse.answer != null) {

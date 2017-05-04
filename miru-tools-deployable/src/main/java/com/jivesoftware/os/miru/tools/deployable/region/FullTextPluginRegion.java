@@ -13,7 +13,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
+import com.jivesoftware.os.miru.plugin.query.MiruRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -43,15 +43,15 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final MiruTenantQueryRouting miruTenantQueryRouting;
+    private final MiruRouting routing;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public FullTextPluginRegion(String template,
         MiruSoyRenderer renderer,
-        MiruTenantQueryRouting miruTenantQueryRouting) {
+        MiruRouting routing) {
         this.template = template;
         this.renderer = renderer;
-        this.miruTenantQueryRouting = miruTenantQueryRouting;
+        this.routing = routing;
     }
 
     public static class FullTextPluginRegionInput {
@@ -147,7 +147,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                             gatherTermsForFieldSplit),
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
-                    MiruResponse<FullTextAnswer> fullTextResponse = miruTenantQueryRouting.query("", "fullTextPluginRegion",
+                    MiruResponse<FullTextAnswer> fullTextResponse = routing.query("", "fullTextPluginRegion",
                         miruRequest, endpoint, FullTextAnswer.class);
 
                     if (fullTextResponse != null && fullTextResponse.answer != null) {

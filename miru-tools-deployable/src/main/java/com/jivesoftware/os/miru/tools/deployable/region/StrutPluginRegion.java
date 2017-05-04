@@ -23,7 +23,7 @@ import com.jivesoftware.os.miru.catwalk.shared.HotOrNot;
 import com.jivesoftware.os.miru.catwalk.shared.HotOrNot.Hotness;
 import com.jivesoftware.os.miru.catwalk.shared.Strategy;
 import com.jivesoftware.os.miru.catwalk.shared.StrutModelScalar;
-import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
+import com.jivesoftware.os.miru.plugin.query.MiruRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -53,15 +53,15 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final MiruTenantQueryRouting miruTenantQueryRouting;
+    private final MiruRouting routing;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public StrutPluginRegion(String template,
         MiruSoyRenderer renderer,
-        MiruTenantQueryRouting miruTenantQueryRouting) {
+        MiruRouting routing) {
         this.template = template;
         this.renderer = renderer;
-        this.miruTenantQueryRouting = miruTenantQueryRouting;
+        this.routing = routing;
     }
 
     public static class StrutPluginRegionInput {
@@ -271,7 +271,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             100), // TODO expose to UI??
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
-                    MiruResponse<StrutAnswer> strutResponse = miruTenantQueryRouting.query("", "strutPluginRegion",
+                    MiruResponse<StrutAnswer> strutResponse = routing.query("", "strutPluginRegion",
                         miruRequest, endpoint, StrutAnswer.class);
 
                     if (strutResponse != null && strutResponse.answer != null) {

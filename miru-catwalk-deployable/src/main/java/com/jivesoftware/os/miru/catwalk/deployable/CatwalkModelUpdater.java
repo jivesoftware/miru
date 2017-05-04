@@ -32,7 +32,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
-import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
+import com.jivesoftware.os.miru.plugin.query.MiruQueryRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -66,7 +66,7 @@ public class CatwalkModelUpdater {
     private final CatwalkModelService modelService;
     private final CatwalkModelQueue modelQueue;
     private final ScheduledExecutorService queueConsumers;
-    private final MiruTenantQueryRouting tenantQueryRouting;
+    private final MiruQueryRouting miruQueryRouting;
     private final ExecutorService modelUpdaters;
     private final AmzaService amzaService;
     private final EmbeddedClientProvider embeddedClientProvider;
@@ -79,7 +79,7 @@ public class CatwalkModelUpdater {
     public CatwalkModelUpdater(CatwalkModelService modelService,
         CatwalkModelQueue modelQueue,
         ScheduledExecutorService queueConsumers,
-        MiruTenantQueryRouting tenantQueryRouting,
+        MiruQueryRouting miruQueryRouting,
         ExecutorService modelUpdaters,
         AmzaService amzaService,
         EmbeddedClientProvider embeddedClientProvider,
@@ -92,7 +92,7 @@ public class CatwalkModelUpdater {
         this.modelService = modelService;
         this.modelQueue = modelQueue;
         this.queueConsumers = queueConsumers;
-        this.tenantQueryRouting = tenantQueryRouting;
+        this.miruQueryRouting = miruQueryRouting;
         this.modelUpdaters = modelUpdaters;
         this.amzaService = amzaService;
         this.embeddedClientProvider = embeddedClientProvider;
@@ -255,7 +255,7 @@ public class CatwalkModelUpdater {
 
         String endpoint = CatwalkConstants.CATWALK_PREFIX + CatwalkConstants.PARTITION_QUERY_ENDPOINT + "/" + updateModelRequest.partitionId;
 
-        MiruResponse<CatwalkAnswer> catwalkResponse = tenantQueryRouting.query("", "catwalkModelQueue", request, endpoint, CatwalkAnswer.class);
+        MiruResponse<CatwalkAnswer> catwalkResponse = miruQueryRouting.query("", "catwalkModelQueue", request, endpoint, CatwalkAnswer.class);
 
         if (catwalkResponse != null && catwalkResponse.answer != null) {
             if (catwalkResponse.answer.destroyed) {

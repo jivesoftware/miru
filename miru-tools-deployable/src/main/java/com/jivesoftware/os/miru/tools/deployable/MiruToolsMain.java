@@ -15,16 +15,25 @@
  */
 package com.jivesoftware.os.miru.tools.deployable;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.amza.client.http.AmzaClientProvider;
+import com.jivesoftware.os.amza.client.http.HttpPartitionClientFactory;
+import com.jivesoftware.os.amza.client.http.HttpPartitionHostsProvider;
+import com.jivesoftware.os.amza.client.http.RingHostHttpClientProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
-import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
+import com.jivesoftware.os.miru.plugin.query.MiruQueryTASRouting;
+import com.jivesoftware.os.miru.query.siphon.EdgeWriter;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.AggregateCountsPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.AnalyticsPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.CatwalkPluginEndpoints;
@@ -52,10 +61,13 @@ import com.jivesoftware.os.miru.ui.MiruRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
+import com.jivesoftware.os.routing.bird.deployable.TenantAwareHttpClientHealthCheck;
 import com.jivesoftware.os.routing.bird.endpoints.base.FullyOnlineVersion;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI.UI;
@@ -67,18 +79,24 @@ import com.jivesoftware.os.routing.bird.health.checkers.GCPauseHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.LoadAverageHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.routing.bird.health.checkers.SystemCpuHealthChecker;
+import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
+import com.jivesoftware.os.routing.bird.http.client.TailAtScaleStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class MiruToolsMain {
+
+    public static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public static void main(String[] args) throws Exception {
         new MiruToolsMain().run(args);
@@ -171,6 +189,20 @@ public class MiruToolsMain {
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("reader", miruReaderClient));
+
+
+            @SuppressWarnings("unchecked")
+            TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.builder(
+                deployable.getTenantRoutingProvider().getConnections("amza", "main", 10_000), // TODO config
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
+
+            deployable.addHealthCheck(new TenantAwareHttpClientHealthCheck("amza", amzaClient));
+
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
@@ -182,58 +214,95 @@ public class MiruToolsMain {
                 renderer,
                 tenantRoutingProvider);
 
-            MiruTenantQueryRouting miruTenantQueryRouting = new MiruTenantQueryRouting(miruReaderClient,
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+
+            TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
+                deployable.newBoundedExecutor(1024, "amza-client-tas"),
+                100, // TODO config
+                95, // TODO config
+                1000
+            );
+
+            AmzaClientProvider<HttpClient, HttpClientException> amzaClientProvider = new AmzaClientProvider<>(
+                new HttpPartitionClientFactory(),
+                new HttpPartitionHostsProvider(amzaClient, tailAtScaleStrategy, objectMapper),
+                new RingHostHttpClientProvider(amzaClient),
+                deployable.newBoundedExecutor(1024, "amza-client"),
+                60_000,
+                -1,
+                -1);
+
+            OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
+            EdgeWriter edgeWriter = new EdgeWriter(amzaClientProvider,
+                orderIdProvider,
+                "reader-queries",
+                TimeUnit.DAYS.toMillis(30),
+                10_000,
+                100, mapper);
+            edgeWriter.start();
+
+            String origin = instanceConfig.getHost() + ":" + instanceConfig.getMainPort();
+            MiruQueryTASRouting queryTASRouting = new MiruQueryTASRouting(
+                miruReaderClient,
                 mapper,
                 responseMapper,
                 deployable.newBoundedExecutor(1024, "reader-tas"),
                 100, // TODO config
                 95, // TODO config
                 1000,
-                true);
+                (tenantId, actorId, family, destination, latency, verbs) -> {
+                    try {
+                        edgeWriter.write(tenantId.toString(), actorId.toString(), family, origin, destination, latency, verbs);
+                    } catch (Exception x) {
+                        LOG.warn("edgewriter failure ",x);
+                    }
+                });
 
 
             List<MiruToolsPlugin> plugins = Lists.newArrayList(
                 new MiruToolsPlugin("road", "Aggregate Counts",
                     "/ui/tools/aggregate",
                     AggregateCountsPluginEndpoints.class,
-                    new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, miruTenantQueryRouting)),
+                    new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, queryTASRouting)),
                 new MiruToolsPlugin("stats", "Analytics",
                     "/ui/tools/analytics",
                     AnalyticsPluginEndpoints.class,
-                    new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, miruTenantQueryRouting)),
+                    new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, queryTASRouting)),
                 new MiruToolsPlugin("education", "Catwalk",
                     "/ui/tools/catwalk",
                     CatwalkPluginEndpoints.class,
-                    new CatwalkPluginRegion("soy.miru.page.catwalkPluginRegion", renderer, miruTenantQueryRouting)),
+                    new CatwalkPluginRegion("soy.miru.page.catwalkPluginRegion", renderer, queryTASRouting)),
                 new MiruToolsPlugin("fire", "Strut your Stuff",
                     "/ui/tools/strut",
                     StrutPluginEndpoints.class,
-                    new StrutPluginRegion("soy.miru.page.strutPluginRegion", renderer, miruTenantQueryRouting)),
+                    new StrutPluginRegion("soy.miru.page.strutPluginRegion", renderer, queryTASRouting)),
                 new MiruToolsPlugin("asterisk", "Distincts",
                     "/ui/tools/distincts",
                     DistinctsPluginEndpoints.class,
-                    new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, miruTenantQueryRouting)),
+                    new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, queryTASRouting)),
                 new MiruToolsPlugin("zoom-in", "Uniques",
                     "/ui/tools/uniques",
                     UniquesPluginEndpoints.class,
-                    new UniquesPluginRegion("soy.miru.page.uniquesPluginRegion", renderer, miruTenantQueryRouting)),
+                    new UniquesPluginRegion("soy.miru.page.uniquesPluginRegion", renderer, queryTASRouting)),
                 new MiruToolsPlugin("search", "Full Text",
                     "/ui/tools/fulltext",
                     FullTextPluginEndpoints.class,
-                    new FullTextPluginRegion("soy.miru.page.fullTextPluginRegion", renderer, miruTenantQueryRouting)),
+                    new FullTextPluginRegion("soy.miru.page.fullTextPluginRegion", renderer, queryTASRouting)),
                 new MiruToolsPlugin("flash", "Realwave",
                     "/ui/tools/realwave",
                     RealwavePluginEndpoints.class,
-                    new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, miruTenantQueryRouting),
+                    new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, queryTASRouting),
                     new RealwaveFramePluginRegion("soy.miru.page.realwaveFramePluginRegion", renderer)),
                 new MiruToolsPlugin("thumbs-up", "Reco",
                     "/ui/tools/reco",
                     RecoPluginEndpoints.class,
-                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, miruTenantQueryRouting)),
+                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, queryTASRouting)),
                 new MiruToolsPlugin("list", "Trending",
                     "/ui/tools/trending",
                     TrendingPluginEndpoints.class,
-                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, miruTenantQueryRouting)));
+                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, queryTASRouting)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

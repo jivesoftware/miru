@@ -61,5 +61,9 @@
             <artifactId>miru-siphon-api</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-api</artifactId>
+        </dependency>
     </dependencies>
 </project>

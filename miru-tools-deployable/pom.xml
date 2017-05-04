@@ -141,5 +141,14 @@
             <artifactId>mockito-all</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-edge-siphon</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

@@ -18,7 +18,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
-import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
+import com.jivesoftware.os.miru.plugin.query.MiruRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -52,15 +52,15 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final MiruTenantQueryRouting miruTenantQueryRouting;
+    private final MiruRouting routing;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public TrendingPluginRegion(String template,
         MiruSoyRenderer renderer,
-        MiruTenantQueryRouting miruTenantQueryRouting) {
+        MiruRouting routing) {
         this.template = template;
         this.renderer = renderer;
-        this.miruTenantQueryRouting = miruTenantQueryRouting;
+        this.routing = routing;
     }
 
     public static class TrendingPluginRegionInput {
@@ -170,7 +170,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                 filterStringUtil.buildFieldPrefixes(input.fieldPrefixes))))),
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
-                    MiruResponse<TrendingAnswer> trendingResponse = miruTenantQueryRouting.query("", "trendingPluginRegion",
+                    MiruResponse<TrendingAnswer> trendingResponse = routing.query("", "trendingPluginRegion",
                         miruRequest, endpoint, TrendingAnswer.class);
 
                     if (trendingResponse != null && trendingResponse.answer != null) {
