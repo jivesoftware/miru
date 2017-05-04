@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.amza.api.AmzaInterner;
 import com.jivesoftware.os.amza.api.PartitionClient;
 import com.jivesoftware.os.amza.api.PartitionClientProvider;
 import com.jivesoftware.os.amza.api.filer.UIO;
@@ -55,6 +56,7 @@ public class AmzaSiphoner {
     public final LongAdder siphoned = new LongAdder();
     public final LongAdder flushed = new LongAdder();
 
+    public final AmzaInterner amzaInterner = new AmzaInterner();
     public final AmzaSiphonerConfig siphonerConfig;
     private final MiruSiphonPlugin miruSiphonPlugin;
     public final PartitionName partitionName;
@@ -191,7 +193,7 @@ public class AmzaSiphoner {
             }, (prefix, key, value, timestamp, version) -> {
 
                 if (value != null) {
-                    cursor[0] = mapper.readValue(value, AmzaSiphonCursor.class);
+                    cursor[0] = cursorFromValue(value);
                 }
                 return true;
             }, additionalSolverAfterNMillis,
@@ -205,7 +207,7 @@ public class AmzaSiphoner {
     private void savePartitionCursor(String siphonerName, PartitionName partitionName, AmzaSiphonCursor cursor) throws Exception {
         PartitionClient cursorClient = cursorClient();
         byte[] cursorKey = cursorKey(siphonerName, partitionName);
-        byte[] value = mapper.writeValueAsBytes(cursor);
+        byte[] value = valueFromCursor(cursor);
         cursorClient.commit(Consistency.leader_quorum, null,
             commitKeyValueStream -> commitKeyValueStream.commit(cursorKey, value, -1, false),
             additionalSolverAfterNMillis,
@@ -218,9 +220,59 @@ public class AmzaSiphoner {
     }
 
     private PartitionName cursorName() {
-        byte[] nameBytes = ("amza-siphoner-cursors-v1").getBytes(StandardCharsets.UTF_8);
+        byte[] nameBytes = ("amza-siphoner-cursors-v2").getBytes(StandardCharsets.UTF_8);
         return new PartitionName(false, nameBytes, nameBytes);
     }
+
+
+
+    private static byte[] valueFromCursor(AmzaSiphonCursor cursor) {
+        int valueLength = 1 + 2;
+        for (RingMember ringMember : cursor.memberTxIds.keySet()) {
+            valueLength += 2 + ringMember.sizeInBytes() + 8;
+        }
+
+        byte[] value = new byte[valueLength];
+        value[0] = 1; // version
+        UIO.unsignedShortBytes(cursor.memberTxIds.size(), value, 1);
+        int o = 3;
+        for (Entry<RingMember, Long> entry : cursor.memberTxIds.entrySet()) {
+            int memberLength = entry.getKey().sizeInBytes();
+            UIO.unsignedShortBytes(memberLength, value, o);
+            o += 2;
+            entry.getKey().toBytes(value, o);
+            o += memberLength;
+            UIO.longBytes(entry.getValue(), value, o);
+            o += 8;
+        }
+        return value;
+    }
+
+    private AmzaSiphonCursor cursorFromValue(byte[] value) throws InterruptedException {
+        if (value[0] == 1) {
+
+            int memberTxIdsLength = UIO.bytesUnsignedShort(value, 1);
+            int o = 3;
+
+            Map<RingMember, Long> memberTxIds = Maps.newHashMap();
+            for (int i = 0; i < memberTxIdsLength; i++) {
+                int memberLength = UIO.bytesUnsignedShort(value, o);
+                o += 2;
+                RingMember member = amzaInterner.internRingMember(value, o, memberLength);
+                o += memberLength;
+                long txId = UIO.bytesLong(value, o);
+                memberTxIds.put(member, txId);
+                o += 8;
+            }
+
+            return new AmzaSiphonCursor(memberTxIds);
+        } else {
+            LOG.error("Unsupported cursor version {}", value[0]);
+            return null;
+        }
+    }
+
+
 
     private byte[] cursorKey(String siphonerName, PartitionName partitionName) {
         byte[] siphonerNameBytes = siphonerName.getBytes(StandardCharsets.UTF_8);
