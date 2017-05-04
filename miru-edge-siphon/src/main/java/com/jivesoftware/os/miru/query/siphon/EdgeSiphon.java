@@ -5,13 +5,13 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.amza.api.filer.UIO;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Prefix;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Prefix.Type;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -69,7 +69,7 @@ public class EdgeSiphon implements MiruSiphonPlugin {
         ListMultimap<MiruTenantId, MiruActivity> activityListMultimap = ArrayListMultimap.create();
 
         Map<String, List<String>> fieldsValues = Maps.newHashMap();
-        fieldsValues.put("id", Arrays.asList(new String(key, StandardCharsets.UTF_8)));
+        fieldsValues.put("id", Arrays.asList(String.valueOf(UIO.bytesLong(key))));
         if (edge.tenant != null) {
             fieldsValues.put("tenant", Arrays.asList(edge.tenant));
         }
@@ -88,7 +88,7 @@ public class EdgeSiphon implements MiruSiphonPlugin {
         if (edge.tags != null && !edge.tags.isEmpty()) {
             fieldsValues.put("tags", Lists.newArrayList(edge.tags));
         }
-
+        fieldsValues.put("latency", Arrays.asList(String.valueOf(edge.latency)));
         MiruActivity activity = new MiruActivity(tenantId, edge.timestamp, 0, false, new String[0], fieldsValues, Collections.emptyMap());
 
         activityListMultimap.put(tenantId, activity);
