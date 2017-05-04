@@ -32,7 +32,7 @@ public class AmzaSiphoners {
     private final ExecutorService ensureSenders = Executors.newFixedThreadPool(1, new ThreadFactoryBuilder().setNameFormat("ensure-siphoner-%d").build());
     private final PartitionClientProvider partitionClientProvider;
     private final AmzaClientAquariumProvider amzaClientAquariumProvider;
-    private final ExecutorService sigonerThreads;
+    private final ExecutorService siphonerThreads;
 
     private final String siphonName;
     private final int siphonStripeCount;
@@ -45,7 +45,7 @@ public class AmzaSiphoners {
 
     public AmzaSiphoners(PartitionClientProvider partitionClientProvider,
         AmzaClientAquariumProvider amzaClientAquariumProvider,
-        ExecutorService sigonerThreads,
+        ExecutorService siphonerThreads,
         String siphonName,
         int siphonStripeCount,
         AmzaSiphonerConfigProvider siphonerConfigProvider,
@@ -56,7 +56,7 @@ public class AmzaSiphoners {
 
         this.partitionClientProvider = partitionClientProvider;
         this.amzaClientAquariumProvider = amzaClientAquariumProvider;
-        this.sigonerThreads = sigonerThreads;
+        this.siphonerThreads = siphonerThreads;
         this.siphonName = siphonName;
         this.siphonStripeCount = siphonStripeCount;
         this.siphonerConfigProvider = siphonerConfigProvider;
@@ -120,12 +120,12 @@ public class AmzaSiphoners {
                                 siphoners.put(entry.getKey(), siphoner);
                             }
 
-                            if (!siphoner.runnable()) {
+                            if (siphoner.runnable()) {
                                 int stripe = Math.abs(siphonerConfig.partitionName.hashCode()) % siphonStripeCount;
                                 if (isStripeElected[stripe].call()) {
-                                    LOG.info("Submited SigonRunnable for {}", siphoner);
-                                    sigonerThreads.submit(
-                                        new SigonRunnable(sigonerThreads, siphonerConfig, siphoner, miruSiphonActivityFlusher, isStripeElected[stripe]));
+                                    LOG.info("Submited SiphonRunnable for {}", siphoner);
+                                    siphonerThreads.submit(
+                                        new SiphonRunnable(siphonerThreads, siphonerConfig, siphoner, miruSiphonActivityFlusher, isStripeElected[stripe]));
                                 }
                             }
                         }
@@ -166,14 +166,14 @@ public class AmzaSiphoners {
         }
     }
 
-    private static class SigonRunnable implements Runnable {
+    private static class SiphonRunnable implements Runnable {
         private final ExecutorService threadPool;
         private final AmzaSiphonerConfig siphonerConfig;
         private final AmzaSiphoner siphoner;
         private final MiruSiphonActivityFlusher activityFlusher;
         private final Callable<Boolean> isElected;
 
-        private SigonRunnable(ExecutorService threadPool,
+        private SiphonRunnable(ExecutorService threadPool,
             AmzaSiphonerConfig siphonerConfig,
             AmzaSiphoner siphoner,
             MiruSiphonActivityFlusher activityFlusher,

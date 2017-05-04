@@ -38,7 +38,7 @@ public class MiruSiphonUIPluginEndpoints {
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response query(
-        @QueryParam("uniqueId") @DefaultValue("-1") long uniqueId,
+        @QueryParam("siphonId") @DefaultValue("-1") long uniqueId,
         @QueryParam("name") @DefaultValue("") String name,
         @QueryParam("description") @DefaultValue("") String description,
         @QueryParam("siphonPluginName") @DefaultValue("") String siphonPluginName,
