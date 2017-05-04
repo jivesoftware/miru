@@ -363,6 +363,7 @@ public class MiruSiphonMain {
                 deployable.addInjectables(plugin.region.getClass(), plugin.region);
             }
 
+            amzaClientAquariumProvider.start();
             amzaSiphoners.start();
 
             deployable.addResource(sourceTree);
