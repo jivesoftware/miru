@@ -33,7 +33,7 @@ import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
-import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
+import com.jivesoftware.os.miru.plugin.query.MiruQueryRouting;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -339,14 +339,13 @@ public class MiruCatwalkMain {
 
             MiruCatwalkConfig catwalkConfig = deployable.config(MiruCatwalkConfig.class);
 
-            MiruTenantQueryRouting tenantQueryRouting = new MiruTenantQueryRouting(readerClient,
+            MiruQueryRouting tenantQueryRouting = new MiruQueryRouting(readerClient,
                 mapper,
                 responseMapper,
-                tasExecutors,
-                catwalkConfig.getTailAtScaleWindowSize(),
-                catwalkConfig.getTailAtScalePercentile(),
-                1000,
-                catwalkConfig.getTailAtScaleEnabled());
+                (tenantId, actorId, family, destination, latency, verbs) -> {
+
+                }
+            );
 
             CatwalkModelQueue catwalkModelQueue = new CatwalkModelQueue(amzaLifecycle.amzaService,
                 embeddedClientProvider,

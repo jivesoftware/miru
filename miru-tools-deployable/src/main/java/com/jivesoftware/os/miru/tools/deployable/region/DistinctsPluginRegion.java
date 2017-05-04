@@ -15,7 +15,7 @@ import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
-import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
+import com.jivesoftware.os.miru.plugin.query.MiruRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -42,15 +42,15 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final MiruTenantQueryRouting miruTenantQueryRouting;
+    private final MiruRouting routing;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public DistinctsPluginRegion(String template,
         MiruSoyRenderer renderer,
-        MiruTenantQueryRouting miruTenantQueryRouting) {
+        MiruRouting routing) {
         this.template = template;
         this.renderer = renderer;
-        this.miruTenantQueryRouting = miruTenantQueryRouting;
+        this.routing = routing;
     }
 
     public static class DistinctsPluginRegionInput {
@@ -134,7 +134,7 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
 
-                    MiruResponse<DistinctsAnswer> distinctsResponse = miruTenantQueryRouting.query("", "distinctsPluginRegion",
+                    MiruResponse<DistinctsAnswer> distinctsResponse = routing.query("", "distinctsPluginRegion",
                         miruRequest, endpoint, DistinctsAnswer.class);
 
                     if (distinctsResponse != null && distinctsResponse.answer != null) {

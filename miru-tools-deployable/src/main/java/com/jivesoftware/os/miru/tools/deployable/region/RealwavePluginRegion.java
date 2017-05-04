@@ -19,7 +19,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
+import com.jivesoftware.os.miru.plugin.query.MiruRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -45,15 +45,15 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final MiruTenantQueryRouting miruTenantQueryRouting;
+    private final MiruRouting routing;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public RealwavePluginRegion(String template,
         MiruSoyRenderer renderer,
-        MiruTenantQueryRouting miruTenantQueryRouting) {
+        MiruRouting routing) {
         this.template = template;
         this.renderer = renderer;
-        this.miruTenantQueryRouting = miruTenantQueryRouting;
+        this.routing = routing;
     }
 
     public static class RealwavePluginRegionInput {
@@ -204,7 +204,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
                     analyticsFilters),
                 MiruSolutionLogLevel.NONE);
 
-            MiruResponse<AnalyticsAnswer> analyticsResponse = miruTenantQueryRouting.query("", "realwavePluginRegion",
+            MiruResponse<AnalyticsAnswer> analyticsResponse = routing.query("", "realwavePluginRegion",
                 miruRequest, endpoint, AnalyticsAnswer.class);
 
             if (analyticsResponse != null && analyticsResponse.answer != null) {
