@@ -29,6 +29,7 @@ public class EdgeSiphon implements MiruSiphonPlugin {
     public static ObjectMapper mapper = new ObjectMapper();
 
 
+
     private static Prefix LONG = new Prefix(Type.numeric, 8, 0);
 
     public static final MiruSchema SCHEMA = new MiruSchema.Builder("edgeSiphon", 1)
@@ -89,7 +90,7 @@ public class EdgeSiphon implements MiruSiphonPlugin {
             fieldsValues.put("tags", Lists.newArrayList(edge.tags));
         }
         fieldsValues.put("latency", Arrays.asList(String.valueOf(edge.latency)));
-        MiruActivity activity = new MiruActivity(tenantId, edge.timestamp, 0, false, new String[0], fieldsValues, Collections.emptyMap());
+        MiruActivity activity = new MiruActivity(tenantId, edge.id, 0, false, new String[0], fieldsValues, Collections.emptyMap());
 
         activityListMultimap.put(tenantId, activity);
 
