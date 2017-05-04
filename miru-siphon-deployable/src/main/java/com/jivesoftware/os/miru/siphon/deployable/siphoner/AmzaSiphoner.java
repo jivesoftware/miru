@@ -183,7 +183,23 @@ public class AmzaSiphoner {
 
 
     private AmzaSiphonCursor getPartitionCursor(String siphonerName, PartitionName partitionName, AmzaSiphonCursor defaultCursor) throws Exception {
-        return null;
+        AmzaSiphonCursor[] cursor = { defaultCursor };
+        cursorClient().get(Consistency.leader_quorum,
+            null,
+            unprefixedWALKeyStream -> {
+                return unprefixedWALKeyStream.stream(cursorKey(siphonerName, partitionName));
+            }, (prefix, key, value, timestamp, version) -> {
+
+                if (value != null) {
+                    cursor[0] = mapper.readValue(value, AmzaSiphonCursor.class);
+                }
+                return true;
+            }, additionalSolverAfterNMillis,
+            abandonLeaderSolutionAfterNMillis,
+            abandonSolutionAfterNMillis,
+            Optional.empty()
+        );
+        return cursor[0];
     }
 
     private void savePartitionCursor(String siphonerName, PartitionName partitionName, AmzaSiphonCursor cursor) throws Exception {
