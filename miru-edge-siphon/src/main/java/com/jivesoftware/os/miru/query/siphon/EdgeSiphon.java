@@ -9,7 +9,6 @@ import com.jivesoftware.os.amza.api.filer.UIO;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Prefix;
-import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Prefix.Type;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import java.util.Arrays;
@@ -28,20 +27,16 @@ public class EdgeSiphon implements MiruSiphonPlugin {
 
     public static ObjectMapper mapper = new ObjectMapper();
 
-
-
-    private static Prefix LONG = new Prefix(Type.numeric, 8, 0);
-
-    public static final MiruSchema SCHEMA = new MiruSchema.Builder("edgeSiphon", 1)
+    public static final MiruSchema SCHEMA = new MiruSchema.Builder("edgeSiphon", 2)
         .setFieldDefinitions(new MiruFieldDefinition[] {
-            new MiruFieldDefinition(0, "id", nonIndexed, LONG),
+            new MiruFieldDefinition(0, "id", nonIndexed, Prefix.NONE),
             new MiruFieldDefinition(1, "tenant", singleTerm, Prefix.NONE),
             new MiruFieldDefinition(2, "user", singleTerm, Prefix.NONE),
             new MiruFieldDefinition(3, "name", singleTerm, Prefix.NONE),
             new MiruFieldDefinition(4, "origin", singleTerm, Prefix.NONE),
             new MiruFieldDefinition(5, "destination", singleTerm, Prefix.NONE),
             new MiruFieldDefinition(6, "tags", multiTerm, Prefix.WILDCARD),
-            new MiruFieldDefinition(7, "latency", nonIndexed, LONG)
+            new MiruFieldDefinition(7, "latency", nonIndexed, Prefix.NONE)
         }).build();
 
 
