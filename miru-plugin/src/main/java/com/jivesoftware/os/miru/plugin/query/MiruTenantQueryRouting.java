@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class MiruTenantQueryRouting {
 
-    private final Map<MiruTenantId, NextClientStrategy> strategyCache = Maps.newConcurrentMap();
+    private final Map<TenantAndFamily, NextClientStrategy> strategyCache = Maps.newConcurrentMap();
 
     private final TenantAwareHttpClient<String> readerClient;
     private final ObjectMapper requestMapper;
@@ -71,7 +71,8 @@ public class MiruTenantQueryRouting {
         Class<A> answerClass) throws Exception {
 
         String json = requestMapper.writeValueAsString(request);
-        NextClientStrategy tenantStrategy = getTenantStrategy(request.tenantId);
+        TenantAndFamily tenantAndFamily = new TenantAndFamily(request.tenantId, family);
+        NextClientStrategy tenantStrategy = getTenantStrategy(tenantAndFamily);
 
         InterceptingNextClientStrategy interceptingNextClientStrategy = null;
         if (tasEnabled) {
@@ -84,8 +85,43 @@ public class MiruTenantQueryRouting {
             (c) -> new ClientCall.ClientResponse<>(c.postJson(path, json, null), true)
         );
         MiruResponse<A> answer = responseMapper.extractResultFromResponse(httpResponse, MiruResponse.class, new Class[] { answerClass }, null);
-        recordTenantStrategy(request.tenantId, interceptingNextClientStrategy, answer);
+        recordTenantStrategy(tenantAndFamily, interceptingNextClientStrategy, answer);
         return answer;
+    }
+
+    private static class TenantAndFamily {
+        private final MiruTenantId miruTenantId;
+        private final String family;
+
+        public TenantAndFamily(MiruTenantId miruTenantId, String family) {
+            this.miruTenantId = miruTenantId;
+            this.family = family;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof TenantAndFamily)) {
+                return false;
+            }
+
+            TenantAndFamily that = (TenantAndFamily) o;
+
+            if (!miruTenantId.equals(that.miruTenantId)) {
+                return false;
+            }
+            return family.equals(that.family);
+
+        }
+
+        @Override
+        public int hashCode() {
+            int result = miruTenantId.hashCode();
+            result = 31 * result + family.hashCode();
+            return result;
+        }
     }
 
     private static final class InterceptingNextClientStrategy implements NextClientStrategy {
@@ -120,8 +156,8 @@ public class MiruTenantQueryRouting {
         }
     }
 
-    private NextClientStrategy getTenantStrategy(MiruTenantId tenantId) {
-        return strategyCache.getOrDefault(tenantId,
+    private NextClientStrategy getTenantStrategy(TenantAndFamily tenantAndFamily) {
+        return strategyCache.getOrDefault(tenantAndFamily,
             tasEnabled
                 ? new TailAtScaleStrategy(executor, windowSize, percentile, initialSLAMillis)
                 : new RoundRobinStrategy()
@@ -129,7 +165,7 @@ public class MiruTenantQueryRouting {
     }
 
 
-    private void recordTenantStrategy(MiruTenantId tenantId, InterceptingNextClientStrategy interceptingNextClientStrategy, MiruResponse<?> response) {
+    private void recordTenantStrategy(TenantAndFamily tenantAndFamily, InterceptingNextClientStrategy interceptingNextClientStrategy, MiruResponse<?> response) {
         if (tasEnabled) {
 
             if (response != null && response.solutions != null && !response.solutions.isEmpty()) {
@@ -161,7 +197,7 @@ public class MiruTenantQueryRouting {
             if (response != null && response.solutions != null && !response.solutions.isEmpty()) {
                 MiruSolution solution = response.solutions.get(0);
                 MiruHost host = solution.usedPartition.host;
-                strategyCache.compute(tenantId, (key, existing) -> {
+                strategyCache.compute(tenantAndFamily, (key, existing) -> {
                     if (existing != null && existing instanceof PreferredNodeStrategy && ((PreferredNodeStrategy) existing).host.equals(host)) {
                         return existing;
                     } else {
