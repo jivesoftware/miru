@@ -12,6 +12,8 @@ import java.util.Set;
 import java.util.function.Function;
 import org.apache.commons.lang.mutable.MutableLong;
 
+import static javafx.scene.input.KeyCode.T;
+
 /**
  * @author jonathan.colt
  */
@@ -94,11 +96,40 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         }
     }
 
-    StreamBatch<MiruWALEntry, S> getRead(MiruTenantId tenantId,
+    OldestReadResult<S> oldestReadEventId(MiruTenantId tenantId,
         MiruStreamId streamId,
         S cursor,
-        long oldestTimestamp,
+        boolean createIfAbsent) throws Exception;
+
+    StreamBatch<MiruWALEntry, Long> scanRead(MiruTenantId tenantId,
+        MiruStreamId streamId,
+        long fromTimestamp,
         int batchSize,
         boolean createIfAbsent) throws Exception;
+
+    class OldestReadResult<C> {
+
+        public long oldestEventId; // non final for json ser-der
+        public C cursor; // non final for json ser-der
+        public boolean endOfWAL; // non final for json ser-der
+
+        public OldestReadResult() {
+        }
+
+        public OldestReadResult(long oldestEventId, C cursor, boolean endOfWAL) {
+            this.oldestEventId = oldestEventId;
+            this.cursor = cursor;
+            this.endOfWAL = endOfWAL;
+        }
+
+        @Override
+        public String toString() {
+            return "OldestReadResult{" +
+                "oldestEventId=" + oldestEventId +
+                ", cursor=" + cursor +
+                ", endOfWAL=" + endOfWAL +
+                '}';
+        }
+    }
 
 }

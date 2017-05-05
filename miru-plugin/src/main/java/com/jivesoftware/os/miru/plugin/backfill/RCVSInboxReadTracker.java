@@ -4,11 +4,14 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity.Type;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.OldestReadResult;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
@@ -61,15 +64,15 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
         // First find the oldest eventId from our sip WAL
         long afterTimestamp = getSipTimestamp(tenantId, partitionId, streamId);
         // TODO this should really be computed on the server side.
-        MiruWALClient.StreamBatch<MiruWALEntry, RCVSSipCursor> got = walClient.getRead(tenantId,
+        OldestReadResult<RCVSSipCursor> oldestReadResult = walClient.oldestReadEventId(tenantId,
             streamId,
-            new RCVSSipCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, 0, false),
-            oldestBackfilledTimestamp,
-            1000,
+            new RCVSSipCursor(Type.ACTIVITY.getSort(), afterTimestamp, 0, false),
             true);
-        RCVSSipCursor lastCursor = null;
+        RCVSSipCursor lastCursor = oldestReadResult.cursor;
+
+        long fromTimestamp = Math.min(oldestBackfilledTimestamp, oldestReadResult.oldestEventId);
+        StreamBatch<MiruWALEntry, Long> got = walClient.scanRead(tenantId, streamId, fromTimestamp, 10_000, true);
         while (got != null && !got.activities.isEmpty()) {
-            lastCursor = got.cursor;
             for (MiruWALEntry e : got.activities) {
                 MiruReadEvent readEvent = e.activity.readEvent.get();
                 MiruFilter filter = readEvent.filter;
@@ -82,7 +85,7 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
                     readTracker.markAllRead(bitmaps, requestContext, streamId, readEvent.time, stackBuffer);
                 }
             }
-            got = (got.cursor != null) ? walClient.getRead(tenantId, streamId, got.cursor, Long.MAX_VALUE, 1000, true) : null;
+            got = (got.cursor != null) ? walClient.scanRead(tenantId, streamId, got.cursor, 10_000, true) : null;
         }
 
         if (lastCursor != null) {

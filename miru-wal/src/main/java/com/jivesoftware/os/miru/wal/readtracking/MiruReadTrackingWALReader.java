@@ -11,10 +11,9 @@ public interface MiruReadTrackingWALReader<C extends MiruCursor<C, S>, S extends
 
     C getCursor(long eventId);
 
-    C stream(MiruTenantId tenantId,
+    long stream(MiruTenantId tenantId,
         MiruStreamId streamId,
-        C afterCursor,
-        int batchSize,
+        long id,
         StreamReadTrackingWAL streamReadTrackingWAL) throws Exception;
 
     S streamSip(MiruTenantId tenantId,

@@ -166,7 +166,8 @@ public class MiruJustInTimeBackfillerizer {
                             bitmaps.cardinality(container.getBitmap()));
                     }
 
-                    inboxReadTracker.sipAndApplyReadTracking(bitmaps,
+                    inboxReadTracker.sipAndApplyReadTracking(name,
+                        bitmaps,
                         requestContext,
                         tenantId,
                         partitionId,
@@ -298,7 +299,8 @@ public class MiruJustInTimeBackfillerizer {
                             lastActivityIndex);
                     }
 
-                    inboxReadTracker.sipAndApplyReadTracking(bitmaps,
+                    inboxReadTracker.sipAndApplyReadTracking(name,
+                        bitmaps,
                         requestContext,
                         tenantId,
                         partitionId,

@@ -42,11 +42,11 @@ public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<Amza
         return cursorsByName;
     }
 
-    private AmzaCursor scanCursors(MiruReadTrackingWALReader.StreamReadTrackingWAL streamMiruReadTrackingWAL,
+    private long scanCursors(MiruReadTrackingWALReader.StreamReadTrackingWAL streamMiruReadTrackingWAL,
         EmbeddedClient client,
         MiruStreamId streamId,
-        Map<String, NamedCursor> cursorsByName) throws Exception {
-        return amzaWALUtil.scan(client, cursorsByName, streamId.getBytes(),
+        long id) throws Exception {
+        return amzaWALUtil.scan(client, id, streamId.getBytes(),
             (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
                 MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
                 if (partitionedActivity != null) {
@@ -85,22 +85,19 @@ public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<Amza
     }
 
     @Override
-    public AmzaCursor stream(MiruTenantId tenantId,
+    public long stream(MiruTenantId tenantId,
         MiruStreamId streamId,
-        AmzaCursor cursor,
-        int batchSize,
+        long id,
         StreamReadTrackingWAL streamReadTrackingWAL) throws Exception {
 
         EmbeddedClient client = amzaWALUtil.getReadTrackingClient(tenantId);
         if (client == null) {
-            return cursor;
+            return id;
         }
         try {
-            Map<String, NamedCursor> cursorsByName = cursor != null ? extractCursors(cursor.cursors) : Maps.newHashMap();
-
-            return scanCursors(streamReadTrackingWAL, client, streamId, cursorsByName);
+            return scanCursors(streamReadTrackingWAL, client, streamId, id);
         } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
-            return cursor;
+            return id;
         } catch (FailedToAchieveQuorumException e) {
             throw new MiruWALWrongRouteException(e);
         }
@@ -124,7 +121,7 @@ public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<Amza
 
             amzaWALUtil.mergeCursors(sipCursorsByName, takeCursors);
 
-            return new AmzaSipCursor(sipCursorsByName.values(), false);
+            return new AmzaSipCursor(sipCursorsByName.values(), takeCursors.tookToEnd);
         } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
             return sipCursor;
         } catch (FailedToAchieveQuorumException e) {

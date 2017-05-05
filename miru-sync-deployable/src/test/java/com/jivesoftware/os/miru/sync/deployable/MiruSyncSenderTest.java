@@ -373,10 +373,17 @@ public class MiruSyncSenderTest {
         }
 
         @Override
-        public StreamBatch<MiruWALEntry, AmzaSipCursor> getRead(MiruTenantId tenantId,
+        public OldestReadResult<AmzaSipCursor> oldestReadEventId(MiruTenantId tenantId,
             MiruStreamId streamId,
             AmzaSipCursor cursor,
-            long oldestTimestamp,
+            boolean createIfAbsent) throws Exception {
+            return null;
+        }
+
+        @Override
+        public StreamBatch<MiruWALEntry, Long> scanRead(MiruTenantId tenantId,
+            MiruStreamId streamId,
+            long fromTimestamp,
             int batchSize,
             boolean createIfAbsent) throws Exception {
             return null;

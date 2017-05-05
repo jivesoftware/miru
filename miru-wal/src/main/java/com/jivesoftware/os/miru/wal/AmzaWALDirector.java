@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.OldestReadResult;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.RoutingGroupType;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
@@ -83,13 +84,13 @@ public class AmzaWALDirector {
 
     private static final HealthTimer sipActivityLatency = HealthFactory.getHealthTimer(SipActivityLatency.class, TimerHealthChecker.FACTORY);
 
-    public interface GetReadLatency extends TimerHealthCheckConfig {
+    public interface OldestReadEventIdLatency extends TimerHealthCheckConfig {
 
-        @StringDefault("getRead>latency")
+        @StringDefault("oldestReadEventId>latency")
         @Override
         String getName();
 
-        @StringDefault("How long its taking to getRead.")
+        @StringDefault("How long its taking to oldestReadEventId.")
         @Override
         String getDescription();
 
@@ -98,7 +99,24 @@ public class AmzaWALDirector {
         Double get95ThPecentileMax();
     }
 
-    private static final HealthTimer getReadLatency = HealthFactory.getHealthTimer(GetReadLatency.class, TimerHealthChecker.FACTORY);
+    private static final HealthTimer oldestReadEventIdLatency = HealthFactory.getHealthTimer(OldestReadEventIdLatency.class, TimerHealthChecker.FACTORY);
+
+    public interface ScanReadLatency extends TimerHealthCheckConfig {
+
+        @StringDefault("scanRead>latency")
+        @Override
+        String getName();
+
+        @StringDefault("How long its taking to scanRead.")
+        @Override
+        String getDescription();
+
+        @DoubleDefault(30000d) /// 30sec
+        @Override
+        Double get95ThPecentileMax();
+    }
+
+    private static final HealthTimer scanReadLatency = HealthFactory.getHealthTimer(ScanReadLatency.class, TimerHealthChecker.FACTORY);
 
     private final MiruWALLookup walLookup;
     private final AmzaActivityWALReader activityWALReader;
@@ -365,39 +383,42 @@ public class AmzaWALDirector {
         }
     }
 
-    public StreamBatch<MiruWALEntry, AmzaSipCursor> getRead(MiruTenantId tenantId,
+    public OldestReadResult<AmzaSipCursor> oldestReadEventId(MiruTenantId tenantId,
         MiruStreamId streamId,
-        AmzaSipCursor sipCursor,
-        long oldestTimestamp,
-        int batchSize,
-        boolean createIfAbsent) throws Exception {
+        AmzaSipCursor sipCursor) throws Exception {
 
-        getReadLatency.startTimer();
+        oldestReadEventIdLatency.startTimer();
         try {
             long[] minEventId = { -1L };
-            int[] count = new int[1];
-            AmzaSipCursor nextCursor = readTrackingWALReader.streamSip(tenantId, streamId, sipCursor, batchSize, (eventId, timestamp) -> {
+            int[] count = { 0 };
+            AmzaSipCursor nextCursor = readTrackingWALReader.streamSip(tenantId, streamId, sipCursor, Integer.MAX_VALUE, (eventId, timestamp) -> {
                 minEventId[0] = (minEventId[0] == -1) ? eventId : Math.min(minEventId[0], eventId);
                 count[0]++;
-                return count[0] < batchSize;
+                return true; // always consume completely
             });
+            LOG.inc("oldestReadEventId>count>pow>" + FilerIO.chunkPower(count[0], 0));
+            return new OldestReadResult<>(minEventId[0], nextCursor, nextCursor.endOfStream);
+        } finally {
+            oldestReadEventIdLatency.stopTimer("Oldest read eventId latency", "Check partition health");
+        }
+    }
 
-            // Take either the oldest eventId or the oldest readtracking sip time
-            minEventId[0] = Math.min(minEventId[0], oldestTimestamp);
-            AmzaCursor cursor = minEventId[0] > 0 ? readTrackingWALReader.getCursor(minEventId[0]) : null;
+    public StreamBatch<MiruWALEntry, Long> scanRead(MiruTenantId tenantId,
+        MiruStreamId streamId,
+        long oldestTimestamp,
+        int batchSize) throws Exception {
 
+        scanReadLatency.startTimer();
+        try {
             List<MiruWALEntry> batch = new ArrayList<>();
-            if (cursor != null) {
-                readTrackingWALReader.stream(tenantId, streamId, cursor, batchSize, (collisionId, partitionedActivity, timestamp) -> {
-                    batch.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
-                    return true; // always consume completely
-                });
-            }
-            LOG.inc("getRead>count>pow>" + FilerIO.chunkPower(count[0], 0));
-            LOG.inc("getRead>batch>pow>" + FilerIO.chunkPower(batch.size(), 0));
+            long nextCursor = readTrackingWALReader.stream(tenantId, streamId, oldestTimestamp, (collisionId, partitionedActivity, timestamp) -> {
+                batch.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
+                return (batch.size() < batchSize);
+            });
+            LOG.inc("scanRead>batch>pow>" + FilerIO.chunkPower(batch.size(), 0));
             return new StreamBatch<>(batch, nextCursor, batch.size() < batchSize, null);
         } finally {
-            getReadLatency.stopTimer("Get read latency", "Check partition health");
+            scanReadLatency.stopTimer("Scan read latency", "Check partition health");
         }
     }
 

@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.backfill;
 
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -12,6 +13,8 @@ import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.OldestReadResult;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -65,21 +68,23 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
         if (verbose) {
             LOG.info("Backfill name:{} tenantId:{} partitionId:{} unread streamId:{} cursors:{}", name, tenantId, partitionId, streamId, cursors);
         }
-        MiruWALClient.StreamBatch<MiruWALEntry, AmzaSipCursor> got = walClient.getRead(tenantId,
+        OldestReadResult<AmzaSipCursor> oldestReadResult = walClient.oldestReadEventId(tenantId,
             streamId,
             new AmzaSipCursor(cursors, false),
-            oldestBackfilledTimestamp,
-            1000,
             true);
-        AmzaSipCursor lastCursor = null;
+        AmzaSipCursor lastCursor = oldestReadResult.cursor;
+
+        long fromTimestamp = Math.min(oldestBackfilledTimestamp, oldestReadResult.oldestEventId);
+
+        StreamBatch<MiruWALEntry, Long> got = walClient.scanRead(tenantId, streamId, fromTimestamp, 10_000, true);
         int calls = 1;
         int count = 0;
         while (got != null && !got.activities.isEmpty()) {
             if (verbose) {
-                LOG.info("Backfill unread tenantId:{} partitionId:{} streamId:{} got:{}", tenantId, partitionId, streamId, got.activities.size());
+                LOG.info("Backfill unread name:{} tenantId:{} partitionId:{} streamId:{} got:{}",
+                    name, tenantId, partitionId, streamId, got.activities.size());
             }
             count += got.activities.size();
-            lastCursor = got.cursor;
             for (MiruWALEntry e : got.activities) {
                 MiruReadEvent readEvent = e.activity.readEvent.get();
                 MiruFilter filter = readEvent.filter;
@@ -104,10 +109,12 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
                     readTracker.markAllRead(bitmaps, requestContext, streamId, readEvent.time, stackBuffer);
                 }
             }
-            got = (got.cursor != null) ? walClient.getRead(tenantId, streamId, got.cursor, Long.MAX_VALUE, 1000, true) : null;
+            got = (got.cursor != null) ? walClient.scanRead(tenantId, streamId, got.cursor, 10_000, true) : null;
             calls++;
         }
 
+        LOG.inc("sipAndApply>calls>pow>" + FilerIO.chunkPower(calls, 0));
+        LOG.inc("sipAndApply>count>pow>" + FilerIO.chunkPower(count, 0));
         if (lastCursor != null) {
             setSipCursors(tenantId, partitionId, streamId, lastCursor.cursors);
         }

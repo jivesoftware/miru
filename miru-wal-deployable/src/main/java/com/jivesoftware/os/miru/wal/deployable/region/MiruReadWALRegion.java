@@ -4,7 +4,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
@@ -63,11 +62,11 @@ public class MiruReadWALRegion implements MiruPageRegion<MiruReadWALRegionInput>
                 MiruStreamId miruStreamId = new MiruStreamId(streamId.getBytes(Charsets.UTF_8));
 
                 try {
-                    MiruWALClient.StreamBatch<MiruWALEntry, RCVSSipCursor> read = rcvsWALClient.getRead(miruTenantId, miruStreamId,
-                        new RCVSSipCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, 0, false), Long.MAX_VALUE, limit, false);
+                    MiruWALClient.StreamBatch<MiruWALEntry, Long> read = rcvsWALClient.scanRead(miruTenantId, miruStreamId,
+                        afterTimestamp, limit, false);
 
                     walReadEvents = Lists.transform(read.activities, input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version));
-                    lastTimestamp.set(read.cursor != null ? read.cursor.clockTimestamp : Long.MAX_VALUE);
+                    lastTimestamp.set(read.cursor != null ? read.cursor : Long.MAX_VALUE);
                 } catch (Exception e) {
                     log.error("Failed to read read-tracking WAL", e);
                     data.put("error", ExceptionUtils.getStackTrace(e));

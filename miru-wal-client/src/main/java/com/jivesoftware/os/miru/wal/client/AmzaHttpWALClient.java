@@ -344,20 +344,35 @@ public class AmzaHttpWALClient implements MiruWALClient<AmzaCursor, AmzaSipCurso
 
     @Override
     @SuppressWarnings("unchecked")
-    public StreamBatch<MiruWALEntry, AmzaSipCursor> getRead(final MiruTenantId tenantId,
-        final MiruStreamId streamId,
+    public OldestReadResult<AmzaSipCursor> oldestReadEventId(MiruTenantId tenantId,
+        MiruStreamId streamId,
         AmzaSipCursor cursor,
-        long oldestTimestamp,
-        int batchSize,
         boolean createIfAbsent) throws Exception {
         final String jsonCursor = requestMapper.writeValueAsString(cursor);
-        return sendWithTenant(RoutingGroupType.readTracking, tenantId, createIfAbsent, "getRead",
+        return sendWithTenant(RoutingGroupType.readTracking, tenantId, createIfAbsent, "oldestReadEventId",
             client -> extract(
-                client.postJson("/miru/wal/amza/read/" + tenantId.toString() + "/" + streamId.toString() + "/" + oldestTimestamp + "/" + batchSize,
+                client.postJson("/miru/wal/amza/oldestReadEventId/" + tenantId.toString() + "/" + streamId.toString(),
                     jsonCursor,
                     null),
+                OldestReadResult.class,
+                new Class[] { AmzaSipCursor.class },
+                null));
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public StreamBatch<MiruWALEntry, Long> scanRead(MiruTenantId tenantId,
+        MiruStreamId streamId,
+        long fromTimestamp,
+        int batchSize,
+        boolean createIfAbsent) throws Exception {
+        return sendWithTenant(RoutingGroupType.readTracking, tenantId, createIfAbsent, "scanRead",
+            client -> extract(
+                client.postJson("/miru/wal/amza/scanRead/" + tenantId.toString() + "/" + streamId.toString() + "/" + fromTimestamp + "/" + batchSize,
+                    "{}",
+                    null),
                 StreamBatch.class,
-                new Class[] { MiruWALEntry.class, AmzaSipCursor.class },
+                new Class[] { MiruWALEntry.class, Long.class },
                 null));
     }
 
