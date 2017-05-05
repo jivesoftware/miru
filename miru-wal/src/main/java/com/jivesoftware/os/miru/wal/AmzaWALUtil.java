@@ -228,27 +228,21 @@ public class AmzaWALUtil {
         return client.takeFromTransactionId(prefix, transactionId, scan);
     }
 
-    public AmzaCursor scan(EmbeddedClient client,
-        Map<String, NamedCursor> cursorsByName,
+    public long scan(EmbeddedClient client,
+        long id,
         byte[] prefix,
         KeyValueTimestampStream scan) throws Exception {
 
-        RingMember localRingMember = amzaService.getRingReader().getRingMember();
-        String localRingMemberName = localRingMember.getMember();
-        NamedCursor localNamedCursor = cursorsByName.get(localRingMemberName);
-        long id = (localNamedCursor != null) ? localNamedCursor.id : 0;
-
-        long[] nextId = new long[1];
+        long[] nextId = { -1 };
         client.scan(
             Collections.singletonList(new ScanRange(prefix, FilerIO.longBytes(id), prefix, FilerIO.longBytes(Long.MAX_VALUE))),
             (prefix1, key, value, timestamp, version) -> {
-                nextId[0] = FilerIO.bytesLong(key);
+                nextId[0] = FilerIO.bytesLong(key) + 1;
                 return scan.stream(prefix1, key, value, timestamp, version);
             },
             true
         );
-        cursorsByName.put(localRingMemberName, new NamedCursor(localRingMemberName, nextId[0]));
-        return new AmzaCursor(cursorsByName.values(), null);
+        return nextId[0];
     }
 
     public byte[] toPartitionsKey(MiruTenantId tenantId, MiruPartitionId partitionId) {

@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.backfill;
 
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -12,6 +13,8 @@ import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.OldestReadResult;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -26,7 +29,7 @@ import java.util.Map;
 /** @author jonathan */
 public class AmzaInboxReadTracker implements MiruInboxReadTracker {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     // TODO - this should probably live in the context
     private final Map<MiruTenantPartitionAndStreamId, Collection<NamedCursor>> userSipTransactionId = Maps.newConcurrentMap();
@@ -49,7 +52,8 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
     }
 
     @Override
-    public <BM extends IBM, IBM> void sipAndApplyReadTracking(final MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM> void sipAndApplyReadTracking(String name,
+        final MiruBitmaps<BM, IBM> bitmaps,
         final MiruRequestContext<BM, IBM, ?> requestContext,
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
@@ -62,44 +66,55 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
 
         Collection<NamedCursor> cursors = getSipCursors(tenantId, partitionId, streamId);
         if (verbose) {
-            log.info("Backfill tenantId:{} partitionId:{} unread streamId:{} cursors:{}", tenantId, partitionId, streamId, cursors);
+            LOG.info("Backfill name:{} tenantId:{} partitionId:{} unread streamId:{} cursors:{}", name, tenantId, partitionId, streamId, cursors);
         }
-        MiruWALClient.StreamBatch<MiruWALEntry, AmzaSipCursor> got = walClient.getRead(tenantId,
+        OldestReadResult<AmzaSipCursor> oldestReadResult = walClient.oldestReadEventId(tenantId,
             streamId,
             new AmzaSipCursor(cursors, false),
-            oldestBackfilledTimestamp,
-            1000,
             true);
-        AmzaSipCursor lastCursor = null;
+        AmzaSipCursor lastCursor = oldestReadResult.cursor;
+
+        long fromTimestamp = Math.min(oldestBackfilledTimestamp, oldestReadResult.oldestEventId);
+
+        StreamBatch<MiruWALEntry, Long> got = walClient.scanRead(tenantId, streamId, fromTimestamp, 10_000, true);
+        int calls = 1;
+        int count = 0;
         while (got != null && !got.activities.isEmpty()) {
             if (verbose) {
-                log.info("Backfill unread tenantId:{} partitionId:{} streamId:{} got:{}", tenantId, partitionId, streamId, got.activities.size());
+                LOG.info("Backfill unread name:{} tenantId:{} partitionId:{} streamId:{} got:{}",
+                    name, tenantId, partitionId, streamId, got.activities.size());
             }
-            lastCursor = got.cursor;
+            count += got.activities.size();
             for (MiruWALEntry e : got.activities) {
                 MiruReadEvent readEvent = e.activity.readEvent.get();
                 MiruFilter filter = readEvent.filter;
 
                 if (e.activity.type == MiruPartitionedActivity.Type.READ) {
                     if (verbose) {
-                        log.info("Backfill unread tenantId:{} partitionId:{} streamId:{} read:{}", tenantId, partitionId, streamId, readEvent.time);
+                        LOG.info("Backfill unread name:{} tenantId:{} partitionId:{} streamId:{} read:{}",
+                            name, tenantId, partitionId, streamId, readEvent.time);
                     }
                     readTracker.read(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time, stackBuffer);
                 } else if (e.activity.type == MiruPartitionedActivity.Type.UNREAD) {
                     if (verbose) {
-                        log.info("Backfill unread tenantId:{} partitionId:{} streamId:{} unread:{}", tenantId, partitionId, streamId, readEvent.time);
+                        LOG.info("Backfill unread name:{} tenantId:{} partitionId:{} streamId:{} unread:{}",
+                            name, tenantId, partitionId, streamId, readEvent.time);
                     }
                     readTracker.unread(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time, stackBuffer);
                 } else if (e.activity.type == MiruPartitionedActivity.Type.MARK_ALL_READ) {
                     if (verbose) {
-                        log.info("Backfill unread tenantId:{} partitionId:{} streamId:{} markAllRead:{}", tenantId, partitionId, streamId, readEvent.time);
+                        LOG.info("Backfill unread name:{} tenantId:{} partitionId:{} streamId:{} markAllRead:{}",
+                            name, tenantId, partitionId, streamId, readEvent.time);
                     }
                     readTracker.markAllRead(bitmaps, requestContext, streamId, readEvent.time, stackBuffer);
                 }
             }
-            got = (got.cursor != null) ? walClient.getRead(tenantId, streamId, got.cursor, Long.MAX_VALUE, 1000, true) : null;
+            got = (got.cursor != null) ? walClient.scanRead(tenantId, streamId, got.cursor, 10_000, true) : null;
+            calls++;
         }
 
+        LOG.inc("sipAndApply>calls>pow>" + FilerIO.chunkPower(calls, 0));
+        LOG.inc("sipAndApply>count>pow>" + FilerIO.chunkPower(count, 0));
         if (lastCursor != null) {
             setSipCursors(tenantId, partitionId, streamId, lastCursor.cursors);
         }

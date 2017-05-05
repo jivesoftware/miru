@@ -48,13 +48,15 @@ public class RCVSReadTrackingWALReader implements MiruReadTrackingWALReader<RCVS
     }
 
     @Override
-    public RCVSCursor stream(MiruTenantId tenantId,
+    public long stream(MiruTenantId tenantId,
         MiruStreamId streamId,
-        RCVSCursor afterCursor,
-        int batchSize,
+        long id,
         StreamReadTrackingWAL streamReadTrackingWAL) throws Exception {
 
-        final List<ColumnValueAndTimestamp<MiruReadTrackingWALColumnKey, MiruPartitionedActivity, Long>> cvats = Lists.newArrayListWithCapacity(batchSize);
+        return id;
+
+        //TODO kill with fire
+        /*final List<ColumnValueAndTimestamp<MiruReadTrackingWALColumnKey, MiruPartitionedActivity, Long>> cvats = Lists.newArrayListWithCapacity(batchSize);
         boolean streaming = true;
         if (afterCursor == null) {
             afterCursor = RCVSCursor.INITIAL;
@@ -98,7 +100,7 @@ public class RCVSReadTrackingWALReader implements MiruReadTrackingWALReader<RCVS
             }
             cvats.clear();
         }
-        return new RCVSCursor(nextSort, nextActivityTimestamp, endOfStream, null);
+        return new RCVSCursor(nextSort, nextActivityTimestamp, endOfStream, null);*/
     }
 
     @Override

@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.OldestReadResult;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.RoutingGroupType;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
@@ -412,30 +413,56 @@ public class AmzaWALEndpoints {
     }
 
     @POST
-    @Path("/read/{tenantId}/{streamId}/{oldestEventId}/{batchSize}")
+    @Path("/oldestReadEventId/{tenantId}/{streamId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getRead(@PathParam("tenantId") String tenantId,
+    public Response oldestReadEventId(@PathParam("tenantId") String tenantId,
         @PathParam("streamId") String streamId,
-        @PathParam("oldestEventId") long oldestEventId,
-        @PathParam("batchSize") int batchSize,
         AmzaSipCursor cursor) throws Exception {
         try {
             long start = System.currentTimeMillis();
-            StreamBatch<MiruWALEntry, AmzaSipCursor> read = walDirector.getRead(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, oldestEventId, batchSize, true);
-            stats.ingressed("/read/" + tenantId + "/" + streamId + "/" + batchSize, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse(read);
+            OldestReadResult<AmzaSipCursor> result = walDirector.oldestReadEventId(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor);
+            stats.ingressed("/oldestReadEventId/" + tenantId + "/" + streamId, 1, System.currentTimeMillis() - start);
+            return responseHelper.jsonResponse(result);
         } catch (MiruWALNotInitializedException x) {
-            log.error("WAL not initialized calling getRead({},{},{},{},{})",
-                new Object[] { tenantId, streamId, oldestEventId, batchSize, cursor }, x);
+            log.error("WAL not initialized calling oldestReadEventId({},{},{})",
+                new Object[] { tenantId, streamId, cursor }, x);
             return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
         } catch (MiruWALWrongRouteException x) {
-            log.error("Wrong route calling getRead({},{},{},{},{})",
-                new Object[] { tenantId, streamId, oldestEventId, batchSize, cursor }, x);
+            log.error("Wrong route calling oldestReadEventId({},{},{})",
+                new Object[] { tenantId, streamId, cursor }, x);
             return responseHelper.errorResponse(Status.CONFLICT, "Wrong route", x);
         } catch (Exception x) {
-            log.error("Failed calling getRead({},{},{},{},{})", new Object[] { tenantId, streamId, oldestEventId, batchSize, cursor }, x);
+            log.error("Failed calling oldestReadEventId({},{},{})", new Object[] { tenantId, streamId, cursor }, x);
+            return responseHelper.errorResponse("Server error", x);
+        }
+    }
+
+    @POST
+    @Path("/scanRead/{tenantId}/{streamId}/{oldestEventId}/{batchSize}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response scanRead(@PathParam("tenantId") String tenantId,
+        @PathParam("streamId") String streamId,
+        @PathParam("oldestEventId") long oldestEventId,
+        @PathParam("batchSize") int batchSize) throws Exception {
+        try {
+            long start = System.currentTimeMillis();
+            StreamBatch<MiruWALEntry, Long> read = walDirector.scanRead(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), oldestEventId, batchSize);
+            stats.ingressed("/scanRead/" + tenantId + "/" + streamId + "/" + batchSize, 1, System.currentTimeMillis() - start);
+            return responseHelper.jsonResponse(read);
+        } catch (MiruWALNotInitializedException x) {
+            log.error("WAL not initialized calling scanRead({},{},{},{})",
+                new Object[] { tenantId, streamId, oldestEventId, batchSize }, x);
+            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
+        } catch (MiruWALWrongRouteException x) {
+            log.error("Wrong route calling scanRead({},{},{},{})",
+                new Object[] { tenantId, streamId, oldestEventId, batchSize }, x);
+            return responseHelper.errorResponse(Status.CONFLICT, "Wrong route", x);
+        } catch (Exception x) {
+            log.error("Failed calling scanRead({},{},{},{})", new Object[] { tenantId, streamId, oldestEventId, batchSize }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }

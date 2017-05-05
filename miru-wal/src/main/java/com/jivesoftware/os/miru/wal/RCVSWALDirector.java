@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.api.topology.MiruPartitionStatus;
 import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient.OldestReadResult;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.RoutingGroupType;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
@@ -297,32 +298,24 @@ public class RCVSWALDirector {
         return new StreamBatch<>(activities, nextCursor, endOfWAL[0], suppressed);
     }
 
-    public StreamBatch<MiruWALEntry, RCVSSipCursor> getRead(MiruTenantId tenantId,
-        MiruStreamId streamId,
-        RCVSSipCursor sipCursor,
-        long oldestTimestamp,
-        int batchSize,
-        boolean createIfAbsent) throws Exception {
-
+    public OldestReadResult<RCVSSipCursor> oldestReadEventId(MiruTenantId tenantId, MiruStreamId streamId, RCVSSipCursor sipCursor) throws Exception {
         long[] minEventId = { -1L };
         int[] count = new int[1];
-        RCVSSipCursor nextCursor = readTrackingWALReader.streamSip(tenantId, streamId, sipCursor, batchSize, (eventId, timestamp) -> {
+        RCVSSipCursor nextCursor = readTrackingWALReader.streamSip(tenantId, streamId, sipCursor, 10_000, (eventId, timestamp) -> {
             minEventId[0] = (minEventId[0] == -1) ? eventId : Math.min(minEventId[0], eventId);
             count[0]++;
-            return count[0] < batchSize;
+            return true;
         });
+        return new OldestReadResult<>(minEventId[0], nextCursor, true);
+    }
 
-        // Take either the oldest eventId or the oldest readtracking sip time
-        minEventId[0] = Math.min(minEventId[0], oldestTimestamp);
-        RCVSCursor cursor = minEventId[0] > 0 ? readTrackingWALReader.getCursor(minEventId[0]) : null;
+    public StreamBatch<MiruWALEntry, Long> scanRead(MiruTenantId tenantId, MiruStreamId streamId, long oldestEventId, int batchSize) throws Exception {
 
         List<MiruWALEntry> batch = new ArrayList<>();
-        if (cursor != null) {
-            readTrackingWALReader.stream(tenantId, streamId, cursor, batchSize, (collisionId, partitionedActivity, timestamp) -> {
-                batch.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
-                return true; // always consume completely
-            });
-        }
+        long nextCursor = readTrackingWALReader.stream(tenantId, streamId, oldestEventId, (collisionId, partitionedActivity, timestamp) -> {
+            batch.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
+            return batch.size() < batchSize;
+        });
         return new StreamBatch<>(batch, nextCursor, batch.size() < batchSize, null);
     }
 

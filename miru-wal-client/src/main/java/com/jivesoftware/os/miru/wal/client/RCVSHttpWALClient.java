@@ -346,20 +346,35 @@ public class RCVSHttpWALClient implements MiruWALClient<RCVSCursor, RCVSSipCurso
 
     @Override
     @SuppressWarnings("unchecked")
-    public StreamBatch<MiruWALEntry, RCVSSipCursor> getRead(final MiruTenantId tenantId,
-        final MiruStreamId streamId,
+    public OldestReadResult<RCVSSipCursor> oldestReadEventId(MiruTenantId tenantId,
+        MiruStreamId streamId,
         RCVSSipCursor cursor,
-        long oldestTimestamp,
-        int batchSize,
         boolean createIfAbsent) throws Exception {
         final String jsonCursor = requestMapper.writeValueAsString(cursor);
-        return sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, createIfAbsent, "getRead",
+        return sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, createIfAbsent, "oldestReadEventId",
             client -> extract(
-                client.postJson("/miru/wal/rcvs/read/" + tenantId.toString() + "/" + streamId.toString() + "/" + oldestTimestamp + "/" + batchSize,
+                client.postJson("/miru/wal/rcvs/oldestReadEventId/" + tenantId.toString() + "/" + streamId.toString(),
                     jsonCursor,
                     null),
+                OldestReadResult.class,
+                new Class[] { RCVSSipCursor.class },
+                null));
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public StreamBatch<MiruWALEntry, Long> scanRead(MiruTenantId tenantId,
+        MiruStreamId streamId,
+        long fromTimestamp,
+        int batchSize,
+        boolean createIfAbsent) throws Exception {
+        return sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, createIfAbsent, "scanRead",
+            client -> extract(
+                client.postJson("/miru/wal/rcvs/scanRead/" + tenantId.toString() + "/" + streamId.toString() + "/" + fromTimestamp + "/" + batchSize,
+                    "{}",
+                    null),
                 StreamBatch.class,
-                new Class[] { MiruWALEntry.class, RCVSSipCursor.class },
+                new Class[] { MiruWALEntry.class, Long.class },
                 null));
     }
 

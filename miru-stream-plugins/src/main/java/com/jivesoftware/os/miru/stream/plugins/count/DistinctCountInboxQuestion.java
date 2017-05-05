@@ -64,7 +64,7 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         if (request.query.suppressUnreadFilter != null && handle.canBackfill()) {
-            backfillerizer.backfillInboxUnread(bitmaps, context, request.query.streamFilter, solutionLog, request.tenantId,
+            backfillerizer.backfillInboxUnread(request.name, bitmaps, context, request.query.streamFilter, solutionLog, request.tenantId,
                 handle.getCoord().partitionId, request.query.streamId, request.query.suppressUnreadFilter);
         }
 

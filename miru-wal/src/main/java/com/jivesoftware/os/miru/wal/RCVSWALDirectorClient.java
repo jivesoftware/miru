@@ -107,12 +107,19 @@ public class RCVSWALDirectorClient implements MiruWALClient<RCVSCursor, RCVSSipC
     }
 
     @Override
-    public StreamBatch<MiruWALEntry, RCVSSipCursor> getRead(MiruTenantId tenantId,
+    public OldestReadResult<RCVSSipCursor> oldestReadEventId(MiruTenantId tenantId,
         MiruStreamId streamId,
         RCVSSipCursor cursor,
-        long oldestTimestamp,
+        boolean createIfAbsent) throws Exception {
+        return director.oldestReadEventId(tenantId, streamId, cursor);
+    }
+
+    @Override
+    public StreamBatch<MiruWALEntry, Long> scanRead(MiruTenantId tenantId,
+        MiruStreamId streamId,
+        long fromTimestamp,
         int batchSize,
         boolean createIfAbsent) throws Exception {
-        return director.getRead(tenantId, streamId, cursor, oldestTimestamp, batchSize, createIfAbsent);
+        return director.scanRead(tenantId, streamId, fromTimestamp, batchSize);
     }
 }
