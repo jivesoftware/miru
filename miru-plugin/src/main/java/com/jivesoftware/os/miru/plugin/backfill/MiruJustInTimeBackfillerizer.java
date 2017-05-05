@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.backfill;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
@@ -18,19 +19,42 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
+import com.jivesoftware.os.routing.bird.health.api.HealthTimer;
+import com.jivesoftware.os.routing.bird.health.api.TimerHealthCheckConfig;
+import com.jivesoftware.os.routing.bird.health.checkers.TimerHealthChecker;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import org.merlin.config.defaults.DoubleDefault;
+import org.merlin.config.defaults.StringDefault;
 
 /**
  *
  */
 public class MiruJustInTimeBackfillerizer {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+
+    public interface BackfillUnreadLatency extends TimerHealthCheckConfig {
+
+        @StringDefault("backfillUnread>latency")
+        @Override
+        String getName();
+
+        @StringDefault("How long its taking to backfillUnread.")
+        @Override
+        String getDescription();
+
+        @DoubleDefault(30000d) /// 30sec
+        @Override
+        Double get95ThPecentileMax();
+    }
+
+    private static final HealthTimer backfillUnreadLatency = HealthFactory.getHealthTimer(BackfillUnreadLatency.class, TimerHealthChecker.FACTORY);
 
     private final MiruInboxReadTracker inboxReadTracker;
 
@@ -49,7 +73,8 @@ public class MiruJustInTimeBackfillerizer {
         this.verboseStreamIds = verboseStreamIds;
     }
 
-    public <BM extends IBM, IBM> void backfillUnread(MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM> void backfillUnread(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
         MiruSolutionLog solutionLog,
         MiruTenantId tenantId,
@@ -58,9 +83,11 @@ public class MiruJustInTimeBackfillerizer {
         MiruFilter suppressUnreadFilter)
         throws Exception {
 
+        LOG.inc("backfillUnread>calls>" + name);
         // backfill in another thread to guard WAL interface from solver cancellation/interruption
         MiruSolutionLog backfillSolutionLog = new MiruSolutionLog(solutionLog.getLevel());
         Future<?> future = backfillExecutor.submit(() -> {
+            backfillUnreadLatency.startTimer();
             try {
                 StackBuffer stackBuffer = new StackBuffer();
                 synchronized (requestContext.getStreamLocks().lock(streamId, 0)) {
@@ -72,7 +99,8 @@ public class MiruJustInTimeBackfillerizer {
                     if (verbose) {
                         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
                         requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(container, stackBuffer);
-                        log.info("Backfill unread tenantId:{} partitionId:{} streamId:{} before:{}",
+                        LOG.info("Backfill unread name:{} tenantId:{} partitionId:{} streamId:{} before:{}",
+                            name,
                             tenantId,
                             partitionId,
                             streamId,
@@ -90,6 +118,7 @@ public class MiruJustInTimeBackfillerizer {
                             }
                         }
                     }
+                    LOG.inc("backfillUnread>ids>pow>" + FilerIO.chunkPower(unreadIds.size(), 0));
                     long elapsed = System.currentTimeMillis() - start;
                     backfillSolutionLog.log(MiruSolutionLogLevel.INFO, "Got oldest backfilled timestamp in {} ms", elapsed);
                     start = System.currentTimeMillis();
@@ -111,7 +140,8 @@ public class MiruJustInTimeBackfillerizer {
                     requestContext.getUnreadTrackingIndex().applyUnread(streamId, unreadMask, stackBuffer);
 
                     if (verbose) {
-                        log.info("Backfill unread tenantId:{} partitionId:{} streamId:{} unreadMask:{} from:{} to:{} oldest:{}",
+                        LOG.info("Backfill unread name:{} tenantId:{} partitionId:{} streamId:{} unreadMask:{} from:{} to:{} oldest:{}",
+                            name,
                             tenantId,
                             partitionId,
                             streamId,
@@ -128,7 +158,8 @@ public class MiruJustInTimeBackfillerizer {
                     if (verbose) {
                         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
                         requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(container, stackBuffer);
-                        log.info("Backfill unread tenantId:{} partitionId:{} streamId:{} after:{}",
+                        LOG.info("Backfill unread name:{} tenantId:{} partitionId:{} streamId:{} after:{}",
+                            name,
                             tenantId,
                             partitionId,
                             streamId,
@@ -152,8 +183,10 @@ public class MiruJustInTimeBackfillerizer {
                 }
 
             } catch (Exception e) {
-                log.error("Backfillerizer failed", e);
+                LOG.error("Backfillerizer failed", e);
                 throw new RuntimeException("Backfillerizer failed");
+            } finally {
+                backfillUnreadLatency.stopTimer("Backfill unread latency", "Fix indexing or downstream WAL issues");
             }
             return null;
         });
@@ -163,7 +196,8 @@ public class MiruJustInTimeBackfillerizer {
         solutionLog.append(backfillSolutionLog);
     }
 
-    public <BM extends IBM, IBM> void backfillInboxUnread(final MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM> void backfillInboxUnread(String name,
+        final MiruBitmaps<BM, IBM> bitmaps,
         final MiruRequestContext<BM, IBM, ?> requestContext,
         final MiruFilter streamFilter,
         final MiruSolutionLog solutionLog,
@@ -173,6 +207,7 @@ public class MiruJustInTimeBackfillerizer {
         MiruFilter suppressUnreadFilter)
         throws Exception {
 
+        LOG.inc("backfillInboxUnread>calls>" + name);
         // backfill in another thread to guard WAL interface from solver cancellation/interruption
         MiruSolutionLog backfillSolutionLog = new MiruSolutionLog(solutionLog.getLevel());
         Future<?> future = backfillExecutor.submit(() -> {
@@ -193,12 +228,12 @@ public class MiruJustInTimeBackfillerizer {
                         stackBuffer);
 
                     MiruInvertedIndexAppender inbox = requestContext.getInboxIndex().getAppender(streamId);
-                    if (log.isDebugEnabled()) {
+                    if (LOG.isDebugEnabled()) {
                         BitmapAndLastId<BM> inboxContainer = new BitmapAndLastId<>();
                         requestContext.getInboxIndex().getInbox(streamId).getIndex(inboxContainer, stackBuffer);
                         BitmapAndLastId<BM> unreadContainer = new BitmapAndLastId<>();
                         requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(inboxContainer, stackBuffer);
-                        log.debug("before:\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
+                        LOG.debug("before:\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
                             streamId.getBytes(),
                             inboxContainer,
                             unreadContainer,
@@ -218,7 +253,7 @@ public class MiruJustInTimeBackfillerizer {
                         if (i > lastActivityIndex && i <= lastId) {
                             TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime("justInTimeBackfillerizer", i, stackBuffer);
                             if (tvr == null) {
-                                log.warn("Missing activity at index {}, timeIndex={}, activityIndex={}",
+                                LOG.warn("Missing activity at index {}, timeIndex={}, activityIndex={}",
                                     i, requestContext.getTimeIndex().lastId(), lastId);
                                 continue;
                             }
@@ -251,12 +286,12 @@ public class MiruJustInTimeBackfillerizer {
                     }
                     requestContext.getUnreadTrackingIndex().applyUnread(streamId, unreadMask, stackBuffer);
 
-                    if (log.isDebugEnabled()) {
+                    if (LOG.isDebugEnabled()) {
                         BitmapAndLastId<BM> inboxContainer = new BitmapAndLastId<>();
                         requestContext.getInboxIndex().getInbox(streamId).getIndex(inboxContainer, stackBuffer);
                         BitmapAndLastId<BM> unreadContainer = new BitmapAndLastId<>();
                         requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(inboxContainer, stackBuffer);
-                        log.debug("after:\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
+                        LOG.debug("after:\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
                             streamId.getBytes(),
                             inboxContainer,
                             unreadContainer,
@@ -276,7 +311,7 @@ public class MiruJustInTimeBackfillerizer {
                 }
 
             } catch (Exception e) {
-                log.error("Backfillerizer failed", e);
+                LOG.error("Backfillerizer failed", e);
                 throw new RuntimeException("Backfillerizer failed");
             }
             return null;

@@ -99,7 +99,8 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
             && !MiruStreamId.NULL.equals(streamId)
             && (request.query.includeUnreadState || request.query.unreadOnly)) {
             if (request.query.suppressUnreadFilter != null && handle.canBackfill()) {
-                backfillerizer.backfillUnread(bitmaps,
+                backfillerizer.backfillUnread(request.name,
+                    bitmaps,
                     context,
                     solutionLog,
                     request.tenantId,

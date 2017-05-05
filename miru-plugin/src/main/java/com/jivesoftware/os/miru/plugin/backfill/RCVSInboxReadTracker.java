@@ -46,7 +46,8 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
     }
 
     @Override
-    public <BM extends IBM, IBM> void sipAndApplyReadTracking(final MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM> void sipAndApplyReadTracking(String name,
+        final MiruBitmaps<BM, IBM> bitmaps,
         final MiruRequestContext<BM, IBM, ?> requestContext,
         MiruTenantId tenantId,
         MiruPartitionId partitionId,

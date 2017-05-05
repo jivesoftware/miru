@@ -96,7 +96,8 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
             && !MiruStreamId.NULL.equals(request.query.streamId)
             && request.query.unreadOnly) {
             if (request.query.suppressUnreadFilter != null && handle.canBackfill()) {
-                backfillerizer.backfillUnread(bitmaps,
+                backfillerizer.backfillUnread(request.name,
+                    bitmaps,
                     context,
                     solutionLog,
                     request.tenantId,

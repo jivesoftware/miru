@@ -156,7 +156,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             && !MiruStreamId.NULL.equals(request.query.unreadStreamId)) {
             if (request.query.suppressUnreadFilter != null && handle.canBackfill()) {
                 long start = System.currentTimeMillis();
-                backfillerizer.backfillUnread(bitmaps,
+                backfillerizer.backfillUnread(request.name,
+                    bitmaps,
                     context,
                     solutionLog,
                     request.tenantId,
