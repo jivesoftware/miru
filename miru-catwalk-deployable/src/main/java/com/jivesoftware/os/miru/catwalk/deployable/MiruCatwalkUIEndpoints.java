@@ -4,7 +4,9 @@ import com.jivesoftware.os.miru.catwalk.deployable.region.MiruInspectRegion.Insp
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import javax.inject.Singleton;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
@@ -30,8 +32,8 @@ public class MiruCatwalkUIEndpoints {
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
-    public Response get() {
-        String rendered = miruCatwalkUIService.render();
+    public Response get(@HeaderParam("rb_session_redir_url") @DefaultValue("") String redirUrl) {
+        String rendered = miruCatwalkUIService.render(redirUrl);
         return Response.ok(rendered).build();
     }
 

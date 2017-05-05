@@ -20,6 +20,7 @@ import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -55,8 +56,8 @@ public class MiruManageEndpoints {
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
-    public Response get() {
-        String rendered = miruManageService.render();
+    public Response get(@HeaderParam("rb_session_redir_url") @DefaultValue("") String redirUrl) {
+        String rendered = miruManageService.render(redirUrl);
         return Response.ok(rendered).build();
     }
 
