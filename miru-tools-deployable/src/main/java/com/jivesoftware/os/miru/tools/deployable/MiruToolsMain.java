@@ -93,6 +93,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.apache.commons.lang.ArrayUtils;
 
 public class MiruToolsMain {
 
@@ -243,7 +244,6 @@ public class MiruToolsMain {
                 100, mapper);
             edgeWriter.start();
 
-            String origin = instanceConfig.getHost() + ":" + instanceConfig.getMainPort();
             MiruQueryTASRouting queryTASRouting = new MiruQueryTASRouting(
                 miruReaderClient,
                 mapper,
@@ -252,11 +252,16 @@ public class MiruToolsMain {
                 100, // TODO config
                 95, // TODO config
                 1000,
-                (tenantId, actorId, family, destination, latency, verbs) -> {
+                (tenantId, actorId, family, destination, latency, tags) -> {
                     try {
-                        edgeWriter.write(tenantId.toString(), actorId.toString(), family, origin, destination, latency, verbs);
+                        edgeWriter.write(tenantId.toString(), actorId.toString(), family, instanceConfig.getInstanceKey(), destination, latency,
+                            (String[])ArrayUtils.addAll(tags, new String[]{
+                                "originService:" + instanceConfig.getServiceName(),
+                                "originAddress:" + instanceConfig.getHost() + ":" + instanceConfig.getMainPort()
+                            }));
+
                     } catch (Exception x) {
-                        LOG.warn("edgewriter failure ",x);
+                        LOG.warn("edgewriter failure ", x);
                     }
                 });
 
