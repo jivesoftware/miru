@@ -21,6 +21,7 @@ import com.jivesoftware.os.routing.bird.shared.IndexedClientStrategy;
 import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
 import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import com.jivesoftware.os.routing.bird.shared.ReturnFirstNonFailure;
+import com.jivesoftware.os.routing.bird.shared.ReturnFirstNonFailure.Favored;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -57,18 +58,24 @@ public class MiruQueryRouting implements MiruRouting {
         String path,
         Class<A> answerClass) throws Exception {
 
-        String json = requestMapper.writeValueAsString(request);
         MiruTenantIdAndFamily tenantAndFamily = new MiruTenantIdAndFamily(request.tenantId, family);
-        NextClientStrategy tenantStrategy = getTenantStrategy(tenantAndFamily);
-
-        HttpResponse httpResponse = readerClient.call(routingTenant,
-            tenantStrategy,
-            family,
-            (c) -> new ClientCall.ClientResponse<>(c.postJson(path, json, null), true)
-        );
-        MiruResponse<A> answer = responseMapper.extractResultFromResponse(httpResponse, MiruResponse.class, new Class[] { answerClass }, null);
-        recordTenantStrategy(tenantAndFamily, request.actorId, answer);
-        return answer;
+        long start = System.currentTimeMillis();
+        try {
+            String json = requestMapper.writeValueAsString(request);
+            NextClientStrategy tenantStrategy = getTenantStrategy(tenantAndFamily);
+            InterceptingNextClientStrategy interceptingNextClientStrategy = new InterceptingNextClientStrategy(tenantStrategy);
+            HttpResponse httpResponse = readerClient.call(routingTenant,
+                tenantStrategy,
+                family,
+                (c) -> new ClientCall.ClientResponse<>(c.postJson(path, json, null), true)
+            );
+            MiruResponse<A> answer = responseMapper.extractResultFromResponse(httpResponse, MiruResponse.class, new Class[] { answerClass }, null);
+            recordTenantStrategy(tenantAndFamily, request.actorId, interceptingNextClientStrategy, answer);
+            return answer;
+        } catch (HttpClientException x) {
+            queryEvent.event(tenantAndFamily.miruTenantId, request.actorId, tenantAndFamily.family, "nil", System.currentTimeMillis() - start, "failure");
+            throw x;
+        }
     }
 
     private NextClientStrategy getTenantStrategy(MiruTenantIdAndFamily tenantAndFamily) {
@@ -76,13 +83,26 @@ public class MiruQueryRouting implements MiruRouting {
     }
 
 
-    private void recordTenantStrategy(MiruTenantIdAndFamily tenantAndFamily, MiruActorId actorId, MiruResponse<?> response) {
+    private void recordTenantStrategy(MiruTenantIdAndFamily tenantAndFamily,
+        MiruActorId actorId,
+        InterceptingNextClientStrategy interceptingNextClientStrategy,
+        MiruResponse<?> response) {
+
         if (response != null && response.solutions != null && !response.solutions.isEmpty()) {
             MiruSolution solution = response.solutions.get(0);
             MiruHost host = solution.usedPartition.host;
 
-            queryEvent.event(tenantAndFamily.miruTenantId, actorId, tenantAndFamily.family, host.getLogicalName(), solution.totalElapsed,
-                "success");
+            ConnectionDescriptor favored = interceptingNextClientStrategy.favoredConnectionDescriptor;
+            if (favored != null) {
+                InstanceDescriptor instanceDescriptor = favored.getInstanceDescriptor();
+                queryEvent.event(tenantAndFamily.miruTenantId, actorId, tenantAndFamily.family, instanceDescriptor.instanceKey, solution.totalElapsed,
+                    "success",
+                    "attempt:" + interceptingNextClientStrategy.attempt,
+                    "totalAttempts:" + interceptingNextClientStrategy.totalAttempts,
+                    "destinationService:" + instanceDescriptor.serviceName,
+                    "destinationAddress:" + instanceDescriptor.publicHost + ":" + instanceDescriptor.ports.get("main")
+                );
+            }
 
             strategyCache.compute(tenantAndFamily, (key, existing) -> {
                 if (existing != null && existing instanceof PreferredNodeStrategy && ((PreferredNodeStrategy) existing).host.equals(host)) {
@@ -114,7 +134,8 @@ public class MiruQueryRouting implements MiruRouting {
             int deadAfterNErrors,
             long checkDeadEveryNMillis,
             AtomicInteger[] clientsErrors,
-            AtomicLong[] clientsDeathTimestamp) throws HttpClientException {
+            AtomicLong[] clientsDeathTimestamp,
+            Favored favored) throws HttpClientException {
             return returnFirstNonFailure.call(this,
                 family,
                 httpCall,
@@ -125,7 +146,8 @@ public class MiruQueryRouting implements MiruRouting {
                 deadAfterNErrors,
                 checkDeadEveryNMillis,
                 clientsErrors,
-                clientsDeathTimestamp);
+                clientsDeathTimestamp,
+                favored);
         }
 
         @Override

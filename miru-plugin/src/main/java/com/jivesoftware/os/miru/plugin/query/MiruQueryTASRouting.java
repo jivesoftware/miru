@@ -13,16 +13,12 @@ import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TailAtScaleStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
-import com.jivesoftware.os.routing.bird.shared.ClientHealth;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
-import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import java.util.Map;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  *
@@ -69,49 +65,23 @@ public class MiruQueryTASRouting implements MiruRouting {
         String path,
         Class<A> answerClass) throws Exception {
 
-        String json = requestMapper.writeValueAsString(request);
         MiruTenantIdAndFamily tenantAndFamily = new MiruTenantIdAndFamily(request.tenantId, family);
-        TailAtScaleStrategy tenantStrategy = getTenantStrategy(tenantAndFamily);
-        InterceptingNextClientStrategy interceptingNextClientStrategy = new InterceptingNextClientStrategy(tenantStrategy);
-        HttpResponse httpResponse = readerClient.call(routingTenant,
-            interceptingNextClientStrategy,
-            family,
-            (c) -> new ClientCall.ClientResponse<>(c.postJson(path, json, null), true)
-        );
-        MiruResponse<A> answer = responseMapper.extractResultFromResponse(httpResponse, MiruResponse.class, new Class[] { answerClass }, null);
-        recordTenantStrategy(tenantAndFamily, request.actorId, interceptingNextClientStrategy, answer);
-        return answer;
-    }
-
-    private static final class InterceptingNextClientStrategy implements NextClientStrategy {
-        final TailAtScaleStrategy delegate;
-        ConnectionDescriptor[] connectionDescriptors;
-        ConnectionDescriptor favored;
-        long latency;
-
-        private InterceptingNextClientStrategy(TailAtScaleStrategy delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public <C, R> R call(String family,
-            ClientCall<C, R, HttpClientException> httpCall,
-            ConnectionDescriptor[] connectionDescriptors,
-            long connectionDescriptorsVersion,
-            C[] clients,
-            ClientHealth[] clientHealths,
-            int deadAfterNErrors,
-            long checkDeadEveryNMillis,
-            AtomicInteger[] clientsErrors,
-            AtomicLong[] clientsDeathTimestamp) throws HttpClientException {
-
-            this.connectionDescriptors = connectionDescriptors;
-
-            return delegate.call(family, httpCall, connectionDescriptors, connectionDescriptorsVersion, clients, clientHealths, deadAfterNErrors,
-                checkDeadEveryNMillis, clientsErrors, clientsDeathTimestamp, (favored, latency) -> {
-                    this.favored = favored;
-                    this.latency = latency;
-                });
+        long start = System.currentTimeMillis();
+        try {
+            String json = requestMapper.writeValueAsString(request);
+            TailAtScaleStrategy tenantStrategy = getTenantStrategy(tenantAndFamily);
+            InterceptingNextClientStrategy interceptingNextClientStrategy = new InterceptingNextClientStrategy(tenantStrategy);
+            HttpResponse httpResponse = readerClient.call(routingTenant,
+                interceptingNextClientStrategy,
+                family,
+                (c) -> new ClientCall.ClientResponse<>(c.postJson(path, json, null), true)
+            );
+            MiruResponse<A> answer = responseMapper.extractResultFromResponse(httpResponse, MiruResponse.class, new Class[] { answerClass }, null);
+            recordTenantStrategy(tenantAndFamily, request.actorId, interceptingNextClientStrategy, answer);
+            return answer;
+        } catch (HttpClientException x) {
+            queryEvent.event(tenantAndFamily.miruTenantId, request.actorId, tenantAndFamily.family, "nil", System.currentTimeMillis() - start, "failure");
+            throw x;
         }
     }
 
@@ -131,12 +101,21 @@ public class MiruQueryTASRouting implements MiruRouting {
             MiruSolution solution = response.solutions.get(0);
             MiruHost host = solution.usedPartition.host;
 
-            queryEvent.event(tenantAndFamily.miruTenantId, actorId, tenantAndFamily.family, host.getLogicalName(), solution.totalElapsed,
-                "success");
+            ConnectionDescriptor favored = interceptingNextClientStrategy.favoredConnectionDescriptor;
+            if (favored != null) {
+                InstanceDescriptor instanceDescriptor = favored.getInstanceDescriptor();
+                queryEvent.event(tenantAndFamily.miruTenantId, actorId, tenantAndFamily.family, instanceDescriptor.instanceKey, solution.totalElapsed,
+                    "success",
+                    "attempt:" + interceptingNextClientStrategy.attempt,
+                    "totalAttempts:" + interceptingNextClientStrategy.totalAttempts,
+                    "destinationService:" + instanceDescriptor.serviceName,
+                    "destinationAddress:" + instanceDescriptor.publicHost + ":" + instanceDescriptor.ports.get("main")
+                );
+            }
 
-            if (interceptingNextClientStrategy.favored != null) {
-                HostPort hostPort = interceptingNextClientStrategy.favored.getHostPort();
-                InstanceDescriptor instanceDescriptor = interceptingNextClientStrategy.favored.getInstanceDescriptor();
+            if (interceptingNextClientStrategy.favoredConnectionDescriptor != null) {
+                HostPort hostPort = interceptingNextClientStrategy.favoredConnectionDescriptor.getHostPort();
+                InstanceDescriptor instanceDescriptor = interceptingNextClientStrategy.favoredConnectionDescriptor.getInstanceDescriptor();
                 if (!MiruHostProvider.checkEquals(host,
                     instanceDescriptor.instanceName, instanceDescriptor.instanceKey,
                     hostPort.getHost(), hostPort.getPort())) {
@@ -147,7 +126,9 @@ public class MiruQueryTASRouting implements MiruRouting {
                         if (MiruHostProvider.checkEquals(host,
                             instanceDescriptor.instanceName, instanceDescriptor.instanceKey,
                             hostPort.getHost(), hostPort.getPort())) {
-                            interceptingNextClientStrategy.delegate.favor(connectionDescriptor);
+
+                            ((TailAtScaleStrategy) interceptingNextClientStrategy.delegate).favor(connectionDescriptor);
+
                             break;
                         }
                     }
