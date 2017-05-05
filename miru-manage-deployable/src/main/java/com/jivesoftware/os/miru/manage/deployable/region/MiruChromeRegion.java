@@ -38,13 +38,6 @@ public class MiruChromeRegion<I, R extends MiruPageRegion<I>> implements MiruReg
         data.put("plugins", Lists.transform(plugins,
             plugin -> ImmutableMap.of("name", plugin.name, "path", plugin.path)));
         return renderer.render(template, data);
-
-        /*
-        // inject js page region module data
-        List<String> jsmodulesVal = Arrays.asList(JSProcessor.classToAMDPath(region.getClass()));
-
-        context.put("jsmodules").value(jsmodulesVal);
-        */
     }
 
 }

@@ -52,12 +52,13 @@ public class MiruManageService {
         return new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion, plugins, region);
     }
 
-    public String render() {
+    public String render(String redirUrl) {
+        headerRegion.setRedirUrl(redirUrl);
         return chrome(adminRegion).render(null);
     }
 
     public String renderHosts() {
-        return chrome(hostsRegion).render(Optional.<MiruHost>absent());
+        return chrome(hostsRegion).render(Optional.absent());
     }
 
     public String renderHostsWithFocus(MiruHost host) {
@@ -73,7 +74,7 @@ public class MiruManageService {
     }
 
     public String renderTenants() {
-        return chrome(tenantsRegion).render(Optional.<MiruTenantId>absent());
+        return chrome(tenantsRegion).render(Optional.absent());
     }
 
     public String renderTenantsWithFocus(MiruTenantId tenantId) {
