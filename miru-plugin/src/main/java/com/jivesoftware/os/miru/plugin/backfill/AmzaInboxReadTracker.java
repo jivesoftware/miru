@@ -74,17 +74,19 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
             true);
         AmzaSipCursor lastCursor = oldestReadResult.cursor;
 
-        long fromTimestamp = Math.min(oldestBackfilledTimestamp, oldestReadResult.oldestEventId);
+        long fromTimestamp = oldestReadResult.oldestEventId == -1 ? oldestBackfilledTimestamp
+            : Math.min(oldestBackfilledTimestamp, oldestReadResult.oldestEventId);
 
-        StreamBatch<MiruWALEntry, Long> got = walClient.scanRead(tenantId, streamId, fromTimestamp, 10_000, true);
-        int calls = 1;
+        StreamBatch<MiruWALEntry, Long> got = (fromTimestamp == Long.MAX_VALUE) ? null : walClient.scanRead(tenantId, streamId, fromTimestamp, 10_000, true);
+        int calls = 0;
         int count = 0;
         while (got != null && !got.activities.isEmpty()) {
+            calls++;
+            count += got.activities.size();
             if (verbose) {
                 LOG.info("Backfill unread name:{} tenantId:{} partitionId:{} streamId:{} got:{}",
                     name, tenantId, partitionId, streamId, got.activities.size());
             }
-            count += got.activities.size();
             for (MiruWALEntry e : got.activities) {
                 MiruReadEvent readEvent = e.activity.readEvent.get();
                 MiruFilter filter = readEvent.filter;
@@ -110,7 +112,6 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
                 }
             }
             got = (got.cursor != null) ? walClient.scanRead(tenantId, streamId, got.cursor, 10_000, true) : null;
-            calls++;
         }
 
         LOG.inc("sipAndApply>calls>pow>" + FilerIO.chunkPower(calls, 0));
