@@ -42,7 +42,8 @@ public class MiruToolsService {
         return new MiruFrameRegion<>("soy.miru.frame.chromeRegion", renderer, region);
     }
 
-    public String render() {
+    public String render(String redirUrl) {
+        headerRegion.setRedirUrl(redirUrl);
         return chrome(adminRegion).render(null);
     }
 

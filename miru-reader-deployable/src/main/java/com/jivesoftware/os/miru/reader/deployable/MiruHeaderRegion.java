@@ -1,23 +1,18 @@
 package com.jivesoftware.os.miru.reader.deployable;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.miru.ui.MiruRegion;
+import com.jivesoftware.os.miru.ui.MiruHeaderRegionBase;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
-import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptors;
-import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
-import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
+
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 // soy.miru.chrome.headerRegion
-public class MiruHeaderRegion implements MiruRegion<Void> {
+public class MiruHeaderRegion extends MiruHeaderRegionBase {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
@@ -25,20 +20,18 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
     private final int instance;
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final TenantRoutingProvider tenantRoutingProvider;
-
-    private String redirUrl;
 
     public MiruHeaderRegion(String cluster,
         int instance,
         String template,
         MiruSoyRenderer renderer,
         TenantRoutingProvider tenantRoutingProvider) {
+        super(tenantRoutingProvider);
+
         this.cluster = cluster;
         this.instance = instance;
         this.template = template;
         this.renderer = renderer;
-        this.tenantRoutingProvider = tenantRoutingProvider;
     }
 
     @Override
@@ -67,41 +60,5 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
             return x.getMessage();
         }
     }
-
-    private int addPeers(List<Map<String, Object>> services,
-        String name,
-        String portName,
-        String path) {
-        TenantsServiceConnectionDescriptorProvider readers = tenantRoutingProvider.getConnections(name, portName, 10_000); // TODO config
-        ConnectionDescriptors connectionDescriptors = readers.getConnections("");
-        if (connectionDescriptors != null) {
-            List<Map<String, String>> instances = new ArrayList<>();
-            List<ConnectionDescriptor> cds = new ArrayList<>(connectionDescriptors.getConnectionDescriptors());
-            Collections.sort(cds, (ConnectionDescriptor o1, ConnectionDescriptor o2) -> {
-                return Integer.compare(o1.getInstanceDescriptor().instanceName, o2.getInstanceDescriptor().instanceName);
-            });
-            for (ConnectionDescriptor connectionDescriptor : cds) {
-                InstanceDescriptor instanceDescriptor = connectionDescriptor.getInstanceDescriptor();
-                InstanceDescriptor.InstanceDescriptorPort port = instanceDescriptor.ports.get(portName);
-                if (port != null) {
-                    instances.add(ImmutableMap.of(
-                        "name", instanceDescriptor.serviceName + " " + instanceDescriptor.instanceName,
-                        "redirect", redirUrl,
-                        "instanceKey", instanceDescriptor.instanceKey,
-                        "portName", portName,
-                        "path", path));
-                }
-            }
-            if (!instances.isEmpty()) {
-                services.add(ImmutableMap.of(
-                    "name", name,
-                    "instances", instances));
-            }
-            return instances.size();
-        }
-        return 0;
-    }
-
-    void setRedirUrl(String redirUrl) { this.redirUrl = redirUrl; }
 
 }

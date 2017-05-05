@@ -11,7 +11,9 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -45,8 +47,8 @@ public class MiruWALEndpoints {
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
-    public Response get() {
-        String rendered = writerUIService.render();
+    public Response get(@HeaderParam("rb_session_redir_url") @DefaultValue("") String redirUrl) {
+        String rendered = writerUIService.render(redirUrl);
         return Response.ok(rendered).build();
     }
 
