@@ -19,6 +19,7 @@ import com.jivesoftware.os.routing.bird.shared.HostPort;
 import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.shared.IndexedClientStrategy;
 import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
+import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor.InstanceDescriptorPort;
 import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import com.jivesoftware.os.routing.bird.shared.ReturnFirstNonFailure;
 import com.jivesoftware.os.routing.bird.shared.ReturnFirstNonFailure.Favored;
@@ -95,12 +96,15 @@ public class MiruQueryRouting implements MiruRouting {
             ConnectionDescriptor favored = interceptingNextClientStrategy.favoredConnectionDescriptor;
             if (favored != null) {
                 InstanceDescriptor instanceDescriptor = favored.getInstanceDescriptor();
+                InstanceDescriptorPort port = instanceDescriptor.ports.get("main");
+                int p = port == null ? -1 : port.port;
+
                 queryEvent.event(tenantAndFamily.miruTenantId, actorId, tenantAndFamily.family, instanceDescriptor.instanceKey, solution.totalElapsed,
                     "success",
                     "attempt:" + interceptingNextClientStrategy.attempt,
                     "totalAttempts:" + interceptingNextClientStrategy.totalAttempts,
                     "destinationService:" + instanceDescriptor.serviceName,
-                    "destinationAddress:" + instanceDescriptor.publicHost + ":" + instanceDescriptor.ports.get("main")
+                    "destinationAddress:" + instanceDescriptor.publicHost + ":" + p
                 );
             }
 
