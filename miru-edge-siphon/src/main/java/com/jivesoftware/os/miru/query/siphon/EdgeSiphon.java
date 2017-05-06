@@ -66,19 +66,19 @@ public class EdgeSiphon implements MiruSiphonPlugin {
 
         Map<String, List<String>> fieldsValues = Maps.newHashMap();
         fieldsValues.put("id", Arrays.asList(String.valueOf(UIO.bytesLong(key))));
-        if (edge.tenant != null) {
+        if (edge.tenant != null && !edge.tenant.isEmpty()) {
             fieldsValues.put("tenant", Arrays.asList(edge.tenant));
         }
-        if (edge.name != null) {
+        if (edge.name != null && !edge.name.isEmpty()) {
             fieldsValues.put("name", Arrays.asList(edge.name));
         }
-        if (edge.user != null) {
+        if (edge.user != null && !edge.user.isEmpty()) {
             fieldsValues.put("user", Arrays.asList(edge.user));
         }
-        if (edge.origin != null) {
+        if (edge.origin != null && !edge.origin.isEmpty()) {
             fieldsValues.put("origin", Arrays.asList(edge.origin));
         }
-        if (edge.destination != null) {
+        if (edge.destination != null && !edge.destination.isEmpty()) {
             fieldsValues.put("destination", Arrays.asList(edge.destination));
         }
         if (edge.tags != null && !edge.tags.isEmpty()) {
