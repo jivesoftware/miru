@@ -22,6 +22,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Collections;
 import java.util.List;
 
 /** @author jonathan */
@@ -51,6 +52,9 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
 
         MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex = requestContext.getUnreadTrackingIndex();
         List<NamedCursor> cursors = unreadTrackingIndex.getCursors(streamId);
+        if (cursors == null) {
+            cursors = Collections.emptyList();
+        }
         OldestReadResult<AmzaSipCursor> oldestReadResult = walClient.oldestReadEventId(tenantId,
             streamId,
             new AmzaSipCursor(cursors, false),
