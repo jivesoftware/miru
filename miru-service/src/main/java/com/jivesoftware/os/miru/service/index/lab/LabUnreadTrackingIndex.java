@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.index.lab;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -8,12 +9,15 @@ import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
+import com.jivesoftware.os.miru.service.index.NamedCursorList;
 import java.util.Collections;
+import java.util.List;
 
 /** @author jonathan */
 public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTrackingIndex<BM, IBM> {
@@ -23,18 +27,22 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
     private final TrackError trackError;
     private final byte[] bitmapPrefix;
     private final byte[] lastActivityIndexPrefix;
+    private final byte[] cursorsPrefix;
     private final boolean atomized;
     private final ValueIndex<byte[]>[] stores;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
+    private final ObjectMapper mapper;
 
     public LabUnreadTrackingIndex(OrderIdProvider idProvider,
         MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         byte[] bitmapPrefix,
         byte[] lastActivityIndexPrefix,
+        byte[] cursorsPrefix,
         boolean atomized,
         ValueIndex<byte[]>[] stores,
-        StripingLocksProvider<MiruStreamId> stripingLocksProvider)
+        StripingLocksProvider<MiruStreamId> stripingLocksProvider,
+        ObjectMapper mapper)
         throws Exception {
 
         this.idProvider = idProvider;
@@ -42,9 +50,11 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
         this.trackError = trackError;
         this.bitmapPrefix = bitmapPrefix;
         this.lastActivityIndexPrefix = lastActivityIndexPrefix;
+        this.cursorsPrefix = cursorsPrefix;
         this.atomized = atomized;
         this.stores = stores;
         this.stripingLocksProvider = stripingLocksProvider;
+        this.mapper = mapper;
     }
 
     private ValueIndex<byte[]> getStore(MiruStreamId streamId) {
@@ -135,5 +145,41 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
             result[0] = getUnread(streamId).lastId(stackBuffer);
         }
         return result[0];
+    }
+
+    @Override
+    public void setCursors(MiruStreamId streamId, List<NamedCursor> cursors) throws Exception {
+        ValueIndex<byte[]> store = getStore(streamId);
+        byte[] key = storeKey(cursorsPrefix, streamId.getBytes());
+        byte[] value = mapper.writeValueAsBytes(cursors);
+        long timestamp = System.currentTimeMillis();
+        long version = idProvider.nextId();
+        store.append(
+            stream -> {
+                return stream.stream(0, key, timestamp, false, version, value);
+            },
+            false,
+            new BolBuffer(),
+            new BolBuffer());
+    }
+
+    @Override
+    public List<NamedCursor> getCursors(MiruStreamId streamId) throws Exception {
+        ValueIndex<byte[]> store = getStore(streamId);
+        byte[] key = storeKey(cursorsPrefix, streamId.getBytes());
+        byte[][] result = new byte[1][];
+        store.get(keyStream -> keyStream.key(0, key, 0, key.length),
+            (index, key1, timestamp, tombstoned, version, payload) -> {
+                if (!tombstoned && payload != null) {
+                    result[0] = payload.copy();
+                }
+                return true;
+            },
+            true);
+
+        if (result[0] != null) {
+            return mapper.readValue(result[0], NamedCursorList.class);
+        }
+        return null;
     }
 }
