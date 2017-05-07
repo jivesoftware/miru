@@ -49,7 +49,7 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
     }
 
     @Override
-    public <BM extends IBM, IBM> void sipAndApplyReadTracking(String name,
+    public <BM extends IBM, IBM> ApplyResult sipAndApplyReadTracking(String name,
         final MiruBitmaps<BM, IBM> bitmaps,
         final MiruRequestContext<BM, IBM, ?> requestContext,
         MiruTenantId tenantId,
@@ -58,7 +58,6 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
         MiruSolutionLog solutionLog,
         int lastActivityIndex,
         long oldestBackfilledTimestamp,
-        boolean verbose,
         StackBuffer stackBuffer) throws Exception {
 
         // First find the oldest eventId from our sip WAL
@@ -91,6 +90,8 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
         if (lastCursor != null) {
             setSipTimestamp(tenantId, partitionId, streamId, lastCursor.clockTimestamp);
         }
+
+        return new ApplyResult(-1, -1, -1, -1, -1, -1, -1, -1, null, null);
     }
 
     private class MiruTenantPartitionAndStreamId {

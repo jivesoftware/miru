@@ -14,14 +14,15 @@ public class MiruBackfillerizerInitializer {
     public MiruLifecyle<MiruJustInTimeBackfillerizer> initialize(ExecutorService backfillExecutor,
         String readStreamIdsPropName,
         MiruInboxReadTracker inboxReadTracker,
-        Set<MiruStreamId> verboseStreamIds) {
+        Set<MiruStreamId> verboseStreamIds,
+        boolean verboseAllStreamIds) {
 
         if (StringUtils.isEmpty(readStreamIdsPropName)) {
             readStreamIdsPropName = null;
         }
 
         final MiruJustInTimeBackfillerizer backfillerizer = new MiruJustInTimeBackfillerizer(inboxReadTracker,
-            Optional.fromNullable(readStreamIdsPropName), backfillExecutor, verboseStreamIds);
+            Optional.fromNullable(readStreamIdsPropName), backfillExecutor, verboseStreamIds, verboseAllStreamIds);
 
         return new MiruLifecyle<MiruJustInTimeBackfillerizer>() {
 
