@@ -4,6 +4,7 @@ import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
@@ -12,6 +13,7 @@ import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collections;
+import java.util.List;
 
 /** @author jonathan */
 public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTrackingIndex<BM, IBM> {
@@ -75,5 +77,16 @@ public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
     @Override
     public void setLastActivityIndex(MiruStreamId streamId, int lastActivityIndex, StackBuffer stackBuffer) throws Exception {
         LOG.error("Deprecated usage of filer setLastActivityIndex");
+    }
+
+    @Override
+    public List<NamedCursor> getCursors(MiruStreamId streamId) throws Exception {
+        LOG.error("Deprecated usage of filer getCursors");
+        return null;
+    }
+
+    @Override
+    public void setCursors(MiruStreamId streamId, List<NamedCursor> cursors) throws Exception {
+        LOG.error("Deprecated usage of filer setCursors");
     }
 }

@@ -23,7 +23,6 @@ import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
-import com.jivesoftware.os.jive.utils.collections.bah.ConcurrentBAHash;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.api.MemoryRawEntryFormat;
@@ -469,6 +468,16 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         }
     }
 
+    private static final byte SHARED_BITMAP = 0;
+    private static final byte SHARED_TERM = 1;
+    private static final byte SHARED_CARDINALITY = 2;
+
+    private static final byte SHARED_UNREAD_BITMAP = -1;
+    private static final byte SHARED_INBOX = -2;
+    private static final byte SHARED_AUTHZ = -3;
+    private static final byte SHARED_UNREAD_LAST_ACTIVITY_INDEX = -4;
+    private static final byte SHARED_UNREAD_CURSORS = -5;
+
     private <BM extends IBM, IBM> MiruContext<BM, IBM, S> allocateLabIndex(int labVersion,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
@@ -545,6 +554,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller = new IntTermIdsKeyValueMarshaller();
 
+        @SuppressWarnings("unchecked")
         ValueIndex<byte[]>[] termStorage = new ValueIndex[smallFootprint ? 1 : labEnvironments.length];
         for (int i = 0; i < termStorage.length; i++) {
             int ei = smallFootprint ? Math.abs((seed + 2 + i) % labEnvironments.length) : i;
@@ -668,9 +678,9 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         for (MiruFieldType fieldType : MiruFieldType.values()) {
             byte[] bitmapPrefix, termPrefix, cardinalityPrefix;
             if (smallFootprint) {
-                bitmapPrefix = new byte[] { 0, (byte) fieldType.getIndex() };
-                termPrefix = new byte[] { 1, (byte) fieldType.getIndex() };
-                cardinalityPrefix = new byte[] { 2, (byte) fieldType.getIndex() };
+                bitmapPrefix = new byte[] { SHARED_BITMAP, (byte) fieldType.getIndex() };
+                termPrefix = new byte[] { SHARED_TERM, (byte) fieldType.getIndex() };
+                cardinalityPrefix = new byte[] { SHARED_CARDINALITY, (byte) fieldType.getIndex() };
             } else {
                 byte[] prefix = { (byte) fieldType.getIndex() };
                 bitmapPrefix = prefix;
@@ -698,8 +708,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             keyBytes("sip"),
             keyBytes("realtimeDeliveryId"),
             keyBytes("sip-"),
-            new ConcurrentBAHash<>(3, true, 4),
-            new ConcurrentBAHash<>(3, true, 4),
             sipMarshaller);
 
         MiruRemovalIndex<BM, IBM> removalIndex = new LabRemovalIndex<>(
@@ -715,17 +723,19 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             idProvider,
             bitmaps,
             trackError,
-            new byte[] { (byte) -1 },
-            new byte[] { (byte) -4 },
+            new byte[] { SHARED_UNREAD_BITMAP }, //TODO add config version to allow clean slate rollover
+            new byte[] { SHARED_UNREAD_LAST_ACTIVITY_INDEX }, //TODO add config version to allow clean slate rollover
+            new byte[] { SHARED_UNREAD_CURSORS }, //TODO add config version to allow clean slate rollover
             atomized,
             bitmapIndex,
-            streamStripingLocksProvider);
+            streamStripingLocksProvider,
+            objectMapper);
 
         MiruInboxIndex<BM, IBM> inboxIndex = new LabInboxIndex<>(
             idProvider,
             bitmaps,
             trackError,
-            new byte[] { (byte) -2 },
+            new byte[] { SHARED_INBOX },
             atomized,
             bitmapIndex,
             streamStripingLocksProvider);
@@ -742,7 +752,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             idProvider,
             bitmaps,
             trackError,
-            new byte[] { (byte) -3 },
+            new byte[] { SHARED_AUTHZ },
             atomized,
             bitmapIndex,
             miruAuthzCache,

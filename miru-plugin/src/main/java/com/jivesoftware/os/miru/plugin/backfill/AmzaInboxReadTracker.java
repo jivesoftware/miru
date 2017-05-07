@@ -18,12 +18,15 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /** @author jonathan */
@@ -31,24 +34,12 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    // TODO - this should probably live in the context
-    private final Map<MiruTenantPartitionAndStreamId, Collection<NamedCursor>> userSipTransactionId = Maps.newConcurrentMap();
-
     private final MiruWALClient<AmzaCursor, AmzaSipCursor> walClient;
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
     private final MiruReadTracker readTracker = new MiruReadTracker(aggregateUtil);
 
     public AmzaInboxReadTracker(MiruWALClient<AmzaCursor, AmzaSipCursor> walClient) {
         this.walClient = walClient;
-    }
-
-    private void setSipCursors(MiruTenantId tenantId, MiruPartitionId partitionId, MiruStreamId streamId, Collection<NamedCursor> cursors) {
-        userSipTransactionId.put(new MiruTenantPartitionAndStreamId(tenantId, partitionId, streamId), cursors);
-    }
-
-    private Collection<NamedCursor> getSipCursors(MiruTenantId tenantId, MiruPartitionId partitionId, MiruStreamId streamId) {
-        Collection<NamedCursor> cursors = userSipTransactionId.get(new MiruTenantPartitionAndStreamId(tenantId, partitionId, streamId));
-        return cursors != null ? cursors : Collections.emptyList();
     }
 
     @Override
@@ -64,7 +55,8 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
         boolean verbose,
         StackBuffer stackBuffer) throws Exception {
 
-        Collection<NamedCursor> cursors = getSipCursors(tenantId, partitionId, streamId);
+        MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex = requestContext.getUnreadTrackingIndex();
+        List<NamedCursor> cursors = unreadTrackingIndex.getCursors(streamId);
         if (verbose) {
             LOG.info("Backfill name:{} tenantId:{} partitionId:{} unread streamId:{} cursors:{}", name, tenantId, partitionId, streamId, cursors);
         }
@@ -117,48 +109,7 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
         LOG.inc("sipAndApply>calls>pow>" + FilerIO.chunkPower(calls, 0));
         LOG.inc("sipAndApply>count>pow>" + FilerIO.chunkPower(count, 0));
         if (lastCursor != null) {
-            setSipCursors(tenantId, partitionId, streamId, lastCursor.cursors);
-        }
-    }
-
-    private class MiruTenantPartitionAndStreamId {
-
-        private final MiruTenantId tenantId;
-        private final MiruPartitionId partitionId;
-        private final MiruStreamId streamId;
-
-        private MiruTenantPartitionAndStreamId(MiruTenantId tenantId, MiruPartitionId partitionId, MiruStreamId streamId) {
-            this.tenantId = tenantId;
-            this.partitionId = partitionId;
-            this.streamId = streamId;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            MiruTenantPartitionAndStreamId that = (MiruTenantPartitionAndStreamId) o;
-
-            if (partitionId != null ? !partitionId.equals(that.partitionId) : that.partitionId != null) {
-                return false;
-            }
-            if (streamId != null ? !streamId.equals(that.streamId) : that.streamId != null) {
-                return false;
-            }
-            return !(tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = tenantId != null ? tenantId.hashCode() : 0;
-            result = 31 * result + (partitionId != null ? partitionId.hashCode() : 0);
-            result = 31 * result + (streamId != null ? streamId.hashCode() : 0);
-            return result;
+            unreadTrackingIndex.setCursors(streamId, lastCursor.cursors);
         }
     }
 }
