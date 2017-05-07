@@ -485,11 +485,12 @@ public class MiruReaderMain {
             }
 
             final ExecutorService backfillExecutor = deployable.newBoundedExecutor(10, "backfillerizer");
-            Set<MiruStreamId> verboseStreamIds = Sets.newHashSet(Lists.transform(
+            boolean verboseAllStreamIds = miruServiceConfig.getBackfillVerboseStreamIds().trim().equals("*");
+            Set<MiruStreamId> verboseStreamIds = verboseAllStreamIds ? null : Sets.newHashSet(Lists.transform(
                 Arrays.asList(miruServiceConfig.getBackfillVerboseStreamIds().split("\\s*,\\s*")),
                 input -> new MiruStreamId(input.getBytes(StandardCharsets.UTF_8))));
             MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer()
-                .initialize(backfillExecutor, miruServiceConfig.getReadStreamIdsPropName(), inboxReadTracker, verboseStreamIds);
+                .initialize(backfillExecutor, miruServiceConfig.getReadStreamIdsPropName(), inboxReadTracker, verboseStreamIds, verboseAllStreamIds);
 
             backfillerizerLifecycle.start();
             MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();

@@ -221,7 +221,7 @@ public class MiruPluginTestBootstrap {
 
 
         MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer()
-            .initialize(Executors.newCachedThreadPool(), config.getReadStreamIdsPropName(), inboxReadTracker, null);
+            .initialize(Executors.newCachedThreadPool(), config.getReadStreamIdsPropName(), inboxReadTracker, null, false);
 
         backfillerizerLifecycle.start();
         final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
