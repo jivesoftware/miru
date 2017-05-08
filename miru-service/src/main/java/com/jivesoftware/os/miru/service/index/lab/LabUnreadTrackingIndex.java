@@ -131,7 +131,7 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
     public int getLastActivityIndex(MiruStreamId streamId, StackBuffer stackBuffer) throws Exception {
         ValueIndex<byte[]> store = getStore(streamId);
         byte[] key = storeKey(lastActivityIndexPrefix, streamId.getBytes());
-        int[] result = { -1 };
+        int[] result = { -2 };
         store.get(keyStream -> keyStream.key(0, key, 0, key.length),
             (index, key1, timestamp, tombstoned, version, payload) -> {
                 if (!tombstoned && payload != null) {
@@ -141,7 +141,7 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
             },
             true);
 
-        if (result[0] == -1) {
+        if (result[0] == -2) {
             result[0] = getUnread(streamId).lastId(stackBuffer);
         }
         return result[0];
