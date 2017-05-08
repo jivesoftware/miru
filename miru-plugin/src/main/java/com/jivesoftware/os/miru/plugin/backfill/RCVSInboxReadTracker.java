@@ -57,6 +57,7 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
         MiruStreamId streamId,
         MiruSolutionLog solutionLog,
         int lastActivityIndex,
+        long smallestTimestamp,
         long oldestBackfilledTimestamp,
         StackBuffer stackBuffer) throws Exception {
 
