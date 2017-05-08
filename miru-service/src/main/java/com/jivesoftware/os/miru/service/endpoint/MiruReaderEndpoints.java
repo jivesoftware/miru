@@ -8,7 +8,9 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
@@ -16,6 +18,7 @@ import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
@@ -41,12 +44,17 @@ public class MiruReaderEndpoints {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruService miruService;
+    private final MiruJustInTimeBackfillerizer backfillerizer;
     private final MiruHost miruHost;
     private final MiruStats stats;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
-    public MiruReaderEndpoints(@Context MiruService miruService, @Context MiruHost miruHost, @Context MiruStats stats) {
+    public MiruReaderEndpoints(@Context MiruService miruService,
+        @Context MiruJustInTimeBackfillerizer backfillerizer,
+        @Context MiruHost miruHost,
+        @Context MiruStats stats) {
         this.miruService = miruService;
+        this.backfillerizer = backfillerizer;
         this.miruHost = miruHost;
         this.stats = stats;
     }
@@ -137,7 +145,35 @@ public class MiruReaderEndpoints {
             stats.ingressed(TIMESTAMPS_ENDPOINT + "/" + tenantIdString + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return Response.ok(value).build();
         } catch (Exception e) {
-            log.error("Failed to inspect.", e);
+            log.error("Failed to get timestamps.", e);
+            return Response.serverError().build();
+        }
+    }
+
+    @GET
+    @Path("/resetUnread/{tenantId}/{partitionId}/{streamId}")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response checkUnread(@PathParam("tenantId") String tenantIdString,
+        @PathParam("partitionId") int partitionIdInt,
+        @PathParam("streamId") String streamId) {
+        try {
+            long start = System.currentTimeMillis();
+            MiruTenantId tenantId = new MiruTenantId(tenantIdString.getBytes(Charsets.UTF_8));
+            MiruPartitionId partitionId = MiruPartitionId.of(partitionIdInt);
+            MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, miruHost);
+            MiruStreamId miruStreamId = new MiruStreamId(streamId.getBytes(StandardCharsets.UTF_8));
+
+            Optional<? extends MiruQueryablePartition<?, ?>> queryablePartition = miruService.getQueryablePartition(coord);
+            if (queryablePartition.isPresent()) {
+                try (MiruRequestHandle<?, ?, ?> handle = queryablePartition.get().acquireQueryHandle()) {
+                    backfillerizer.resetUnread(handle.getRequestContext(), miruStreamId);
+                }
+            }
+
+            stats.ingressed("/resetUnread/" + tenantIdString + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            return Response.ok("Success").build();
+        } catch (Exception e) {
+            log.error("Failed to resetUnread.", e);
             return Response.serverError().build();
         }
     }

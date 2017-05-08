@@ -47,6 +47,7 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
         MiruStreamId streamId,
         MiruSolutionLog solutionLog,
         int lastActivityIndex,
+        long smallestTimestamp,
         long oldestBackfilledTimestamp,
         StackBuffer stackBuffer) throws Exception {
 
@@ -63,6 +64,8 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
 
         long fromTimestamp = oldestReadResult.oldestEventId == -1 ? oldestBackfilledTimestamp
             : Math.min(oldestBackfilledTimestamp, oldestReadResult.oldestEventId);
+        // don't look back further than the start of the partition
+        fromTimestamp = Math.max(smallestTimestamp, fromTimestamp);
 
         StreamBatch<MiruWALEntry, Long> got = (fromTimestamp == Long.MAX_VALUE) ? null : walClient.scanRead(tenantId, streamId, fromTimestamp, 10_000, true);
         int calls = 0;
