@@ -37,6 +37,9 @@ public class AggregateCountsPluginEndpoints {
         @QueryParam("field") @DefaultValue("parent") String field,
         @QueryParam("streamFilters") @DefaultValue("") String streamFilters,
         @QueryParam("constraintsFilters") @DefaultValue("") String constraintsFilters,
+        @QueryParam("includeUnreadState") @DefaultValue("false") boolean includeUnreadState,
+        @QueryParam("unreadOnly") @DefaultValue("false") boolean unreadOnly,
+        @QueryParam("suppressUnreadFilter") @DefaultValue("") String suppressUnreadFilter,
         @QueryParam("count") @DefaultValue("10") String count,
         @QueryParam("pages") @DefaultValue("3") String pages,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
@@ -49,6 +52,9 @@ public class AggregateCountsPluginEndpoints {
                 field.trim(),
                 streamFilters.trim(),
                 constraintsFilters.trim(),
+                includeUnreadState,
+                unreadOnly,
+                suppressUnreadFilter,
                 count.isEmpty() ? 10 : Integer.parseInt(count),
                 pages.isEmpty() ? 3 : Integer.parseInt(pages),
                 logLevel)));

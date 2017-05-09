@@ -11,6 +11,9 @@
  * @param? field
  * @param? streamFilters
  * @param? constraintsFilters
+ * @param? includeUnreadState
+ * @param? unreadOnly
+ * @param? suppressUnreadFilter
  * @param? count
  * @param? pages
  * @param? resultPages
@@ -94,10 +97,32 @@
                         <td>Constraints Filters</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-streamFilters-autocomplete j-autocomplete-input j-ui-elem" placeholder="Constraints Filters" value="{$constraintsFilters?:''}"
+                                class="j-constraintsFilters-autocomplete j-autocomplete-input j-ui-elem" placeholder="Constraints Filters" value="{$constraintsFilters?:''}"
                                 name="constraintsFilters" id="constraintsPicker" data-original-title="" title="">
                             &nbsp;
                             <em>(e.g. user:3 3765, parentType:102|2|38)</em>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Include Unread State</td>
+                        <td>
+                            <input type="checkbox" class="j-ui-elem" value="false" name="inbox" id="includeUnreadState" {if $includeUnreadState}checked{/if}>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Unread Only</td>
+                        <td>
+                            <input type="checkbox" class="j-ui-elem" value="false" name="inbox" id="unreadOnly" {if $unreadOnly}checked{/if}>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Suppress Unread Filter</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-suppressUnreadFilter-autocomplete j-autocomplete-input j-ui-elem" placeholder="Suppress Unread Filter" value="{$suppressUnreadFilter?:''}"
+                                name="suppressUnreadFilter" id="suppressUnreadFilterPicker" data-original-title="" title="">
+                            &nbsp;
+                            <em>(e.g. suppressUnreadUsers:3 3765)</em>
                         </td>
                     </tr>
                     <tr>
