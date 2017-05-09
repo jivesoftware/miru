@@ -121,6 +121,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                 data.put("constraintsFilters", input.constraintsFilters);
                 data.put("includeUnreadState", input.includeUnreadState);
                 data.put("unreadOnly", input.unreadOnly);
+                data.put("suppressUnreadFilter", input.suppressUnreadFilter);
                 data.put("count", input.count);
                 data.put("pages", input.pages);
 
