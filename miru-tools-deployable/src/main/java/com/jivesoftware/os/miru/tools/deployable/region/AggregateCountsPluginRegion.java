@@ -66,6 +66,9 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
         final String field;
         final String streamFilters;
         final String constraintsFilters;
+        final boolean includeUnreadState;
+        final boolean unreadOnly;
+        final String suppressUnreadFilter;
         final int count;
         final int pages;
         final String logLevel;
@@ -77,6 +80,9 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
             String field,
             String streamFilters,
             String constraintsFilters,
+            boolean includeUnreadState,
+            boolean unreadOnly,
+            String suppressUnreadFilter,
             int count,
             int pages,
             String logLevel) {
@@ -87,6 +93,9 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
             this.field = field;
             this.streamFilters = streamFilters;
             this.constraintsFilters = constraintsFilters;
+            this.includeUnreadState = includeUnreadState;
+            this.unreadOnly = unreadOnly;
+            this.suppressUnreadFilter = suppressUnreadFilter;
             this.count = count;
             this.pages = pages;
             this.logLevel = logLevel;
@@ -110,6 +119,8 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                 data.put("field", input.field);
                 data.put("streamFilters", input.streamFilters);
                 data.put("constraintsFilters", input.constraintsFilters);
+                data.put("includeUnreadState", input.includeUnreadState);
+                data.put("unreadOnly", input.unreadOnly);
                 data.put("count", input.count);
                 data.put("pages", input.pages);
 
@@ -146,7 +157,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                             MiruAuthzExpression.NOT_PROVIDED,
                             new AggregateCountsQuery(
                                 streamId,
-                                null, //TODO this prevents backfill
+                                input.includeUnreadState || input.unreadOnly ? filterStringUtil.parseFilters(input.suppressUnreadFilter) : null,
                                 MiruTimeRange.ALL_TIME,
                                 timeRange,
                                 MiruTimeRange.ALL_TIME,
@@ -157,8 +168,8 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                                         0,
                                         input.count,
                                         new String[0])),
-                                false,
-                                false),
+                                input.includeUnreadState,
+                                input.unreadOnly),
                             MiruSolutionLogLevel.valueOf(input.logLevel));
 
                         MiruResponse<AggregateCountsAnswer> aggregatesResponse = routing.query("", "aggregateCountsPluginRegion",
