@@ -28,6 +28,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.MiruStats;
+import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
@@ -266,48 +267,49 @@ public class MiruToolsMain {
                 });
 
 
+            FilterStringUtil filterStringUtil = new FilterStringUtil(mapper);
             List<MiruToolsPlugin> plugins = Lists.newArrayList(
                 new MiruToolsPlugin("road", "Aggregate Counts",
                     "/ui/tools/aggregate",
                     AggregateCountsPluginEndpoints.class,
-                    new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, queryTASRouting)),
+                    new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, queryTASRouting, filterStringUtil)),
                 new MiruToolsPlugin("stats", "Analytics",
                     "/ui/tools/analytics",
                     AnalyticsPluginEndpoints.class,
-                    new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, queryTASRouting)),
+                    new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, queryTASRouting, filterStringUtil)),
                 new MiruToolsPlugin("education", "Catwalk",
                     "/ui/tools/catwalk",
                     CatwalkPluginEndpoints.class,
-                    new CatwalkPluginRegion("soy.miru.page.catwalkPluginRegion", renderer, queryTASRouting)),
+                    new CatwalkPluginRegion("soy.miru.page.catwalkPluginRegion", renderer, queryTASRouting, filterStringUtil)),
                 new MiruToolsPlugin("fire", "Strut your Stuff",
                     "/ui/tools/strut",
                     StrutPluginEndpoints.class,
-                    new StrutPluginRegion("soy.miru.page.strutPluginRegion", renderer, queryTASRouting)),
+                    new StrutPluginRegion("soy.miru.page.strutPluginRegion", renderer, queryTASRouting, filterStringUtil)),
                 new MiruToolsPlugin("asterisk", "Distincts",
                     "/ui/tools/distincts",
                     DistinctsPluginEndpoints.class,
-                    new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, queryTASRouting)),
+                    new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, queryTASRouting, filterStringUtil)),
                 new MiruToolsPlugin("zoom-in", "Uniques",
                     "/ui/tools/uniques",
                     UniquesPluginEndpoints.class,
-                    new UniquesPluginRegion("soy.miru.page.uniquesPluginRegion", renderer, queryTASRouting)),
+                    new UniquesPluginRegion("soy.miru.page.uniquesPluginRegion", renderer, queryTASRouting, filterStringUtil)),
                 new MiruToolsPlugin("search", "Full Text",
                     "/ui/tools/fulltext",
                     FullTextPluginEndpoints.class,
-                    new FullTextPluginRegion("soy.miru.page.fullTextPluginRegion", renderer, queryTASRouting)),
+                    new FullTextPluginRegion("soy.miru.page.fullTextPluginRegion", renderer, queryTASRouting, filterStringUtil)),
                 new MiruToolsPlugin("flash", "Realwave",
                     "/ui/tools/realwave",
                     RealwavePluginEndpoints.class,
-                    new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, queryTASRouting),
+                    new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, queryTASRouting, filterStringUtil),
                     new RealwaveFramePluginRegion("soy.miru.page.realwaveFramePluginRegion", renderer)),
                 new MiruToolsPlugin("thumbs-up", "Reco",
                     "/ui/tools/reco",
                     RecoPluginEndpoints.class,
-                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, queryTASRouting)),
+                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, queryTASRouting, filterStringUtil)),
                 new MiruToolsPlugin("list", "Trending",
                     "/ui/tools/trending",
                     TrendingPluginEndpoints.class,
-                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, queryTASRouting)));
+                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, queryTASRouting, filterStringUtil)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

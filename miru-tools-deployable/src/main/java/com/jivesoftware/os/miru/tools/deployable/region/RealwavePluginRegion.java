@@ -46,14 +46,16 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
     private final String template;
     private final MiruSoyRenderer renderer;
     private final MiruRouting routing;
-    private final FilterStringUtil filterStringUtil = new FilterStringUtil();
+    private final FilterStringUtil filterStringUtil;
 
     public RealwavePluginRegion(String template,
         MiruSoyRenderer renderer,
-        MiruRouting routing) {
+        MiruRouting routing,
+        FilterStringUtil filterStringUtil) {
         this.template = template;
         this.renderer = renderer;
         this.routing = routing;
+        this.filterStringUtil = filterStringUtil;
     }
 
     public static class RealwavePluginRegionInput {
