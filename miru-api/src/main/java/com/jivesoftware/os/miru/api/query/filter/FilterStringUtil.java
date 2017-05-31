@@ -1,7 +1,9 @@
 package com.jivesoftware.os.miru.api.query.filter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -10,13 +12,23 @@ import java.util.List;
  */
 public class FilterStringUtil {
 
+    private final ObjectMapper mapper;
+
+    public FilterStringUtil(ObjectMapper mapper) {
+        this.mapper = mapper;
+    }
+
     /**
      * Example input: activityType:0|1|2, authors:3765
      */
-    public MiruFilter parseFilters(String filtersString) {
+    public MiruFilter parseFilters(String filtersString) throws IOException {
         filtersString = filtersString == null ? null : filtersString.trim();
         if (filtersString == null || filtersString.isEmpty()) {
             return MiruFilter.NO_FILTER;
+        }
+
+        if (filtersString.startsWith("{") && filtersString.endsWith("}")) {
+            return mapper.readValue(filtersString, MiruFilter.class);
         }
 
         String[] filtersArray = filtersString.split("\\s*,\\s*");

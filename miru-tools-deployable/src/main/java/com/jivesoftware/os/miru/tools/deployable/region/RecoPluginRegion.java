@@ -45,14 +45,16 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
     private final String template;
     private final MiruSoyRenderer renderer;
     private final MiruRouting routing;
-    private final FilterStringUtil filterStringUtil = new FilterStringUtil();
+    private final FilterStringUtil filterStringUtil;
 
     public RecoPluginRegion(String template,
         MiruSoyRenderer renderer,
-        MiruRouting routing) {
+        MiruRouting routing,
+        FilterStringUtil filterStringUtil) {
         this.template = template;
         this.renderer = renderer;
         this.routing = routing;
+        this.filterStringUtil = filterStringUtil;
     }
 
     public static class RecoPluginRegionInput {
