@@ -142,7 +142,6 @@ public class MiruSyncMain {
             });
             deployable.buildManageServer().start();
 
-
             ObjectMapper mapper = new ObjectMapper();
             mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
             mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -300,7 +299,6 @@ public class MiruSyncMain {
                 10_000L, //TODO config
                 syncConfig.getUseClientSolutionLog());
 
-
             MiruSyncConfigStorage miruSyncConfigStorage = new MiruSyncConfigStorage(amzaClientProvider,
                 "miru-sync-config-",
                 new PartitionProperties(Durability.fsync_async,
@@ -339,7 +337,6 @@ public class MiruSyncMain {
                     }
                 }
             );
-
 
             MiruSyncSenderConfigStorage miruSyncSenderConfigStorage = new MiruSyncSenderConfigStorage(amzaClientProvider,
                 "miru-sync-sender-config",
@@ -380,7 +377,6 @@ public class MiruSyncMain {
                 }
             );
 
-
             SickThreads walClientSickThreads = new SickThreads();
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
@@ -390,7 +386,7 @@ public class MiruSyncMain {
             ActivityReadEventConverter activityReadEventConverter = syncConfig.getSyncReceiverActivityReadEventConverterClass().newInstance();
 
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
-            MiruSyncReceiver<?, ?> syncReceiver = null;
+            MiruSyncReceiver<?, ?> syncReceiver;
             MiruSyncCopier<?, ?> syncCopier;
             MiruSyncSenders<?, ?> syncSenders = null;
 
@@ -411,13 +407,13 @@ public class MiruSyncMain {
                     mapper,
                     walClientSickThreads,
                     10_000);
-                syncCopier = (MiruSyncCopier) new MiruSyncCopier<>(rcvsWALClient, syncConfig.getCopyBatchSize(), RCVSCursor.INITIAL, RCVSCursor.class);
+                syncCopier = new MiruSyncCopier<>(rcvsWALClient, syncConfig.getCopyBatchSize(), RCVSCursor.INITIAL, RCVSCursor.class);
 
                 MiruSyncReceiver<RCVSCursor, RCVSSipCursor> rcvsMiruSyncReceiver = new MiruSyncReceiver<>(rcvsWALClient,
                     writerHttpClient,
                     clusterClient,
                     activityReadEventConverter);
-                syncReceiver = (MiruSyncReceiver) rcvsMiruSyncReceiver;
+                syncReceiver = rcvsMiruSyncReceiver;
 
                 if (syncConfig.getSyncSenderEnabled()) {
                     ScheduledExecutorService executorService = Executors.newScheduledThreadPool(syncConfig.getSyncSendersThreadCount());
@@ -442,8 +438,8 @@ public class MiruSyncMain {
                             return tenantTupleConfigs;
                         };
                     }
-                    //  don't remove generics (fails compilation for others when we do)
-                    syncSenders = (MiruSyncSenders) new MiruSyncSenders<>(
+
+                    syncSenders = new MiruSyncSenders<>(
                         miruStats,
                         syncConfig,
                         rcvsMiruSyncReceiver,
@@ -463,7 +459,6 @@ public class MiruSyncMain {
                         RCVSCursor.INITIAL,
                         RCVSCursor.class);
                 }
-
             } else if (walConfig.getActivityWALType().equals("amza")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new AmzaWALClientInitializer().initialize("",
                     walHttpClient,
@@ -475,13 +470,13 @@ public class MiruSyncMain {
                     walClientSickThreads,
                     10_000);
 
-                syncCopier = (MiruSyncCopier) new MiruSyncCopier<>(amzaWALClient, syncConfig.getCopyBatchSize(), null, AmzaCursor.class);
+                syncCopier = new MiruSyncCopier<>(amzaWALClient, syncConfig.getCopyBatchSize(), null, AmzaCursor.class);
 
                 MiruSyncReceiver<AmzaCursor, AmzaSipCursor> amzaMiruSyncReceiver = new MiruSyncReceiver<>(amzaWALClient,
                     writerHttpClient,
                     clusterClient,
                     activityReadEventConverter);
-                syncReceiver = (MiruSyncReceiver) amzaMiruSyncReceiver;
+                syncReceiver = amzaMiruSyncReceiver;
 
                 if (syncConfig.getSyncSenderEnabled()) {
                     ScheduledExecutorService executorService = Executors.newScheduledThreadPool(syncConfig.getSyncSendersThreadCount());
@@ -506,8 +501,8 @@ public class MiruSyncMain {
                             return tenantTupleConfigs;
                         };
                     }
-                    //  don't remove generics (fails compilation for others when we do)
-                    syncSenders = (MiruSyncSenders) new MiruSyncSenders<>(
+
+                    syncSenders = new MiruSyncSenders<>(
                         miruStats,
                         syncConfig,
                         amzaMiruSyncReceiver,
@@ -527,11 +522,9 @@ public class MiruSyncMain {
                         null,
                         AmzaCursor.class);
                 }
-
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
-
 
             amzaClientAquariumProvider.start();
             if (syncSenders != null) {
@@ -543,7 +536,6 @@ public class MiruSyncMain {
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
             Resource sourceTree = new Resource(staticResourceDir)
-                //.addResourcePath("../../../../../src/main/resources") // fluff?
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setDirectoryListingAllowed(false)
                 .setContext("/ui/static");
@@ -591,7 +583,6 @@ public class MiruSyncMain {
             deployable.addInjectables(ObjectMapper.class, mapper);
             deployable.addInjectables(MiruSyncConfigStorage.class, miruSyncConfigStorage);
             deployable.addInjectables(MiruSyncSenderConfigStorage.class, miruSyncSenderConfigStorage);
-
 
             deployable.addResource(sourceTree);
             deployable.addEndpoints(LoadBalancerHealthCheckEndpoints.class);
