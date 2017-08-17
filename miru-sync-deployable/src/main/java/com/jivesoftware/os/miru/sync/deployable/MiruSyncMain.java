@@ -407,13 +407,15 @@ public class MiruSyncMain {
                     mapper,
                     walClientSickThreads,
                     10_000);
-                syncCopier = new MiruSyncCopier<>(rcvsWALClient, syncConfig.getCopyBatchSize(), RCVSCursor.INITIAL, RCVSCursor.class);
+
+                // do not remove generics; jenkins will fail to compile
+                syncCopier = (MiruSyncCopier) new MiruSyncCopier<>(rcvsWALClient, syncConfig.getCopyBatchSize(), RCVSCursor.INITIAL, RCVSCursor.class);
 
                 MiruSyncReceiver<RCVSCursor, RCVSSipCursor> rcvsMiruSyncReceiver = new MiruSyncReceiver<>(rcvsWALClient,
                     writerHttpClient,
                     clusterClient,
                     activityReadEventConverter);
-                syncReceiver = rcvsMiruSyncReceiver;
+                syncReceiver = (MiruSyncReceiver) rcvsMiruSyncReceiver;
 
                 if (syncConfig.getSyncSenderEnabled()) {
                     ScheduledExecutorService executorService = Executors.newScheduledThreadPool(syncConfig.getSyncSendersThreadCount());
@@ -439,7 +441,7 @@ public class MiruSyncMain {
                         };
                     }
 
-                    syncSenders = new MiruSyncSenders<>(
+                    syncSenders = (MiruSyncSenders) new MiruSyncSenders<>(
                         miruStats,
                         syncConfig,
                         rcvsMiruSyncReceiver,
@@ -470,13 +472,13 @@ public class MiruSyncMain {
                     walClientSickThreads,
                     10_000);
 
-                syncCopier = new MiruSyncCopier<>(amzaWALClient, syncConfig.getCopyBatchSize(), null, AmzaCursor.class);
+                syncCopier = (MiruSyncCopier) new MiruSyncCopier<>(amzaWALClient, syncConfig.getCopyBatchSize(), null, AmzaCursor.class);
 
                 MiruSyncReceiver<AmzaCursor, AmzaSipCursor> amzaMiruSyncReceiver = new MiruSyncReceiver<>(amzaWALClient,
                     writerHttpClient,
                     clusterClient,
                     activityReadEventConverter);
-                syncReceiver = amzaMiruSyncReceiver;
+                syncReceiver = (MiruSyncReceiver) amzaMiruSyncReceiver;
 
                 if (syncConfig.getSyncSenderEnabled()) {
                     ScheduledExecutorService executorService = Executors.newScheduledThreadPool(syncConfig.getSyncSendersThreadCount());
@@ -502,7 +504,7 @@ public class MiruSyncMain {
                         };
                     }
 
-                    syncSenders = new MiruSyncSenders<>(
+                    syncSenders = (MiruSyncSenders) new MiruSyncSenders<>(
                         miruStats,
                         syncConfig,
                         amzaMiruSyncReceiver,
