@@ -8,11 +8,9 @@ miru.resetButton = function ($button, value) {
 };
 
 miru.activitywal = {
-
 };
 
 miru.repair = {
-
     repairBoundaries: function (ele) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
@@ -87,7 +85,6 @@ miru.repair = {
 };
 
 miru.cleanup = {
-
     removeCleanup: function (ele) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
@@ -145,7 +142,7 @@ $(document).ready(function () {
     if ($('#rw-waveform').length) {
         miru.realwave.init();
     }
-    
+
     $(function () {
         var hack = {};
         $('[rel="popover"]').popover({

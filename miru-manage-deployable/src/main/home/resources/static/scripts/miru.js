@@ -94,7 +94,6 @@ miru.tenants = {
                 "tenantId": tenantId,
                 "partitionId": partitionId
             },
-            //contentType: "application/json",
             success: function () {
                 $button.val('Success');
                 setTimeout(function () {
@@ -140,7 +139,6 @@ miru.tenants = {
 };
 
 $(document).ready(function () {
-
     if ($.fn.dropdown) {
         $('.dropdown-toggle').dropdown();
     }
@@ -149,6 +147,26 @@ $(document).ready(function () {
     miru.onWindowFocus = [];
     miru.onWindowBlur = [];
 
+    $(function () {
+        var hack = {};
+        $('[rel="popover"]').popover({
+            container: 'body',
+            html: true,
+            content: function () {
+                console.log($(this).attr('id'));
+                var h = $($(this).data('popover-content')).removeClass('hide');
+                hack[$(this).attr('id')] = h;
+                return h;
+            }
+        }).click(function (e) {
+            e.preventDefault();
+        }).on('hidden.bs.popover', function () {
+            var h = hack[$(this).attr('id')];
+            h.detach();
+            h.addClass('hide');
+            $('body').append(h);
+        });
+    });
 });
 
 $(window).focus(function () {

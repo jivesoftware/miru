@@ -518,7 +518,8 @@ public class MiruSyncMain {
                         miruSyncSenderConfigStorage,
                         miruSyncConfigStorage,
                         30_000, // TODO config
-                        clusterClient, amzaWALClient,
+                        clusterClient,
+                        amzaWALClient,
                         syncLoopback,
                         loopbackSyncConfigProvider,
                         null,
