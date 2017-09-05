@@ -51,9 +51,7 @@
         <module>miru-anomaly-plugins-test</module>
         <module>miru-metric-sampler</module>
         <module>miru-wal-client</module>
-        <module>wiki-miru-deployable</module>
         <module>miru-bot-deployable</module>
-        <module>miru-syslog-deployable</module>
         <module>miru-siphon-api</module>
         <module>miru-siphon-deployable</module>
         <module>miru-edge-siphon</module>

@@ -88,4 +88,4 @@ git push origin ${ON_BRANCH}
 echo "/-------------------------------------------------------"
 echo "| populating .m2 for "${NEXT_VERSION}"-SNAPSHOT"
 echo "\-------------------------------------------------------"
-mvn clean install -DskipTests
+mvn clean install
