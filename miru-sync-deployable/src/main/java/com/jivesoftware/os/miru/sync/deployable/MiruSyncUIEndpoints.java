@@ -4,9 +4,12 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.sync.deployable.region.MiruStatusRegionInput;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+
 import java.nio.charset.StandardCharsets;
 import javax.inject.Singleton;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -32,8 +35,8 @@ public class MiruSyncUIEndpoints {
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
-    public Response get() {
-        String rendered = syncUIService.render();
+    public Response get(@HeaderParam("rb_session_redir_url") @DefaultValue("") String redirUrl) {
+        String rendered = syncUIService.render(redirUrl);
         return Response.ok(rendered).build();
     }
 
@@ -59,7 +62,7 @@ public class MiruSyncUIEndpoints {
             String rendered = syncUIService.renderStatus(new MiruStatusRegionInput(syncspaceName, new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
             return Response.ok(rendered).build();
         } catch (Throwable t) {
-            LOG.error("Failed to getStatus({}, {})", new Object[] { syncspaceName, tenantId }, t);
+            LOG.error("Failed to getStatus({}, {})", new Object[]{syncspaceName, tenantId}, t);
             return Response.serverError().build();
         }
     }
