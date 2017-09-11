@@ -36,7 +36,8 @@ public class MiruSyncUIService {
         return new MiruChromeRegion<>("soy.miru.chrome.chromeRegion", renderer, headerRegion, plugins, region);
     }
 
-    public String render() {
+    public String render(String redirUrl) {
+        headerRegion.setRedirUrl(redirUrl);
         return chrome(adminRegion).render(null);
     }
 
