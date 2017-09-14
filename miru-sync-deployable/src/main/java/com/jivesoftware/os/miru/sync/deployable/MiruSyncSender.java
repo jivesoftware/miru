@@ -354,7 +354,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             return new SyncResult(0, 0, 0, false);
         }
 
-        LOG.info("Syncing stripe:{}", stripe);
+        LOG.info("Syncing stripe {} for {}", stripe, config.name);
 
         int tenantCount = 0;
         long count = 0;
@@ -363,21 +363,16 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         boolean progress = false;
 
         Map<MiruSyncTenantTuple, MiruSyncTenantConfig> tenantTupleConfigs = syncConfigProvider.getAll(config.name);
-        LOG.info("Got all {} configs from {}",
-            tenantTupleConfigs.size(), syncConfigProvider.getClass().getSimpleName());
-
         for (Entry<MiruSyncTenantTuple, MiruSyncTenantConfig> entry : tenantTupleConfigs.entrySet()) {
             if (!isElected(stripe)) {
                 break;
             }
 
-            LOG.info("Is elected");
-
             MiruSyncTenantTuple tenantTuple = entry.getKey();
             LOG.info("tenant from:{} to:{}", tenantTuple.from, tenantTuple.to);
 
             int tenantStripe = Math.abs(tenantTuple.from.hashCode() % syncRingStripes);
-            LOG.info("stripe:{} tenantStripe:{} from:", stripe, tenantStripe, tenantTuple.from);
+            LOG.info("stripe:{} tenantStripe:{} from:{}", stripe, tenantStripe, tenantTuple.from);
 
             if (tenantStripe == stripe) {
                 LOG.info("count {}", count);
@@ -396,8 +391,6 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 }
 
                 boolean ensured = ensureTenantPartitionState(tenantTuple, entry.getValue(), stripe);
-                LOG.info("ensured partition {}", ensured);
-
                 if (!isElected(stripe)) {
                     break;
                 }
@@ -424,6 +417,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     LOG.info("Synced stripe:{} tenantId:{} activities:{} skipped:{} ignored:{} type:{}",
                         stripe, tenantTuple.from, syncResult.count, syncResult.skipped, syncResult.ignored, reverse);
                 }
+
                 count += syncResult.count;
                 skipped += syncResult.skipped;
                 ignored += syncResult.ignored;
@@ -453,6 +447,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         if (ensuredTenantIds.contains(tenantTuple)) {
             return true;
         }
+
         if (tenantConfig.timeShiftStrategy == MiruSyncTimeShiftStrategy.step) {
             MiruPartitionId largestPartitionId = fromWALClient.getLargestPartitionId(tenantTuple.from);
             if (!isElected(stripe)) {
@@ -528,7 +523,6 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
     private SyncResult syncTenant(MiruSyncTenantTuple tenantTuple, MiruSyncTenantConfig tenantConfig, int stripe, ProgressType type) throws Exception {
         TenantProgress progress = getTenantProgress(tenantTuple.from, tenantTuple.to, stripe);
-        LOG.info("progress {}", progress);
         if (!isElected(stripe)) {
             return new SyncResult(0, 0, 0, false);
         }
@@ -1044,7 +1038,6 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
     private static final int CURSOR_RESERVED_OFFSET = 32_768;
     private static final int STATE_PREFIX = CURSOR_RESERVED_OFFSET;
-    //private static final int OTHER_PREFIX = CURSOR_RESERVED_OFFSET + 1;
 
     private byte[] tenantPartitionStateKey(MiruTenantId fromTenantId, MiruTenantId toTenantId, MiruPartitionId partitionId) {
         byte[] fromTenantBytes = fromTenantId.getBytes();

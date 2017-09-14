@@ -18,6 +18,4 @@ public class MiruSyncConfigStorage extends AmzaPartitionedConfigStorage<MiruSync
         AmzaMarshaller<MiruSyncTenantConfig> valueMarshaller) {
         super(clientProvider, partitionName, partitionProperties, keyMarshaller, valueMarshaller);
     }
-
-
 }
