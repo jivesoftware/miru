@@ -34,6 +34,7 @@ import com.jivesoftware.os.miru.sync.deployable.MiruSyncSenders;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -56,7 +57,6 @@ import javax.ws.rs.core.Response.Status;
 @Singleton
 @Path("/miru/sync")
 public class MiruSyncEndpoints {
-
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruSyncSenderConfigStorage syncSenderConfigStorage;
@@ -145,14 +145,17 @@ public class MiruSyncEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getStatus(@PathParam("syncspaceName") String syncspaceName) {
         try {
+            if (syncSenders == null)
+                return Response.status(Status.SERVICE_UNAVAILABLE).entity("Sender is not enabled").build();
+
             MiruSyncSender<?, ?> sender = syncSenders.getSender(syncspaceName);
             Map<String, MiruSyncStatus> map = Maps.newHashMap();
             if (sender != null) {
                 MiruSyncTenantTuple[] current = new MiruSyncTenantTuple[1];
-                long[] forwardTimestamp = { -1 };
-                boolean[] forwardTaking = { false };
-                long[] reverseTimestamp = { -1 };
-                boolean[] reverseTaking = { false };
+                long[] forwardTimestamp = {-1};
+                boolean[] forwardTaking = {false};
+                long[] reverseTimestamp = {-1};
+                boolean[] reverseTaking = {false};
                 sender.streamProgress(null, null, (fromTenantId, toTenantId, type, partitionId, timestamp, taking) -> {
                     if (type == ProgressType.forward || type == ProgressType.reverse) {
                         MiruSyncTenantTuple tuple = new MiruSyncTenantTuple(fromTenantId, toTenantId);
@@ -190,14 +193,17 @@ public class MiruSyncEndpoints {
         @PathParam("fromTenantId") String fromTenantId,
         @PathParam("toTenantId") String toTenantId) {
         try {
+            if (syncSenders == null)
+                return Response.status(Status.SERVICE_UNAVAILABLE).entity("Sender is not enabled").build();
+
             MiruSyncSender<?, ?> sender = syncSenders.getSender(syncspaceName);
             Map<String, MiruSyncStatus> map = Maps.newHashMap();
             if (sender != null) {
                 MiruSyncTenantTuple[] current = new MiruSyncTenantTuple[1];
-                long[] forwardTimestamp = { -1 };
-                boolean[] forwardTaking = { false };
-                long[] reverseTimestamp = { -1 };
-                boolean[] reverseTaking = { false };
+                long[] forwardTimestamp = {-1};
+                boolean[] forwardTaking = {false};
+                long[] reverseTimestamp = {-1};
+                boolean[] reverseTaking = {false};
                 sender.streamProgress(new MiruTenantId(fromTenantId.getBytes(StandardCharsets.UTF_8)),
                     new MiruTenantId(toTenantId.getBytes(StandardCharsets.UTF_8)),
                     (fromTenantId1, toTenantId1, type, partitionId, timestamp, taking) -> {
@@ -286,13 +292,12 @@ public class MiruSyncEndpoints {
     public Response postReset(@PathParam("syncspaceName") String syncspaceName,
         @PathParam("tenantId") String tenantId) {
         try {
-            if (syncSenders != null) {
+            if (syncSenders == null)
+                return Response.status(Status.SERVICE_UNAVAILABLE).entity("Sender is not enabled").build();
+
                 MiruSyncSender<?, ?> miruSyncSender = syncSenders.getSender(syncspaceName);
                 boolean result = miruSyncSender != null && miruSyncSender.resetProgress(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)));
                 return Response.ok(result).build();
-            } else {
-                return Response.status(Status.SERVICE_UNAVAILABLE).entity("Sender is not enabled").build();
-            }
         } catch (Exception e) {
             LOG.error("Failed to reset.", e);
             return Response.serverError().build();
@@ -308,16 +313,15 @@ public class MiruSyncEndpoints {
         @PathParam("toPartitionId") int toPartitionId,
         @PathParam("fromTimestamp") long fromTimestamp) {
         try {
-            if (syncCopier != null) {
-                int copied = syncCopier.copyLocal(new MiruTenantId(fromTenantId.getBytes(StandardCharsets.UTF_8)),
-                    MiruPartitionId.of(fromPartitionId),
-                    new MiruTenantId(toTenantId.getBytes(StandardCharsets.UTF_8)),
-                    MiruPartitionId.of(toPartitionId),
-                    fromTimestamp);
-                return Response.ok("Copied " + copied).build();
-            } else {
-                return Response.status(Status.SERVICE_UNAVAILABLE).entity("Copier is not enabled").build();
-            }
+            if (syncSenders == null)
+                return Response.status(Status.SERVICE_UNAVAILABLE).entity("Sender is not enabled").build();
+
+            int copied = syncCopier.copyLocal(new MiruTenantId(fromTenantId.getBytes(StandardCharsets.UTF_8)),
+                MiruPartitionId.of(fromPartitionId),
+                new MiruTenantId(toTenantId.getBytes(StandardCharsets.UTF_8)),
+                MiruPartitionId.of(toPartitionId),
+                fromTimestamp);
+            return Response.ok("Copied " + copied).build();
         } catch (Exception e) {
             LOG.error("Failed to copy.", e);
             return Response.serverError().build();

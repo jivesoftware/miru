@@ -46,6 +46,7 @@ import com.jivesoftware.os.miru.sync.api.MiruSyncTenantTuple;
 import com.jivesoftware.os.miru.sync.api.MiruSyncTimeShiftStrategy;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -60,6 +61,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.commons.lang.mutable.MutableLong;
 
 import static com.jivesoftware.os.miru.sync.deployable.MiruSyncSender.ProgressType.forward;
@@ -70,7 +72,6 @@ import static com.jivesoftware.os.miru.sync.deployable.MiruSyncSender.ProgressTy
  *
  */
 public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> {
-
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private static final PartitionProperties PROGRESS_PROPERTIES = new PartitionProperties(Durability.fsync_async,
@@ -159,7 +160,6 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     }
 
     private class SyncRunnable implements Runnable {
-
         private final int stripe;
 
         public SyncRunnable(int stripe) {
@@ -174,7 +174,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             } catch (InterruptedException e) {
                 LOG.info("Sync thread {} was interrupted", stripe);
             } catch (Throwable t) {
-                LOG.error("Failure in sync thread {}", new Object[] { stripe }, t);
+                LOG.error("Failure in sync thread {}", new Object[]{stripe}, t);
             } finally {
                 synchronized (syncFutures) {
                     if (syncFutures[stripe] == null) {
@@ -189,6 +189,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     }
 
     public void start() {
+        LOG.info("Start sync sender");
+
         if (running.compareAndSet(false, true)) {
             for (int i = 0; i < syncRingStripes; i++) {
                 amzaClientAquariumProvider.register(aquariumName(i));
@@ -225,9 +227,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         byte[] fromKey = fromTenantId == null ? null : progressKey(fromTenantId, toTenantId, null);
         byte[] toKey = fromTenantId == null ? null : WALKey.prefixUpperExclusive(fromKey);
         progressClient.scan(Consistency.leader_quorum, true,
-            prefixedKeyRangeStream -> {
-                return prefixedKeyRangeStream.stream(null, fromKey, null, toKey);
-            },
+            prefixedKeyRangeStream -> prefixedKeyRangeStream.stream(null, fromKey, null, toKey),
             (prefix, key, value, timestamp, version) -> {
                 if (value != null) {
                     MiruTenantId from = progressKeyFromTenantId(key);
@@ -355,20 +355,36 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         }
 
         LOG.info("Syncing stripe:{}", stripe);
+
         int tenantCount = 0;
         long count = 0;
         long skipped = 0;
         long ignored = 0;
         boolean progress = false;
+
         Map<MiruSyncTenantTuple, MiruSyncTenantConfig> tenantTupleConfigs = syncConfigProvider.getAll(config.name);
+        LOG.info("Got all {} configs from {}",
+            tenantTupleConfigs.size(), syncConfigProvider.getClass().getSimpleName());
+
         for (Entry<MiruSyncTenantTuple, MiruSyncTenantConfig> entry : tenantTupleConfigs.entrySet()) {
             if (!isElected(stripe)) {
                 break;
             }
+
+            LOG.info("Is elected");
+
             MiruSyncTenantTuple tenantTuple = entry.getKey();
+            LOG.info("tenant from:{} to:{}", tenantTuple.from, tenantTuple.to);
+
             int tenantStripe = Math.abs(tenantTuple.from.hashCode() % syncRingStripes);
+            LOG.info("stripe:{} tenantStripe:{} from:", stripe, tenantStripe, tenantTuple.from);
+
             if (tenantStripe == stripe) {
+                LOG.info("count {}", count);
+
                 tenantCount++;
+                LOG.info("tenant count {}", tenantCount);
+
                 try {
                     ensureSchema(tenantTuple.from, tenantTuple.to);
                 } catch (MiruSchemaUnvailableException e) {
@@ -380,6 +396,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 }
 
                 boolean ensured = ensureTenantPartitionState(tenantTuple, entry.getValue(), stripe);
+                LOG.info("ensured partition {}", ensured);
+
                 if (!isElected(stripe)) {
                     break;
                 }
@@ -412,9 +430,12 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 progress |= syncResult.advanced;
             }
         }
+
         LOG.info("Synced stripe:{} tenants:{} activities:{} skipped:{} ignored:{}", stripe, tenantCount, count, skipped, ignored);
+
         // Reverse count implies the consumption of at least one partition, which we'll use to tighten the sync interval.
         // Forward count is more relaxed to achieve better batching.
+
         return new SyncResult(count, skipped, ignored, progress);
     }
 
@@ -507,11 +528,12 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
     private SyncResult syncTenant(MiruSyncTenantTuple tenantTuple, MiruSyncTenantConfig tenantConfig, int stripe, ProgressType type) throws Exception {
         TenantProgress progress = getTenantProgress(tenantTuple.from, tenantTuple.to, stripe);
+        LOG.info("progress {}", progress);
         if (!isElected(stripe)) {
             return new SyncResult(0, 0, 0, false);
         }
         if (type == reverse && progress.reversePartitionId == null) {
-            // all done
+            LOG.info("type is reverse and partition id is empty");
             return new SyncResult(0, 0, 0, false);
         }
 
@@ -810,8 +832,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
      * @return null if finished, empty if not started, else the last synced partition
      */
     private TenantProgress getTenantProgress(MiruTenantId fromTenantId, MiruTenantId toTenantId, int stripe) throws Exception {
-        int[] progressId = { Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE };
-        Boolean[] progressTaking = { null, null, null };
+        int[] progressId = {Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE};
+        Boolean[] progressTaking = {null, null, null};
         streamProgress(fromTenantId, toTenantId, (fromTenantId1, toTenantId1, type, partitionId, timestamp, taking) -> {
             progressId[type.index] = partitionId;
             progressTaking[type.index] = taking;

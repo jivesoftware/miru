@@ -117,7 +117,6 @@ import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
 
 public class MiruWALMain {
-
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public static void main(String[] args) throws Exception {
@@ -125,7 +124,6 @@ public class MiruWALMain {
     }
 
     public interface DiskFreeCheck extends ScheduledMinMaxHealthCheckConfig {
-
         @StringDefault("disk>free")
         @Override
         String getName();
@@ -133,11 +131,9 @@ public class MiruWALMain {
         @LongDefault(80)
         @Override
         Long getMax();
-
     }
 
     public interface WALAmzaServiceConfig extends MiruAmzaServiceConfig {
-
         @StringDefault("./var/amza/wal/data/")
         @Override
         String getWorkingDirectories();
@@ -180,7 +176,6 @@ public class MiruWALMain {
                 input -> new File(input.trim())));
             HealthFactory.scheduleHealthChecker(DiskFreeCheck.class,
                 config1 -> (HealthChecker) new DiskFreeHealthChecker(config1, amzaPaths.toArray(new File[amzaPaths.size()])));
-
 
             ObjectMapper mapper = new ObjectMapper();
             mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
@@ -469,7 +464,6 @@ public class MiruWALMain {
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
             Resource sourceTree = new Resource(staticResourceDir)
-                //.addResourcePath("../../../../../src/main/resources") // fluff?
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setDirectoryListingAllowed(false)
                 .setContext("/ui/static");
@@ -510,7 +504,6 @@ public class MiruWALMain {
             clientHealthProvider.start();
             isAmzaReady.set(amzaLifecycle::isReady);
             serviceStartupHealthCheck.success();
-
         } catch (Throwable t) {
             serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);
         }

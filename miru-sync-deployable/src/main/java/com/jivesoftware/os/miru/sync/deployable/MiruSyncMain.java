@@ -68,6 +68,8 @@ import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererCon
 import com.jivesoftware.os.miru.wal.client.AmzaWALClientInitializer;
 import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer.WALClientSickThreadsHealthCheckConfig;
 import com.jivesoftware.os.miru.wal.client.RCVSWALClientInitializer;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
@@ -112,6 +114,7 @@ import org.glassfish.jersey.oauth1.signature.OAuth1Request;
 import org.glassfish.jersey.oauth1.signature.OAuth1Signature;
 
 public class MiruSyncMain {
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public static void main(String[] args) throws Exception {
         new MiruSyncMain().run(args);
@@ -397,6 +400,10 @@ public class MiruSyncMain {
                 syncLoopback = true;
             }
 
+            LOG.info("WAL type {}", walConfig.getActivityWALType());
+            LOG.info("Sync loopback {}", syncConfig.getSyncLoopback());
+            LOG.info("Sync sender enabled {}", syncConfig.getSyncSenderEnabled());
+
             if (walConfig.getActivityWALType().equals("rcvs")) {
                 MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new RCVSWALClientInitializer().initialize("",
                     walHttpClient,
@@ -408,7 +415,7 @@ public class MiruSyncMain {
                     walClientSickThreads,
                     10_000);
 
-                // do not remove generics; jenkins will fail to compile
+                // do not remove cast; jenkins will fail to compile
                 syncCopier = (MiruSyncCopier) new MiruSyncCopier<>(rcvsWALClient, syncConfig.getCopyBatchSize(), RCVSCursor.INITIAL, RCVSCursor.class);
 
                 MiruSyncReceiver<RCVSCursor, RCVSSipCursor> rcvsMiruSyncReceiver = new MiruSyncReceiver<>(rcvsWALClient,
@@ -426,7 +433,7 @@ public class MiruSyncMain {
                         long loopbackSyncDurationMillis = syncConfig.getSyncLoopbackDurationMillis();
                         loopbackSyncConfigProvider = senderName -> {
                             List<MiruTenantId> tenantIds = rcvsWALClient.getAllTenantIds();
-                            Map<MiruSyncTenantTuple, MiruSyncTenantConfig> tenantTupleConfigs = Maps.newHashMap();
+                            Map<MiruSyncTenantTuple, MiruSyncTenantConfig> got = Maps.newHashMap();
                             MiruSyncTenantConfig config = new MiruSyncTenantConfig(System.currentTimeMillis() - loopbackSyncDurationMillis,
                                 Long.MAX_VALUE,
                                 0,
@@ -435,9 +442,11 @@ public class MiruSyncMain {
                                 MiruSyncTimeShiftStrategy.none,
                                 false);
                             for (MiruTenantId tenantId : tenantIds) {
-                                tenantTupleConfigs.put(new MiruSyncTenantTuple(tenantId, tenantId), config);
+                                got.put(new MiruSyncTenantTuple(tenantId, tenantId), config);
                             }
-                            return tenantTupleConfigs;
+
+                            LOG.info("Got {} configs.", got.size());
+                            return got;
                         };
                     }
 
@@ -489,7 +498,7 @@ public class MiruSyncMain {
                         long loopbackSyncDurationMillis = syncConfig.getSyncLoopbackDurationMillis();
                         loopbackSyncConfigProvider = senderName -> {
                             List<MiruTenantId> tenantIds = amzaWALClient.getAllTenantIds();
-                            Map<MiruSyncTenantTuple, MiruSyncTenantConfig> tenantTupleConfigs = Maps.newHashMap();
+                            Map<MiruSyncTenantTuple, MiruSyncTenantConfig> got = Maps.newHashMap();
                             MiruSyncTenantConfig config = new MiruSyncTenantConfig(System.currentTimeMillis() - loopbackSyncDurationMillis,
                                 Long.MAX_VALUE,
                                 0,
@@ -498,9 +507,11 @@ public class MiruSyncMain {
                                 MiruSyncTimeShiftStrategy.none,
                                 false);
                             for (MiruTenantId tenantId : tenantIds) {
-                                tenantTupleConfigs.put(new MiruSyncTenantTuple(tenantId, tenantId), config);
+                                got.put(new MiruSyncTenantTuple(tenantId, tenantId), config);
                             }
-                            return tenantTupleConfigs;
+
+                            LOG.info("Got {} configs.", got.size());
+                            return got;
                         };
                     }
 
