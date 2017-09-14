@@ -20,6 +20,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.OAuthSigner;
+
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -28,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import oauth.signpost.commonshttp.CommonsHttpOAuthConsumer;
 import oauth.signpost.signature.HmacSha1MessageSigner;
 import org.apache.commons.lang.StringUtils;
@@ -115,12 +117,9 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
         return senders.get(syncspaceName);
     }
 
-    public Collection<MiruSyncSender<C, S>> getActiveSenders() {
-        return senders.values();
-    }
-
     public void start() {
         if (running.compareAndSet(false, true)) {
+            LOG.info("sync loopback {}", syncLoopback);
             if (syncLoopback) {
                 loopbackSender = new MiruSyncSender<>(
                     stats,
@@ -145,8 +144,11 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                 while (running.get()) {
                     try {
                         Map<String, MiruSyncSenderConfig> all = syncSenderConfigProvider.getAll();
+                        LOG.info("Got {} sender configs {}", all.size());
                         for (Entry<String, MiruSyncSenderConfig> entry : all.entrySet()) {
                             String name = entry.getKey();
+                            LOG.info("Sender configs {}", name);
+
                             MiruSyncSender<C, S> syncSender = senders.get(name);
                             MiruSyncSenderConfig senderConfig = entry.getValue();
                             if (syncSender != null && syncSender.configHasChanged(senderConfig)) {
@@ -155,7 +157,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                                 syncSender = null;
                             }
                             if (syncSender == null) {
-                                syncSender = new MiruSyncSender<C, S>(
+                                syncSender = new MiruSyncSender<>(
                                     stats,
                                     senderConfig,
                                     clientAquariumProvider,
@@ -182,6 +184,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                         for (Iterator<Entry<String, MiruSyncSender<C, S>>> iterator = senders.entrySet().iterator(); iterator.hasNext(); ) {
                             Entry<String, MiruSyncSender<C, S>> entry = iterator.next();
                             if (!all.containsKey(entry.getKey())) {
+                                LOG.info("Remove config {}", entry.getKey());
                                 entry.getValue().stop();
                                 iterator.remove();
                             }
@@ -213,7 +216,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
             try {
                 amzaSyncSender.stop();
             } catch (Exception x) {
-                LOG.warn("Failure while stopping sender:{}", new Object[] { amzaSyncSender }, x);
+                LOG.warn("Failure while stopping sender:{}", new Object[]{amzaSyncSender}, x);
             }
         }
     }
