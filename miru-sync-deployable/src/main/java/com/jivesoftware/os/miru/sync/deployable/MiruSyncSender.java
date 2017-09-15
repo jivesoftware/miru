@@ -364,6 +364,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
         Map<MiruSyncTenantTuple, MiruSyncTenantConfig> tenantTupleConfigs = syncConfigProvider.getAll(config.name);
         for (Entry<MiruSyncTenantTuple, MiruSyncTenantConfig> entry : tenantTupleConfigs.entrySet()) {
+            LOG.info("tenant tuple config entry:{}", entry.getKey());
+
             if (!isElected(stripe)) {
                 break;
             }
