@@ -350,11 +350,11 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     }
 
     private SyncResult syncStripe(int stripe) throws Exception {
+        LOG.info("Syncing stripe {} for {}", stripe, config.name);
+
         if (!isElected(stripe)) {
             return new SyncResult(0, 0, 0, false);
         }
-
-        LOG.info("Syncing stripe {} for {}", stripe, config.name);
 
         int tenantCount = 0;
         long count = 0;
@@ -372,13 +372,10 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             LOG.info("tenant from:{} to:{}", tenantTuple.from, tenantTuple.to);
 
             int tenantStripe = Math.abs(tenantTuple.from.hashCode() % syncRingStripes);
-            LOG.info("stripe:{} tenantStripe:{} from:{}", stripe, tenantStripe, tenantTuple.from);
+            LOG.info("stripe:{} tenantStripe:{}", stripe, tenantStripe);
 
             if (tenantStripe == stripe) {
-                LOG.info("count {}", count);
-
                 tenantCount++;
-                LOG.info("tenant count {}", tenantCount);
 
                 try {
                     ensureSchema(tenantTuple.from, tenantTuple.to);
@@ -522,6 +519,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     }
 
     private SyncResult syncTenant(MiruSyncTenantTuple tenantTuple, MiruSyncTenantConfig tenantConfig, int stripe, ProgressType type) throws Exception {
+        LOG.info("sync tenant from:{} to:{} stripe:{}", tenantTuple.from, tenantTuple.to, stripe);
+
         TenantProgress progress = getTenantProgress(tenantTuple.from, tenantTuple.to, stripe);
         if (!isElected(stripe)) {
             return new SyncResult(0, 0, 0, false);
@@ -593,6 +592,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         MiruActivityWALStatus status,
         PartitionRange partitionRange,
         boolean taking) throws Exception {
+        LOG.info("sync tenant from:{} to:{}", tenantTuple.from, tenantTuple.to);
 
         if (!isElected(stripe)) {
             return new SyncResult(0, 0, 0, false);

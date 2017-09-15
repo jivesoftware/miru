@@ -119,8 +119,9 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
     public void start() {
         if (running.compareAndSet(false, true)) {
-            LOG.info("sync loopback {}", syncLoopback);
             if (syncLoopback) {
+                LOG.info("Create sync loopback sender");
+
                 loopbackSender = new MiruSyncSender<>(
                     stats,
                     new MiruSyncSenderConfig("loopback", true, 10_000L, 60_000L, 10_000, true, null, null, -1, null, null, null, false),
@@ -144,10 +145,9 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                 while (running.get()) {
                     try {
                         Map<String, MiruSyncSenderConfig> all = syncSenderConfigProvider.getAll();
-                        LOG.info("Got {} sender configs {}", all.size());
                         for (Entry<String, MiruSyncSenderConfig> entry : all.entrySet()) {
                             String name = entry.getKey();
-                            LOG.info("Sender configs {}", name);
+                            LOG.info("Sender config {}", name);
 
                             MiruSyncSender<C, S> syncSender = senders.get(name);
                             MiruSyncSenderConfig senderConfig = entry.getValue();
@@ -157,6 +157,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                                 syncSender = null;
                             }
                             if (syncSender == null) {
+                                LOG.info("Creating sender {}", name);
                                 syncSender = new MiruSyncSender<>(
                                     stats,
                                     senderConfig,
@@ -184,7 +185,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                         for (Iterator<Entry<String, MiruSyncSender<C, S>>> iterator = senders.entrySet().iterator(); iterator.hasNext(); ) {
                             Entry<String, MiruSyncSender<C, S>> entry = iterator.next();
                             if (!all.containsKey(entry.getKey())) {
-                                LOG.info("Remove config {}", entry.getKey());
+                                LOG.info("Stop sender {}", entry.getKey());
                                 entry.getValue().stop();
                                 iterator.remove();
                             }
@@ -192,12 +193,13 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
                         Thread.sleep(ensureSendersInterval);
                     } catch (InterruptedException e) {
-                        LOG.info("Ensure senders thread {} was interrupted");
+                        LOG.info("Ensure senders thread was interrupted");
                     } catch (Throwable t) {
                         LOG.error("Failure while ensuring senders", t);
                         Thread.sleep(ensureSendersInterval);
                     }
                 }
+
                 return null;
             });
         }
