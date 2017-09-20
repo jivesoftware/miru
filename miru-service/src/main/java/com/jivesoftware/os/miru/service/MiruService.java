@@ -15,7 +15,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnavailableException;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
@@ -110,7 +110,7 @@ public class MiruService implements Miru {
 
         try {
             schemaProvider.getSchema(tenantId);
-        } catch (MiruSchemaUnvailableException e) {
+        } catch (MiruSchemaUnavailableException e) {
             return new MiruResponse<>(null, null, 0, true, Collections.emptyList(),
                 Collections.singletonList("Schema has not been registered for this tenantId"));
         }
@@ -207,7 +207,7 @@ public class MiruService implements Miru {
 
         try {
             schemaProvider.getSchema(tenantId);
-        } catch (MiruSchemaUnvailableException e) {
+        } catch (MiruSchemaUnavailableException e) {
             return new MiruResponse<>(null, null, 0, true, Collections.emptyList(),
                 Collections.singletonList("Schema has not been registered for this tenantId"));
         }

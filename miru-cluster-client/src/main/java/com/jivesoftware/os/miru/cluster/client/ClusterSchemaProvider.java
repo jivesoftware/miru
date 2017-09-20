@@ -5,7 +5,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnavailableException;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import java.util.concurrent.ExecutionException;
@@ -31,7 +31,7 @@ public class ClusterSchemaProvider implements MiruSchemaProvider {
     }
 
     @Override
-    public MiruSchema getSchema(final MiruTenantId tenantId) throws MiruSchemaUnvailableException {
+    public MiruSchema getSchema(final MiruTenantId tenantId) throws MiruSchemaUnavailableException {
         try {
             return cache.get(tenantId, () -> {
                 MiruSchema schema = client.getSchema(tenantId);
@@ -42,7 +42,7 @@ public class ClusterSchemaProvider implements MiruSchemaProvider {
                 }
             });
         } catch (UncheckedExecutionException | ExecutionException e) {
-            throw new MiruSchemaUnvailableException(e);
+            throw new MiruSchemaUnavailableException(e);
         }
     }
 

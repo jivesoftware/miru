@@ -43,7 +43,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnavailableException;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -609,7 +609,7 @@ public class MiruLocalHostedPartitionTest {
     public void testSchemaNotRegistered_checkActive(boolean useLabIndexes) throws Exception {
         init(useLabIndexes);
 
-        when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnvailableException("test"));
+        when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnavailableException("test"));
         MiruLocalHostedPartition<RoaringBitmap, RoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
 
@@ -629,7 +629,7 @@ public class MiruLocalHostedPartitionTest {
     public void testSchemaRegisteredLate(boolean useLabIndexes) throws Exception {
         init(useLabIndexes);
 
-        when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnvailableException("test"));
+        when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnavailableException("test"));
         MiruLocalHostedPartition<RoaringBitmap, RoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
 

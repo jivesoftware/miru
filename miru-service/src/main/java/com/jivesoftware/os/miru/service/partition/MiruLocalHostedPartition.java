@@ -14,7 +14,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnavailableException;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.realtime.MiruRealtimeDelivery;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
@@ -668,7 +668,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             try {
                 try {
                     checkActive();
-                } catch (MiruSchemaUnvailableException sue) {
+                } catch (MiruSchemaUnavailableException sue) {
                     LOG.warn("Tenant is active but schema not available for {}", coord.tenantId);
                     LOG.debug("Tenant is active but schema not available", sue);
                 } catch (Throwable t) {
@@ -849,7 +849,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         LOG.debug("Skipped rebuild because count={} available={}", count, rebuildDirector.available());
                     }
                 }
-            } catch (MiruSchemaUnvailableException e) {
+            } catch (MiruSchemaUnavailableException e) {
                 LOG.warn("Skipped rebuild because schema is unavailable for {}", coord);
             } catch (Throwable t) {
                 LOG.error("RebuildIndex encountered a problem for {}", new Object[] { coord }, t);
