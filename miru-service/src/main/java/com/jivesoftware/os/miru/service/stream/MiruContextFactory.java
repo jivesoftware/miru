@@ -37,7 +37,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Feature;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnavailableException;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -209,7 +209,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             if (checkForPersistentStorage(coord)) {
                 return MiruBackingStorage.disk;
             }
-        } catch (MiruSchemaUnvailableException e) {
+        } catch (MiruSchemaUnavailableException e) {
             log.warn("Schema not registered for tenant {}, using default storage", coord.tenantId);
         }
         return MiruBackingStorage.memory;
@@ -932,7 +932,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         }
     }
 
-    public MiruSchema lookupLatestSchema(MiruTenantId tenantId) throws MiruSchemaUnvailableException {
+    public MiruSchema lookupLatestSchema(MiruTenantId tenantId) throws MiruSchemaUnavailableException {
         return schemaProvider.getSchema(tenantId);
     }
 

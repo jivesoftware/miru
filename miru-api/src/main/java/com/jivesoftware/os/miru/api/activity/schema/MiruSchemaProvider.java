@@ -23,5 +23,5 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
  */
 public interface MiruSchemaProvider {
 
-    MiruSchema getSchema(MiruTenantId miruTenantId) throws MiruSchemaUnvailableException;
+    MiruSchema getSchema(MiruTenantId miruTenantId) throws MiruSchemaUnavailableException;
 }
