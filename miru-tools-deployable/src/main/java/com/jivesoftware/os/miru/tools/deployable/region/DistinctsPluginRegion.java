@@ -135,6 +135,12 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
                             fieldTypes),
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
+                    //
+                    //  Output the endpoint and the reqeust
+                    //
+                    data.put("endpoint", endpoint);
+                    ObjectMapper requestMapper = new ObjectMapper();
+                    data.put("postedJSON", requestMapper.writeValueAsString(miruRequest));
 
                     MiruResponse<DistinctsAnswer> distinctsResponse = routing.query("", "distinctsPluginRegion",
                         miruRequest, endpoint, DistinctsAnswer.class);
