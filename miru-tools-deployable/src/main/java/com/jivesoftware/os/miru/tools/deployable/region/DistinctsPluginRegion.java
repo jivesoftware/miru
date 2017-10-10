@@ -136,8 +136,9 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
 
-                    log.trace("endpoint = '" + endpoint + "'");
-                    log.trace("json = '" + requestMapper.writeValueAsString(miruRequest) + "'");
+                    ObjectMapper requestMapper = new ObjectMapper();
+                    log.trace("endpoint = '{}'", endpoint);
+                    log.trace("json = '{}'", requestMapper.writeValueAsString(miruRequest));
 
                     MiruResponse<DistinctsAnswer> distinctsResponse = routing.query("", "distinctsPluginRegion",
                         miruRequest, endpoint, DistinctsAnswer.class);
