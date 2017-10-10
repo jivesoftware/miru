@@ -13,6 +13,8 @@
  * @param? filters
  * @param? graphType
  * @param? execute
+ * @param? endpoint
+ * @param? postedJSON
  */
 {template .realwavePluginRegion}
     <div class="panel panel-default">
@@ -122,6 +124,16 @@
                 <div>
                     <canvas id="rw-canvas" height="400" width="1070"></canvas>
                 </div>
+            </div>
+        </div>
+    {/if}
+    {if $postedJSON}
+        <a name="postedJSON"></a>
+        <div class="panel panel-default">
+            <div class="panel-heading">Posted JSON</div>
+            <div class="panel-body">
+                POSTED to {$endpoint}
+                <pre>{$postedJSON}</pre>
             </div>
         </div>
     {/if}

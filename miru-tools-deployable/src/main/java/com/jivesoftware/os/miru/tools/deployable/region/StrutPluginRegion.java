@@ -273,6 +273,12 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             100), // TODO expose to UI??
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
+
+                    data.put("endpoint", endpoint);
+                    ObjectMapper requestMapper = new ObjectMapper();
+                    requestMapper.enable(SerializationFeature.INDENT_OUTPUT);
+                    data.put("postedJSON", requestMapper.writeValueAsString(miruRequest));
+
                     MiruResponse<StrutAnswer> strutResponse = routing.query("", "strutPluginRegion",
                         miruRequest, endpoint, StrutAnswer.class);
 

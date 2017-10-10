@@ -26,6 +26,8 @@
  * @param? results
  * @param? summary
  * @param? elapse
+ * @param? endpoint
+ * @param? postedJSON
  */
 {template .strutPluginRegion}
     <div class="panel panel-default">
@@ -238,7 +240,9 @@
             <div class="panel-heading">
                 Results
                 &nbsp;|&nbsp;
-                <a href="#summary">Jump to query summary&nbsp;&nbsp;&nbsp;{$elapse}</a>
+                <a href="#summary">Jump to query summary</a>
+                &nbsp;|&nbsp;
+                <a href="#postedJSON">Jump to Posted JSON summary</a>
             </div>
             <div class="panel-body">
                 <table class="table table-condensed">
@@ -284,6 +288,16 @@
             <div class="panel-heading">Query Summary {$elapse}</div>
             <div class="panel-body">
                 <pre>{$summary}</pre>
+            </div>
+        </div>
+    {/if}
+    {if $postedJSON}
+        <a name="postedJSON"></a>
+        <div class="panel panel-default">
+            <div class="panel-heading">Posted JSON</div>
+            <div class="panel-body">
+                POSTED to {$endpoint}
+                <pre>{$postedJSON}</pre>
             </div>
         </div>
     {/if}

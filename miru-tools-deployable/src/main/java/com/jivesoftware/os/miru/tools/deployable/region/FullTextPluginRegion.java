@@ -149,6 +149,11 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                             gatherTermsForFieldSplit),
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
+                    data.put("endpoint", endpoint);
+                    ObjectMapper requestMapper = new ObjectMapper();
+                    requestMapper.enable(SerializationFeature.INDENT_OUTPUT);
+                    data.put("postedJSON", requestMapper.writeValueAsString(miruRequest));
+
                     MiruResponse<FullTextAnswer> fullTextResponse = routing.query("", "fullTextPluginRegion",
                         miruRequest, endpoint, FullTextAnswer.class);
 

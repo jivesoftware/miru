@@ -159,6 +159,11 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
                             100),
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
+                    data.put("endpoint", endpoint);
+                    ObjectMapper requestMapper = new ObjectMapper();
+                    requestMapper.enable(SerializationFeature.INDENT_OUTPUT);
+                    data.put("postedJSON", requestMapper.writeValueAsString(miruRequest));
+
                     MiruResponse<RecoAnswer> recoResponse = routing.query("", "recoPluginRegion",
                         miruRequest, endpoint, RecoAnswer.class);
 

@@ -204,6 +204,10 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                             analyticsFilters),
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
+                    data.put("endpoint", endpoint);
+                    ObjectMapper requestMapper = new ObjectMapper();
+                    requestMapper.enable(SerializationFeature.INDENT_OUTPUT);
+                    data.put("postedJSON", requestMapper.writeValueAsString(miruRequest));
 
                     MiruResponse<AnalyticsAnswer> analyticsResponse = routing.query("", "analyticsPluginRegion",
                         miruRequest, endpoint, AnalyticsAnswer.class);
