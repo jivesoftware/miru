@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.tools.deployable.region;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -162,6 +164,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
         long jiveCeilingTime = jiveCurrentTime - jiveModulusTime + millisPerBucket;
         final long packCeilingTime = snowflakeIdPacker.pack(jiveCeilingTime, 0, 0);
         final long packLookbackTime = packCeilingTime - snowflakeIdPacker.pack(TimeUnit.SECONDS.toMillis(input.lookbackSeconds), 0, 0);
+        Map<String, Object> data = Maps.newHashMap();
 
         MiruFilter constraintsFilter = filterStringUtil.parseFilters(input.filters);
 
@@ -194,6 +197,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
             ImmutableMap<String, MiruFilter> analyticsFilters = analyticsFiltersBuilder.build();
 
             String endpoint = AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT;
+
             MiruRequest<AnalyticsQuery> miruRequest = new MiruRequest<>("toolsRealwave",
                 tenantId,
                 MiruActorId.NOT_PROVIDED,
@@ -206,6 +210,12 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
                     analyticsFilters),
                 MiruSolutionLogLevel.NONE);
 
+
+            data.put("endpoint", endpoint);
+            ObjectMapper requestMapper = new ObjectMapper();
+            requestMapper.enable(SerializationFeature.INDENT_OUTPUT);
+            data.put("postedJSON", requestMapper.writeValueAsString(miruRequest));
+
             MiruResponse<AnalyticsAnswer> analyticsResponse = routing.query("", "realwavePluginRegion",
                 miruRequest, endpoint, AnalyticsAnswer.class);
 
@@ -216,7 +226,6 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
             }
         }
 
-        Map<String, Object> data = Maps.newHashMap();
         if (response != null && response.answer != null && response.answer.waveforms != null) {
             data.put("elapse", String.valueOf(response.totalElapsed));
 

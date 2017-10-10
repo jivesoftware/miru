@@ -172,6 +172,12 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                 filterStringUtil.buildFieldPrefixes(input.fieldPrefixes))))),
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
+
+                    data.put("endpoint", endpoint);
+                    ObjectMapper requestMapper = new ObjectMapper();
+                    requestMapper.enable(SerializationFeature.INDENT_OUTPUT);
+                    data.put("postedJSON", requestMapper.writeValueAsString(miruRequest));
+
                     MiruResponse<TrendingAnswer> trendingResponse = routing.query("", "trendingPluginRegion",
                         miruRequest, endpoint, TrendingAnswer.class);
 

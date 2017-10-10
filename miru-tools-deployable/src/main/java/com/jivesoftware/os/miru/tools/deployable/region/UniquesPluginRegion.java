@@ -124,6 +124,11 @@ public class UniquesPluginRegion implements MiruPageRegion<Optional<UniquesPlugi
                             fieldTypes),
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
+                    data.put("endpoint", endpoint);
+                    ObjectMapper requestMapper = new ObjectMapper();
+                    requestMapper.enable(SerializationFeature.INDENT_OUTPUT);
+                    data.put("postedJSON", requestMapper.writeValueAsString(miruRequest));
+
                     MiruResponse<UniquesAnswer> uniquesResponse = routing.query("", "uniquesPluginRegion",
                         miruRequest, endpoint, UniquesAnswer.class);
 

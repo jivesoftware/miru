@@ -174,6 +174,11 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                                 input.unreadOnly),
                             MiruSolutionLogLevel.valueOf(input.logLevel));
 
+                        data.put("endpoint", endpoint);
+                        ObjectMapper requestMapper = new ObjectMapper();
+                        requestMapper.enable(SerializationFeature.INDENT_OUTPUT);
+                        data.put("postedJSON", requestMapper.writeValueAsString(miruRequest));
+
                         MiruResponse<AggregateCountsAnswer> aggregatesResponse = routing.query("", "aggregateCountsPluginRegion",
                             miruRequest, endpoint, AggregateCountsAnswer.class);
 

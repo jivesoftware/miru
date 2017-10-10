@@ -199,6 +199,11 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
 
+                    data.put("endpoint", endpoint);
+                    ObjectMapper requestMapper = new ObjectMapper();
+                    requestMapper.enable(SerializationFeature.INDENT_OUTPUT);
+                    data.put("postedJSON", requestMapper.writeValueAsString(miruRequest));
+
                     MiruResponse<CatwalkAnswer> catwalkResponse = routing.query("", "catwalkPluginRegion",
                         miruRequest, endpoint, CatwalkAnswer.class);
 
