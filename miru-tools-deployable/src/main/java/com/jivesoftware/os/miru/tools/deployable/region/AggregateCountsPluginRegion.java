@@ -209,19 +209,22 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                     List<Map<String, Object>> summaries = Lists.newArrayList();
                     for (MiruResponse<AggregateCountsAnswer> response : responses) {
                         List<Map<String, Object>> page = Lists.newArrayList();
-                        for (AggregateCount result : response.answer.constraints.get(input.field).results) {
-                            LOG.trace("Result: {}", result);
+                        AggregateCountsAnswerConstraint answerConstraint = response.answer.constraints.get(input.field);
+                        if (answerConstraint != null) {
+                            for (AggregateCount result : answerConstraint.results) {
+                                LOG.trace("Result: {}", result);
 
-                            long time = result.latestTimestamp;
-                            long jiveEpochTime = snowflakeIdPacker.unpack(time)[0];
-                            String clockTime = new ISO8601DateFormat().format(new Date(jiveEpochTime + JiveEpochTimestampProvider.JIVE_EPOCH));
+                                long time = result.latestTimestamp;
+                                long jiveEpochTime = snowflakeIdPacker.unpack(time)[0];
+                                String clockTime = new ISO8601DateFormat().format(new Date(jiveEpochTime + JiveEpochTimestampProvider.JIVE_EPOCH));
 
-                            page.add(ImmutableMap.of(
-                                "aggregate", result.distinctValue.last(),
-                                "time", String.valueOf(time),
-                                "date", clockTime,
-                                "count", String.valueOf(result.count),
-                                "unread", String.valueOf(result.anyUnread)));
+                                page.add(ImmutableMap.of(
+                                    "aggregate", result.distinctValue.last(),
+                                    "time", String.valueOf(time),
+                                    "date", clockTime,
+                                    "count", String.valueOf(result.count),
+                                    "unread", String.valueOf(result.anyUnread)));
+                            }
                         }
                         resultPages.add(page);
 
