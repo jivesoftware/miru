@@ -23,6 +23,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCount;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswerConstraint;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQueryConstraint;
@@ -184,12 +185,17 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                             miruRequest, endpoint, AggregateCountsAnswer.class);
 
                         if (aggregatesResponse != null && aggregatesResponse.answer != null) {
-                            List<AggregateCount> results = aggregatesResponse.answer.constraints.get(input.field).results;
-                            if (results.size() < input.count) {
+                            AggregateCountsAnswerConstraint answerConstraint = aggregatesResponse.answer.constraints.get(input.field);
+                            if (answerConstraint == null) {
                                 timeRange = null;
                             } else {
-                                long lastTimestamp = results.get(results.size() - 1).latestTimestamp;
-                                timeRange = new MiruTimeRange(0, lastTimestamp - 1);
+                                List<AggregateCount> results = answerConstraint.results;
+                                if (results.size() < input.count) {
+                                    timeRange = null;
+                                } else {
+                                    long lastTimestamp = results.get(results.size() - 1).latestTimestamp;
+                                    timeRange = new MiruTimeRange(0, lastTimestamp - 1);
+                                }
                             }
                             responses.add(aggregatesResponse);
                         } else {
