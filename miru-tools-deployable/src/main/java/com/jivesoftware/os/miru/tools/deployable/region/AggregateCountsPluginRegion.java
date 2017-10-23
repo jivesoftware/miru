@@ -31,6 +31,7 @@ import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.ISO8601DateFormat;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -41,12 +42,14 @@ import java.util.Map;
 // soy.miru.page.aggregateCountsPluginRegion
 public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<AggregateCountsPluginRegion.AggregateCountsPluginRegionInput>> {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final String template;
     private final MiruSoyRenderer renderer;
     private final MiruRouting routing;
     private final FilterStringUtil filterStringUtil;
+
+    private final ObjectMapper objectMapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     public AggregateCountsPluginRegion(String template,
         MiruSoyRenderer renderer,
@@ -59,7 +62,6 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
     }
 
     public static class AggregateCountsPluginRegionInput {
-
         final String tenant;
         final String forUser;
         final boolean inbox;
@@ -106,6 +108,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
     @Override
     public String render(Optional<AggregateCountsPluginRegionInput> optionalInput) {
         Map<String, Object> data = Maps.newHashMap();
+
         try {
             if (optionalInput.isPresent()) {
                 AggregateCountsPluginRegionInput input = optionalInput.get();
@@ -140,19 +143,19 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                         streamId = new MiruStreamId(input.forUser.getBytes());
                     }
 
-                    String endpoint;
+                    String endpoint = AggregateCountsConstants.FILTER_PREFIX;
                     if (input.inbox) {
-                        endpoint = AggregateCountsConstants.FILTER_PREFIX + AggregateCountsConstants.INBOX_ALL_QUERY_ENDPOINT;
+                        endpoint += AggregateCountsConstants.INBOX_ALL_QUERY_ENDPOINT;
                     } else {
-                        endpoint = AggregateCountsConstants.FILTER_PREFIX + AggregateCountsConstants.CUSTOM_QUERY_ENDPOINT;
+                        endpoint += AggregateCountsConstants.CUSTOM_QUERY_ENDPOINT;
                     }
 
                     MiruTimeRange timeRange = input.fromTimestamp > 0 ? new MiruTimeRange(0, input.fromTimestamp) : MiruTimeRange.ALL_TIME;
-
                     for (int i = 0; i < input.pages; i++) {
                         if (timeRange == null) {
                             break;
                         }
+
                         MiruRequest<AggregateCountsQuery> miruRequest = new MiruRequest<>("toolsAggregateCounts",
                             tenantId,
                             MiruActorId.NOT_PROVIDED,
@@ -175,9 +178,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                             MiruSolutionLogLevel.valueOf(input.logLevel));
 
                         data.put("endpoint", endpoint);
-                        ObjectMapper requestMapper = new ObjectMapper();
-                        requestMapper.enable(SerializationFeature.INDENT_OUTPUT);
-                        data.put("postedJSON", requestMapper.writeValueAsString(miruRequest));
+                        data.put("postedJSON", objectMapper.writeValueAsString(miruRequest));
 
                         MiruResponse<AggregateCountsAnswer> aggregatesResponse = routing.query("", "aggregateCountsPluginRegion",
                             miruRequest, endpoint, AggregateCountsAnswer.class);
@@ -191,27 +192,25 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                                 timeRange = new MiruTimeRange(0, lastTimestamp - 1);
                             }
                             responses.add(aggregatesResponse);
-                            break;
                         } else {
-                            log.warn("Empty aggregate counts response for {}", tenantId);
+                            LOG.warn("Empty aggregate counts response for {}", tenantId);
                         }
                     }
                 }
 
                 if (!responses.isEmpty()) {
-                    ObjectMapper mapper = new ObjectMapper();
-                    mapper.enable(SerializationFeature.INDENT_OUTPUT);
-
                     List<List<Map<String, Object>>> resultPages = Lists.newArrayList();
                     List<Map<String, Object>> summaries = Lists.newArrayList();
                     for (MiruResponse<AggregateCountsAnswer> response : responses) {
                         List<Map<String, Object>> page = Lists.newArrayList();
                         for (AggregateCount result : response.answer.constraints.get(input.field).results) {
+                            LOG.trace("Result: {}", result);
+
                             long time = result.latestTimestamp;
                             long jiveEpochTime = snowflakeIdPacker.unpack(time)[0];
                             String clockTime = new ISO8601DateFormat().format(new Date(jiveEpochTime + JiveEpochTimestampProvider.JIVE_EPOCH));
 
-                            page.add(ImmutableMap.<String, Object>of(
+                            page.add(ImmutableMap.of(
                                 "aggregate", result.distinctValue.last(),
                                 "time", String.valueOf(time),
                                 "date", clockTime,
@@ -220,8 +219,8 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                         }
                         resultPages.add(page);
 
-                        summaries.add(ImmutableMap.<String, Object>of(
-                            "body", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions),
+                        summaries.add(ImmutableMap.of(
+                            "body", Joiner.on("\n").join(response.log) + "\n\n" + objectMapper.writeValueAsString(response.solutions),
                             "elapse", String.valueOf(response.totalElapsed)));
                     }
 
@@ -230,7 +229,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                 }
             }
         } catch (Exception e) {
-            log.error("Unable to retrieve data", e);
+            LOG.error("Unable to retrieve data", e);
         }
 
         return renderer.render(template, data);
@@ -240,4 +239,5 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
     public String getTitle() {
         return "Aggregate Counts";
     }
+
 }
