@@ -1,8 +1,10 @@
 package com.jivesoftware.os.miru.plugin.query;
 
 import com.google.common.collect.ImmutableMap;
+
 import java.util.Collections;
 import java.util.Map;
+
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.ar.ArabicAnalyzer;
@@ -134,4 +136,24 @@ public class TermAnalyzers {
         }
         return analyzer;
     }
+
+
+    public static void main(String[] args) throws Exception {
+        String locale = "en";
+        boolean useStopWords = false;
+
+        if (args.length > 0) {
+            locale = args[0];
+        }
+        if (args.length > 1) {
+            useStopWords = Boolean.valueOf(args[1]);
+        }
+
+        System.out.println("Build analyzer");
+        TermAnalyzers termAnalyzers = new TermAnalyzers();
+        System.out.println("Find analyzer");
+        Analyzer analyzer = termAnalyzers.findAnalyzer(locale, useStopWords);
+        System.out.println("Analyzer: " + analyzer);
+    }
+
 }
