@@ -4,12 +4,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.1971</version>
+        <version>0.1972</version>
         <relativePath>../global-repo-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
     <artifactId>global-build-management</artifactId>
-    <version>0.1971</version>
+    <version>0.1972</version>
     <packaging>pom</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -140,7 +140,7 @@
             <dependency>
                 <groupId>com.jivesoftware.os.miru</groupId>
                 <artifactId>miru-reco</artifactId>
-                <version>0.1971</version>
+                <version>0.1972</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
@@ -205,6 +205,11 @@
             <dependency>
                 <groupId>com.jivesoftware.os.routing.bird</groupId>
                 <artifactId>merlin-config</artifactId>
+                <version>${routing-bird-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jivesoftware.os.routing.bird</groupId>
+                <artifactId>deployable-config-extractor</artifactId>
                 <version>${routing-bird-version}</version>
             </dependency>
             <dependency>

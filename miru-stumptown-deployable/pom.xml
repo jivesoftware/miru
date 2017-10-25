@@ -2,22 +2,18 @@
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.1971</version>
+        <version>0.1972</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
-
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-stumptown-deployable</artifactId>
-
     <properties>
         <java.main>com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownMain</java.main>
         <assembly.home>${project.basedir}</assembly.home>
     </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.jivesoftware.os.routing.bird</groupId>
@@ -26,7 +22,6 @@
             <classifier>bin</classifier>
             <scope>runtime</scope>
         </dependency>
-
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
@@ -92,6 +87,10 @@
         <dependency>
             <groupId>com.jivesoftware.os.routing.bird</groupId>
             <artifactId>routing-bird-shared</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>deployable-config-extractor</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.mlogger</groupId>
