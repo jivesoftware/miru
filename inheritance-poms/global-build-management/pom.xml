@@ -208,6 +208,11 @@
                 <version>${routing-bird-version}</version>
             </dependency>
             <dependency>
+                <groupId>com.jivesoftware.os.routing.bird</groupId>
+                <artifactId>deployable-config-extractor</artifactId>
+                <version>${routing-bird-version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.jivesoftware.os.rcvs</groupId>
                 <artifactId>row-column-value-store-tests</artifactId>
                 <version>${rcvs-version}</version>
