@@ -31,6 +31,8 @@ import com.jivesoftware.os.miru.wal.AmzaWALUtil;
 import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALWriter;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
+import com.jivesoftware.os.routing.bird.deployable.config.extractor.ConfigBinder;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
@@ -90,7 +92,10 @@ public class AmzaWALTest {
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         acrc.setMaxUpdatesBeforeDeltaStripeCompaction(100_000);
-        Deployable deployable = new Deployable(new String[0]);
+
+        ConfigBinder configBinder = new ConfigBinder(new String[0]);
+        InstanceConfig instanceConfig = configBinder.bind(InstanceConfig.class);
+        Deployable deployable = new Deployable(new String[0], configBinder, instanceConfig, null);
         Lifecycle amzaLifecycle = new MiruAmzaServiceInitializer().initialize(deployable,
             connectionDescriptor -> new NoOpClientHealth(),
             1,
@@ -108,8 +113,6 @@ public class AmzaWALTest {
             rowsChanged -> {
             });
         EmbeddedClientProvider amzaClientProvider = new EmbeddedClientProvider(amzaLifecycle.amzaService);
-        //WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(false, new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
-        //    null, 1000, 1000);
 
         AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaLifecycle.amzaService, amzaClientProvider,
             new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, Consistency.leader_quorum, true, false, false,

@@ -44,6 +44,7 @@ import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.deployable.TenantAwareHttpClientHealthCheck;
+import com.jivesoftware.os.routing.bird.deployable.config.extractor.ConfigBinder;
 import com.jivesoftware.os.routing.bird.endpoints.base.FullyOnlineVersion;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI.UI;
@@ -61,6 +62,7 @@ import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -77,9 +79,9 @@ public class MiruAnomalyMain {
     void run(String[] args) throws Exception {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
         try {
-
-            final Deployable deployable = new Deployable(args);
-            InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
+            ConfigBinder configBinder = new ConfigBinder(args);
+            InstanceConfig instanceConfig = configBinder.bind(InstanceConfig.class);
+            final Deployable deployable = new Deployable(args, configBinder, instanceConfig, null);
 
             HealthFactory.initialize(deployable::config, new DeployableHealthCheckRegistry(deployable));
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new UI("Anomaly", "main", "/ui/anomaly/query"))));
@@ -99,7 +101,6 @@ public class MiruAnomalyMain {
                 }
             });
             deployable.buildManageServer().start();
-
 
             MiruAnomalyServiceConfig anomalyServiceConfig = deployable.config(MiruAnomalyServiceConfig.class);
 
@@ -261,4 +262,5 @@ public class MiruAnomalyMain {
             serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);
         }
     }
+
 }

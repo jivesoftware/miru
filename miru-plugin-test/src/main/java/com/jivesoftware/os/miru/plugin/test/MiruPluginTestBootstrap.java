@@ -78,6 +78,8 @@ import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
+import com.jivesoftware.os.routing.bird.deployable.config.extractor.ConfigBinder;
 import com.jivesoftware.os.routing.bird.health.HealthCheck;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
@@ -177,7 +179,10 @@ public class MiruPluginTestBootstrap {
         File amzaDataDir = Files.createTempDir();
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
-        Deployable deployable = new Deployable(new String[0]);
+
+        ConfigBinder configBinder = new ConfigBinder(new String[0]);
+        InstanceConfig instanceConfig = configBinder.bind(InstanceConfig.class);
+        final Deployable deployable = new Deployable(new String[0], configBinder, instanceConfig, null);
         Lifecycle amzaLifecycle = new MiruAmzaServiceInitializer().initialize(deployable,
             connectionDescriptor -> new NoOpClientHealth(),
             1,
