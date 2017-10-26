@@ -13,7 +13,7 @@
     <packaging>pom</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <mlogger-version>0.28</mlogger-version>
+        <mlogger-version>0.27</mlogger-version>
         <jive-utils-version>0.112</jive-utils-version>
         <rcvs-version>0.26</rcvs-version>
         <filer-version>0.98</filer-version>
