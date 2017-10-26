@@ -123,7 +123,7 @@ public class TermAnalyzers {
             String code = locale;
             analyzer = analyzers.get(code);
             while (analyzer == null) {
-                int ix = locale.indexOf('_');
+                int ix = code.indexOf('_');
                 if (ix == -1) {
                     break;
                 }
