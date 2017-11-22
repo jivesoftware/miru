@@ -26,11 +26,13 @@ import com.jivesoftware.os.routing.bird.health.api.TimerHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.health.checkers.TimerHealthChecker;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+
 import org.merlin.config.defaults.DoubleDefault;
 import org.merlin.config.defaults.StringDefault;
 
@@ -96,8 +98,8 @@ public class MiruJustInTimeBackfillerizer {
         MiruStreamId streamId,
         MiruFilter suppressUnreadFilter)
         throws Exception {
-
         LOG.inc("backfillUnread>calls>" + name);
+
         // backfill in another thread to guard WAL interface from solver cancellation/interruption
         MiruSolutionLog backfillSolutionLog = new MiruSolutionLog(solutionLog.getLevel());
         Future<?> future = backfillExecutor.submit(() -> {
@@ -201,7 +203,6 @@ public class MiruJustInTimeBackfillerizer {
                     elapsed = System.currentTimeMillis() - start;
                     backfillSolutionLog.log(MiruSolutionLogLevel.INFO, "Applied read tracking in {} ms", elapsed);
                 }
-
             } catch (Exception e) {
                 LOG.error("Backfillerizer failed", e);
                 throw new RuntimeException("Backfillerizer failed");
@@ -226,8 +227,8 @@ public class MiruJustInTimeBackfillerizer {
         final MiruStreamId streamId,
         MiruFilter suppressUnreadFilter)
         throws Exception {
-
         LOG.inc("backfillInboxUnread>calls>" + name);
+
         // backfill in another thread to guard WAL interface from solver cancellation/interruption
         MiruSolutionLog backfillSolutionLog = new MiruSolutionLog(solutionLog.getLevel());
         Future<?> future = backfillExecutor.submit(() -> {
@@ -343,4 +344,5 @@ public class MiruJustInTimeBackfillerizer {
         future.get();
         solutionLog.append(backfillSolutionLog);
     }
+
 }

@@ -24,6 +24,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -61,7 +62,6 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
     public <BM extends IBM, IBM> MiruPartitionResponse<AggregateCountsAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
         Optional<AggregateCountsReport> report)
         throws Exception {
-
         StackBuffer stackBuffer = new StackBuffer();
 
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
@@ -170,4 +170,5 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         }
         return report;
     }
+
 }
