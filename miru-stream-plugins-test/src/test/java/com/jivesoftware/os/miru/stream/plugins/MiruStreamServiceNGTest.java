@@ -105,7 +105,7 @@ public class MiruStreamServiceNGTest {
             miruSchema, MiruBackingStorage.disk, new MiruBitmapsRoaring(), Collections.emptyList());
         this.service = miruProvider.getMiru(tenant1);
 
-        this.aggregateCountsInjectable = new AggregateCountsInjectable(miruProvider, new AggregateCounts(), null);
+        this.aggregateCountsInjectable = new AggregateCountsInjectable(miruProvider, new AggregateCounts(), null, true);
 
         this.distinctCountInjectable = new DistinctCountInjectable(miruProvider, new DistinctCount());
     }
