@@ -3,12 +3,15 @@ package com.jivesoftware.os.miru.stream.plugins.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+
 import java.util.Map;
 
-/** @author jonathan */
+/**
+ * @author jonathan
+ */
 public class AggregateCountsAnswer {
 
-    public static final AggregateCountsAnswer EMPTY_RESULTS = new AggregateCountsAnswer(ImmutableMap.<String, AggregateCountsAnswerConstraint>of(), true);
+    public static final AggregateCountsAnswer EMPTY_RESULTS = new AggregateCountsAnswer(ImmutableMap.of(), true);
 
     public final Map<String, AggregateCountsAnswerConstraint> constraints;
     public final boolean resultsExhausted;
@@ -38,4 +41,5 @@ public class AggregateCountsAnswer {
     public int hashCode() {
         throw new UnsupportedOperationException("NOPE");
     }
+
 }

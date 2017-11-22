@@ -24,13 +24,16 @@ public class AggregateCountsInjectable {
     private final MiruProvider<? extends Miru> provider;
     private final AggregateCounts aggregateCounts;
     private final Set<MiruStreamId> verboseStreamIds;
+    private final boolean verboseAllStreamIds;
 
     public AggregateCountsInjectable(MiruProvider<? extends Miru> provider,
         AggregateCounts aggregateCounts,
-        Set<MiruStreamId> verboseStreamIds) {
+        Set<MiruStreamId> verboseStreamIds,
+        boolean verboseAllStreamIds) {
         this.provider = provider;
         this.aggregateCounts = aggregateCounts;
         this.verboseStreamIds = verboseStreamIds;
+        this.verboseAllStreamIds = verboseAllStreamIds;
     }
 
     public MiruResponse<AggregateCountsAnswer> filterCustomStream(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException,
@@ -46,7 +49,8 @@ public class AggregateCountsInjectable {
                         provider.getBackfillerizer(tenantId),
                         request,
                         provider.getRemotePartition(AggregateCountsCustomRemotePartition.class),
-                        verboseStreamIds)),
+                        verboseStreamIds,
+                        verboseAllStreamIds)),
                 new AggregateCountsAnswerEvaluator(request.query),
                 new AggregateCountsAnswerMerger(),
                 AggregateCountsAnswer.EMPTY_RESULTS,
@@ -100,7 +104,8 @@ public class AggregateCountsInjectable {
                         provider.getBackfillerizer(tenantId),
                         requestAndReport.request,
                         provider.getRemotePartition(AggregateCountsCustomRemotePartition.class),
-                        verboseStreamIds)),
+                        verboseStreamIds,
+                        verboseAllStreamIds)),
                 Optional.fromNullable(requestAndReport.report),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);

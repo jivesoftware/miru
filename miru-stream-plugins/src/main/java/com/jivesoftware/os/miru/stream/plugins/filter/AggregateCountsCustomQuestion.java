@@ -24,6 +24,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -42,6 +43,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
     private final MiruRequest<AggregateCountsQuery> request;
     private final MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition;
     private final Set<MiruStreamId> verboseStreamIds;
+    private final boolean verboseAllStreamIds;
 
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
@@ -49,19 +51,21 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
     public AggregateCountsCustomQuestion(AggregateCounts aggregateCounts,
         MiruJustInTimeBackfillerizer backfillerizer,
         MiruRequest<AggregateCountsQuery> request,
-        MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition, Set<MiruStreamId> verboseStreamIds) {
+        MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition,
+        Set<MiruStreamId> verboseStreamIds,
+        boolean verboseAllStreamIds) {
         this.aggregateCounts = aggregateCounts;
         this.backfillerizer = backfillerizer;
         this.request = request;
         this.remotePartition = remotePartition;
         this.verboseStreamIds = verboseStreamIds;
+        this.verboseAllStreamIds = verboseAllStreamIds;
     }
 
     @Override
     public <BM extends IBM, IBM> MiruPartitionResponse<AggregateCountsAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
         Optional<AggregateCountsReport> report)
         throws Exception {
-
         StackBuffer stackBuffer = new StackBuffer();
 
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
@@ -69,7 +73,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         MiruStreamId streamId = request.query.streamId;
-        boolean verbose = verboseStreamIds != null && streamId != null && !MiruStreamId.NULL.equals(streamId) && verboseStreamIds.contains(streamId);
+        boolean verbose = verboseAllStreamIds || verboseStreamIds != null && streamId != null && !MiruStreamId.NULL.equals(streamId) && verboseStreamIds.contains(streamId);
 
         MiruTimeRange answerTimeRange = request.query.answerTimeRange;
         if (!context.getTimeIndex().intersects(answerTimeRange)) {
@@ -170,4 +174,5 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         }
         return report;
     }
+
 }

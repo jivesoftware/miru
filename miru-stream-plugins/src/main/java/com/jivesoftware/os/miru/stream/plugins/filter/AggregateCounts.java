@@ -44,7 +44,6 @@ public class AggregateCounts {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
-    private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
 
     public <BM extends IBM, IBM> AggregateCountsAnswer getAggregateCounts(String name,
         MiruSolutionLog solutionLog,
@@ -57,12 +56,10 @@ public class AggregateCounts {
         Optional<BM> counter,
         boolean verbose)
         throws Exception {
-
         LOG.debug("Get aggregate counts for answer={} request={}", answer, request);
 
         Map<String, AggregateCountsAnswerConstraint> results = Maps.newHashMapWithExpectedSize(request.query.constraints.size());
         for (Map.Entry<String, AggregateCountsQueryConstraint> entry : request.query.constraints.entrySet()) {
-
             Optional<AggregateCountsReportConstraint> lastReportConstraint = Optional.absent();
             if (lastReport.isPresent()) {
                 lastReportConstraint = Optional.of(lastReport.get().constraints.get(entry.getKey()));
@@ -103,7 +100,6 @@ public class AggregateCounts {
         BM answer,
         Optional<BM> counter,
         boolean verbose) throws Exception {
-
         StackBuffer stackBuffer = new StackBuffer();
 
         MiruSchema schema = requestContext.getSchema();
@@ -158,8 +154,6 @@ public class AggregateCounts {
         }
 
         MiruTermComposer termComposer = requestContext.getTermComposer();
-        //MiruActivityInternExtern activityInternExtern = miruProvider.getActivityInternExtern(coord.tenantId);
-
         MiruFieldIndex<BM, IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         LOG.debug("fieldId={}", fieldId);
 
@@ -278,7 +272,6 @@ public class AggregateCounts {
                     BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
                     bitmaps.inPlaceAndNot(answer, removeUnknownField);
                     beforeCount--;
-
                 } else {
                     MiruTermId aggregateTermId = fieldValues[0]; // Kinda lame but for now we don't see a need for multi field aggregation.
                     MiruValue aggregateValue = new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, aggregateTermId));
