@@ -96,12 +96,9 @@ public class InMemoryEndpointsTest {
 
         MiruService miruService = miruProvider.getMiru(tenantId);
 
-        this.aggregateCountsEndpoints = new AggregateCountsEndpoints(new AggregateCountsInjectable(miruProvider, new AggregateCounts(), null));
+        this.aggregateCountsEndpoints = new AggregateCountsEndpoints(new AggregateCountsInjectable(miruProvider, new AggregateCounts(), null, true));
         this.miruWriterEndpoints = new MiruWriterEndpoints(miruService, new MiruStats());
 
-        //Response addResponse = miruWriterEndpoints.addActivities(partitionedActivities);
-        //assertNotNull(addResponse);
-        //assertEquals(addResponse.getStatus(), 200);
         // Request 1
         Response getResponse = aggregateCountsEndpoints.filterCustomStream(new MiruRequest<>("test",
             tenantId,
