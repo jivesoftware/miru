@@ -9,17 +9,14 @@ import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
 import com.jivesoftware.os.miru.plugin.solution.JsonRemotePartitionReader;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 
-/**
- *
- */
 public class AggregateCountsPlugin implements MiruPlugin<AggregateCountsEndpoints, AggregateCountsInjectable> {
-
     @Override
     public Class<AggregateCountsEndpoints> getEndpointsClass() {
         return AggregateCountsEndpoints.class;
@@ -27,15 +24,16 @@ public class AggregateCountsPlugin implements MiruPlugin<AggregateCountsEndpoint
 
     @Override
     public Collection<MiruEndpointInjectable<AggregateCountsInjectable>> getInjectables(MiruProvider<? extends Miru> miruProvider) {
-
         AggregateCountsConfig config = miruProvider.getConfig(AggregateCountsConfig.class);
         AggregateCounts aggregateCounts = new AggregateCounts();
+
+        boolean verboseAllStreamIds = config.getVerboseStreamIds().trim().equals("*");
         Set<MiruStreamId> verboseStreamIds = Sets.newHashSet(Lists.transform(
             Arrays.asList(config.getVerboseStreamIds().split("\\s*,\\s*")),
             input -> new MiruStreamId(input.getBytes(StandardCharsets.UTF_8))));
         return Collections.singletonList(new MiruEndpointInjectable<>(
             AggregateCountsInjectable.class,
-            new AggregateCountsInjectable(miruProvider, aggregateCounts, verboseStreamIds)
+            new AggregateCountsInjectable(miruProvider, aggregateCounts, verboseStreamIds, verboseAllStreamIds)
         ));
     }
 
@@ -46,4 +44,5 @@ public class AggregateCountsPlugin implements MiruPlugin<AggregateCountsEndpoint
         return Arrays.asList(new AggregateCountsCustomRemotePartition(remotePartitionReader),
             new AggregateCountsInboxAllRemotePartition(remotePartitionReader));
     }
+
 }
