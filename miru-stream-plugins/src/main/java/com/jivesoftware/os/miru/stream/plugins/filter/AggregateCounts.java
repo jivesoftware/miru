@@ -15,7 +15,6 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
@@ -27,6 +26,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,7 +56,7 @@ public class AggregateCounts {
         Optional<BM> counter,
         boolean verbose)
         throws Exception {
-        LOG.debug("Get aggregate counts for answer={} request={}", answer, request);
+        LOG.trace("Get aggregate counts for answer: {} request: {}", answer, request);
 
         Map<String, AggregateCountsAnswerConstraint> results = Maps.newHashMapWithExpectedSize(request.query.constraints.size());
         for (Map.Entry<String, AggregateCountsQueryConstraint> entry : request.query.constraints.entrySet()) {
@@ -83,7 +83,7 @@ public class AggregateCounts {
 
         boolean resultsExhausted = request.query.answerTimeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         AggregateCountsAnswer result = new AggregateCountsAnswer(results, resultsExhausted);
-        LOG.debug("result={}", result);
+        LOG.trace("result: {}", result);
         return result;
     }
 
@@ -155,7 +155,7 @@ public class AggregateCounts {
 
         MiruTermComposer termComposer = requestContext.getTermComposer();
         MiruFieldIndex<BM, IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-        LOG.debug("fieldId={}", fieldId);
+        LOG.trace("fieldId: {}", fieldId);
 
         List<AggregateCount> aggregateCounts = new ArrayList<>();
         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
@@ -259,14 +259,14 @@ public class AggregateCounts {
 
             while (true) {
                 int lastSetBit = bitmaps.lastSetBit(answer);
-                LOG.trace("lastSetBit={}", lastSetBit);
+                LOG.trace("lastSetBit: {}", lastSetBit);
                 if (lastSetBit < 0) {
                     break;
                 }
 
                 MiruTermId[] fieldValues = requestContext.getActivityIndex().get(name, lastSetBit, fieldDefinition, stackBuffer);
                 if (LOG.isTraceEnabled()) {
-                    LOG.trace("fieldValues={}", Arrays.toString(fieldValues));
+                    LOG.trace("fieldValues: {}", Arrays.toString(fieldValues));
                 }
                 if (fieldValues == null || fieldValues.length == 0) {
                     BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
@@ -289,7 +289,7 @@ public class AggregateCounts {
                         oldestTVR = latestTVR;
                     } else {
                         TimeVersionRealtime[] tvr = requestContext.getActivityIndex().getAllTimeVersionRealtime(name,
-                            new int[] { lastSetBit, firstIntersectingBit },
+                            new int[]{lastSetBit, firstIntersectingBit},
                             stackBuffer);
                         latestTVR = tvr[0];
                         oldestTVR = tvr[1];
@@ -344,7 +344,7 @@ public class AggregateCounts {
                                 oldestValues[i] = values;
                             } else {
                                 MiruTermId[][] termIds = requestContext.getActivityIndex().getAll(name,
-                                    new int[] { lastSetBit, firstIntersectingBit },
+                                    new int[]{lastSetBit, firstIntersectingBit},
                                     gatherFieldDefinition,
                                     stackBuffer);
                                 latestValues[i] = termsToValues(stackBuffer, schema, termComposer, gatherFieldDefinition, termIds[0]);
@@ -353,8 +353,7 @@ public class AggregateCounts {
                         }
                         //TODO much more efficient to accumulate bits and gather these once at the end
 
-                        AggregateCount aggregateCount = new AggregateCount(
-                            aggregateValue,
+                        AggregateCount aggregateCount = new AggregateCount(aggregateValue,
                             latestValues,
                             oldestValues,
                             beforeCount - afterCount,

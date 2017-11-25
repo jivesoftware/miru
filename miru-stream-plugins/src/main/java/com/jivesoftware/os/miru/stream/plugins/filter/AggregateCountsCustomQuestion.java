@@ -67,7 +67,6 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         Optional<AggregateCountsReport> report)
         throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
@@ -86,7 +85,8 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         List<IBM> ands = new ArrayList<>();
         int lastId = context.getActivityIndex().lastId(stackBuffer);
 
-        BM filtered = aggregateUtil.filter("aggregateCountsCustom", bitmaps,
+        BM filtered = aggregateUtil.filter("aggregateCountsCustom",
+            bitmaps,
             context,
             request.query.streamFilter,
             solutionLog,
@@ -146,8 +146,18 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
                 context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp, stackBuffer)));
         }
 
-        return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts("aggregateCountsCustom", solutionLog, bitmaps, context, request,
-            handle.getCoord(), report, answer, Optional.fromNullable(counter), verbose), solutionLog.asList());
+        return new MiruPartitionResponse<>(
+            aggregateCounts.getAggregateCounts("aggregateCountsCustom",
+                solutionLog,
+                bitmaps,
+                context,
+                request,
+                handle.getCoord(),
+                report,
+                answer,
+                Optional.fromNullable(counter),
+                verbose),
+            solutionLog.asList());
     }
 
     @Override

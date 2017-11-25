@@ -60,12 +60,10 @@ public class MiruAggregateUtil {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public interface StreamBitmaps<BM> {
-
         boolean stream(int streamIndex, int lastId, int fieldId, MiruTermId termId, int scoredToLastId, BM[] answers) throws Exception;
     }
 
     public interface ConsumeBitmaps<BM> {
-
         boolean consume(StreamBitmaps<BM> streamBitmaps) throws Exception;
     }
 
@@ -346,7 +344,6 @@ public class MiruAggregateUtil {
         if (count > 0) {
             gatherAndCountFeaturesForTerm(name, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
                 ids, featuresContained, count, features, gathered, schema, metrics);
-            count = 0;
         }
     }
 
@@ -440,175 +437,6 @@ public class MiruAggregateUtil {
         }
         return true;
     }
-
-    /*private <BM extends IBM, IBM, S extends MiruSipCursor<S>> void indexValueBitsGatherFeatures(String name,
-        MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<BM, IBM, S> requestContext,
-        ConsumeBitmaps<BM> consumeAnswers,
-        int[][] featureFieldIds,
-        boolean dedupe,
-        FeatureStream stream,
-        MiruSolutionLog solutionLog,
-        StackBuffer stackBuffer) throws Exception {
-
-        MiruFieldIndex<BM, IBM> valueBitsIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.valueBits);
-
-        Set<Integer> uniqueFieldIds = Sets.newHashSet();
-        for (int i = 0; i < featureFieldIds.length; i++) {
-            if (featureFieldIds[i] != null) {
-                for (int j = 0; j < featureFieldIds[i].length; j++) {
-                    uniqueFieldIds.add(featureFieldIds[i][j]);
-                }
-            }
-        }
-
-        long start = System.currentTimeMillis();
-        int bitmapCount = 0;
-        long bitmapBytes = 0;
-        byte[][] valueBuffers = new byte[requestContext.getSchema().fieldCount()][];
-        List<FieldBits<BM, IBM>> baseFieldBits = Lists.newArrayList();
-        for (int fieldId : uniqueFieldIds) {
-            List<MiruTermId> termIds = Lists.newArrayList();
-            valueBitsIndex.streamTermIdsForField(name, fieldId, null,
-                termId -> {
-                    termIds.add(termId);
-                    return true;
-                },
-                stackBuffer);
-            bitmapCount += termIds.size();
-
-            @SuppressWarnings("unchecked")
-            BitmapAndLastId<BM>[] results = new BitmapAndLastId[termIds.size()];
-            valueBitsIndex.multiGet(name, fieldId, termIds.toArray(new MiruTermId[0]), results, stackBuffer);
-
-            BM[] featureBits = bitmaps.createArrayOf(results.length);
-            for (int i = 0; i < results.length; i++) {
-                BitmapAndLastId<BM> result = results[i];
-                bitmapBytes += bitmaps.sizeInBytes(result.bitmap);
-                featureBits[i] = result.bitmap;
-            }
-
-            int[] bits = new int[termIds.size()];
-            int maxBit = -1;
-            for (int i = 0; i < termIds.size(); i++) {
-                bits[i] = ValueIndex.bytesShort(termIds.get(i).getBytes());
-                maxBit = Math.max(maxBit, bits[i]);
-            }
-
-            if (maxBit != -1) {
-                valueBuffers[fieldId] = new byte[(maxBit / 8) + 1];
-                for (int i = 0; i < termIds.size(); i++) {
-                    MiruTermId termId = termIds.get(i);
-                    int bit = ValueIndex.bytesShort(termId.getBytes());
-                    baseFieldBits.add(new FieldBits<>(fieldId, bit, featureBits[i], bitmaps.cardinality(featureBits[i])));
-                }
-            }
-        }
-
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Setup field bits for fields:{} bitmaps:{} bytes:{} took {} ms",
-            uniqueFieldIds.size(), bitmapCount, bitmapBytes, System.currentTimeMillis() - start);
-        start = System.currentTimeMillis();
-
-        consumeAnswers.consume((streamIndex, lastId, answerTermId, answerScoredLastId, answerBitmap) -> {
-            List<FieldBits<BM, IBM>> fieldBits = Lists.newArrayList();
-            for (FieldBits<BM, IBM> base : baseFieldBits) {
-                BM bitmap;
-                long cardinality;
-                if (answerBitmap != null) {
-                    bitmap = bitmaps.and(Arrays.asList(answerBitmap, base.bitmap));
-                    cardinality = bitmaps.cardinality(answerBitmap);
-                } else {
-                    bitmap = bitmaps.copy(base.bitmap);
-                    cardinality = base.cardinality;
-                }
-                fieldBits.add(new FieldBits<>(base.fieldId, base.bit, bitmap, cardinality));
-            }
-
-            @SuppressWarnings("unchecked")
-            Set<Feature>[] quickDedupe = dedupe ? new Set[featureFieldIds.length] : null;
-            if (dedupe) {
-                for (int i = 0; i < quickDedupe.length; i++) {
-                    quickDedupe[i] = Sets.newHashSet();
-                }
-            }
-
-            byte[][] values = new byte[valueBuffers.length][];
-            Collections.sort(fieldBits);
-            done:
-            while (!fieldBits.isEmpty()) {
-                if (quickDedupe != null) {
-                    for (Set<Feature> qd : quickDedupe) {
-                        qd.clear();
-                    }
-                }
-
-                FieldBits<BM, IBM> next = fieldBits.remove(0);
-
-                MiruIntIterator iter = bitmaps.intIterator(next.bitmap);
-                while (iter.hasNext()) {
-                    for (byte[] valueBuffer : valueBuffers) {
-                        if (valueBuffer != null) {
-                            Arrays.fill(valueBuffer, (byte) 0);
-                        }
-                    }
-
-                    int id = iter.next();
-                    valueBuffers[next.fieldId][next.bit >>> 3] |= 1 << (next.bit & 0x07);
-                    for (FieldBits<BM, IBM> fb : fieldBits) {
-                        if (bitmaps.removeIfPresent(fb.bitmap, id)) {
-                            fb.cardinality--;
-                            valueBuffers[fb.fieldId][fb.bit >>> 3] |= 1 << (fb.bit & 0x07);
-                        }
-                    }
-
-                    Arrays.fill(values, null);
-                    for (int i = 0; i < valueBuffers.length; i++) {
-                        byte[] valueBuffer = valueBuffers[i];
-                        if (valueBuffer != null) {
-                            byte[] value = ValueIndex.unpackValue(valueBuffer);
-                            if (value != null) {
-                                values[i] = value;
-                            }
-                        }
-                    }
-
-                    next:
-                    for (int featureId = 0; featureId < featureFieldIds.length; featureId++) {
-                        if (featureFieldIds[featureId] == null) {
-                            continue;
-                        }
-                        int[] fieldIds = featureFieldIds[featureId];
-                        // make sure we have all the parts for this feature
-                        for (int i = 0; i < fieldIds.length; i++) {
-                            if (values[fieldIds[i]] == null) {
-                                continue next;
-                            }
-                        }
-
-                        MiruTermId[] featureTermIds = new MiruTermId[fieldIds.length];
-                        for (int i = 0; i < fieldIds.length; i++) {
-                            int fieldId = fieldIds[i];
-                            MiruTermId termId = new MiruTermId(values[fieldId]);
-                            featureTermIds[i] = termId;
-                        }
-
-                        if (dedupe && !quickDedupe[featureId].add(new Feature(featureTermIds))) {
-                            continue;
-                        }
-
-                        if (!stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, featureId, featureTermIds)) {
-                            break done;
-                        }
-                    }
-                }
-                Collections.sort(fieldBits);
-            }
-            return true;
-        });
-
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Gather value bits took {} ms", System.currentTimeMillis() - start);
-        start = System.currentTimeMillis();
-    }*/
 
     public interface FeatureStream {
 
@@ -718,35 +546,6 @@ public class MiruAggregateUtil {
         }
     }
 
-    /*private static class FieldBits<BM extends IBM, IBM> implements Comparable<FieldBits<BM, IBM>> {
-
-        private final int fieldId;
-        private final int bit;
-        private final BM bitmap;
-
-        private long cardinality;
-
-        public FieldBits(int fieldId, int bit, BM bitmap, long cardinality) {
-            this.fieldId = fieldId;
-            this.bit = bit;
-            this.bitmap = bitmap;
-            this.cardinality = cardinality;
-        }
-
-        @Override
-        public int compareTo(FieldBits<BM, IBM> o) {
-            int c = Long.compare(cardinality, o.cardinality);
-            if (c != 0) {
-                return c;
-            }
-            c = Integer.compare(fieldId, o.fieldId);
-            if (c != 0) {
-                return c;
-            }
-            return Integer.compare(bit, o.bit);
-        }
-    }*/
-
     public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void stream(String name,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, S> requestContext,
@@ -758,16 +557,13 @@ public class MiruAggregateUtil {
         StackBuffer stackBuffer,
         CallbackStream<MiruTermCount> terms)
         throws Exception {
-
-        boolean traceEnabled = LOG.isTraceEnabled();
-        boolean debugEnabled = LOG.isDebugEnabled();
         MiruSchema schema = requestContext.getSchema();
 
         // don't mutate the original
         initialAnswer = bitmaps.copy(initialAnswer);
 
         final AtomicLong bytesTraversed = new AtomicLong();
-        if (debugEnabled) {
+        if (LOG.isDebugEnabled()) {
             bytesTraversed.addAndGet(bitmaps.sizeInBytes(initialAnswer));
         }
 
@@ -855,101 +651,6 @@ public class MiruAggregateUtil {
         LOG.debug("stream: bytesTraversed={}", bytesTraversed.longValue());
     }
 
-    /*TODO forced ascending gather doesn't work with current lastId merging strategy
-    public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherParallel(String name,
-        MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<BM, IBM, S> requestContext,
-        BM answer,
-        int pivotFieldId,
-        int batchSize,
-        boolean includeCounts,
-        int limit,
-        Optional<BM> counter,
-        MiruSolutionLog solutionLog,
-        ExecutorService executorService,
-        TermIdLastIdCountStream stream,
-        StackBuffer stackBuffer) throws Exception {
-
-        BM[] splitAnswers = bitmaps.split(answer);
-        BM[] splitCounters = null;
-        if (counter.isPresent()) {
-            int[] keys = bitmaps.keys(answer);
-            splitCounters = bitmaps.extract(counter.get(), keys);
-        }
-        List<Future<List<TermIdLastIdCount>>> futures = Lists.newArrayListWithCapacity(splitAnswers.length);
-        for (int i = splitAnswers.length - 1; i >= 0; i--) {
-            BM splitAnswer = splitAnswers[i];
-            if (bitmaps.isEmpty(splitAnswer)) {
-                futures.add(null);
-            } else {
-                Optional<BM> splitCounter = splitCounters == null || splitCounters[i] == null ? Optional.absent() : Optional.fromNullable(splitCounters[i]);
-                futures.add(executorService.submit(() -> {
-                    try {
-                        List<TermIdLastIdCount> gatherSplit = Lists.newArrayList();
-                        gatherActivityLookup(name,
-                            bitmaps,
-                            requestContext,
-                            splitAnswer,
-                            pivotFieldId,
-                            batchSize,
-                            false,
-                            includeCounts,
-                            splitCounter,
-                            solutionLog,
-                            (lastId, termId, count) -> {
-                                gatherSplit.add(new TermIdLastIdCount(termId, lastId, count));
-                                return true;
-                            },
-                            stackBuffer);
-                        return gatherSplit;
-                    } catch (InterruptedException e) {
-                        // ignore
-                        return null;
-                    } catch (Throwable t) {
-                        Throwable cause = t.getCause();
-                        if (cause instanceof InterruptedException || cause instanceof InterruptedIOException || cause instanceof ClosedByInterruptException) {
-                            // ignore
-                        } else {
-                            LOG.warn("Parallel gather failed", t);
-                        }
-                        return null;
-                    }
-                }));
-            }
-        }
-
-        Map<MiruTermId, TermIdLastIdCount> results = Maps.newHashMap();
-        boolean done = false;
-        for (Future<List<TermIdLastIdCount>> future : futures) {
-            if (future != null) {
-                if (done) {
-                    future.cancel(true);
-                } else {
-                    List<TermIdLastIdCount> got = future.get();
-                    if (got != null) {
-                        for (TermIdLastIdCount termIdLastIdCount : got) {
-                            TermIdLastIdCount existing = results.putIfAbsent(termIdLastIdCount.termId, termIdLastIdCount);
-                            if (existing != null) {
-                                existing.lastId = Math.max(existing.lastId, termIdLastIdCount.lastId);
-                                existing.count += termIdLastIdCount.count;
-                            } else if (limit >= 0 && results.size() > limit) {
-                                done = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        int count = 0;
-        for (TermIdLastIdCount termIdLastIdCount : results.values()) {
-            if ((limit >= 0 && count > limit) || !stream.stream(termIdLastIdCount)) {
-                break;
-            }
-            count++;
-        }
-    }*/
-
     public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gather(String name,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, S> requestContext,
@@ -975,36 +676,7 @@ public class MiruAggregateUtil {
             solutionLog,
             idAndTermIdStream,
             stackBuffer);
-
-        /*MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(pivotFieldId);
-        if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedValueBits)) {
-            gatherValueBits(name, bitmaps, requestContext, answer, pivotFieldId, solutionLog, termIdStream, stackBuffer);
-        } else {
-            gatherActivityLookup(name, bitmaps, requestContext, answer, pivotFieldId, batchSize, solutionLog, termIdStream, stackBuffer);
-        }*/
     }
-
-    // ooh that tickles
-    /*private <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherValueBits(String name,
-        MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<BM, IBM, S> requestContext,
-        BM answer,
-        int pivotFieldId,
-        MiruSolutionLog solutionLog,
-        TermIdStream termIdStream,
-        StackBuffer stackBuffer) throws Exception {
-
-        int[][] featureFieldIds = new int[][] { new int[] { pivotFieldId } };
-        gatherFeatures(name,
-            bitmaps,
-            requestContext,
-            streamBitmaps -> streamBitmaps.stream(0, -1, null, -1, answer),
-            featureFieldIds,
-            true,
-            (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds) -> featureId == -1 || termIdStream.stream(termIds[0]),
-            solutionLog,
-            stackBuffer);
-    }*/
 
     private <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherActivityLookup(String name,
         MiruBitmaps<BM, IBM> bitmaps,
