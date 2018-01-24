@@ -247,9 +247,8 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
 
         @Override
         public void run() {
-            List<MiruLogEvent> miruLogEvents = new ArrayList<>();
-
             while (running.get()) {
+                List<MiruLogEvent> miruLogEvents = new ArrayList<>();
                 queue.drainTo(miruLogEvents, batchSize);
 
                 if (miruLogEvents.isEmpty()) {
@@ -284,8 +283,6 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
                             Thread.interrupted();
                         }
                     }
-
-                    miruLogEvents.clear();
 
                     try {
                         Thread.sleep(ifSuccessPauseMillis);
