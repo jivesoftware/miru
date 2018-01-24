@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.logappender;
 
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-import java.io.IOException;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.IntDefault;
@@ -10,7 +9,6 @@ import org.merlin.config.defaults.LongDefault;
 public class MiruLogAppenderInitializer {
 
     public interface MiruLogAppenderConfig extends Config {
-
         @IntDefault(100_000)
         int getQueueMaxDepth();
 
@@ -46,8 +44,7 @@ public class MiruLogAppenderInitializer {
         String instance,
         String version,
         MiruLogAppenderConfig config,
-        TenantAwareHttpClient<String> client) throws IOException {
-
+        TenantAwareHttpClient<String> client) {
         if (config.getEnabled()) {
             return new HttpMiruLogAppender(datacenter,
                 cluster,
@@ -65,8 +62,7 @@ public class MiruLogAppenderInitializer {
                 config.getNonBlockingDrainThreshold(),
                 config.getNonBlockingDrainCount());
         } else {
-            return () -> {
-            };
+            return () -> {};
         }
     }
 

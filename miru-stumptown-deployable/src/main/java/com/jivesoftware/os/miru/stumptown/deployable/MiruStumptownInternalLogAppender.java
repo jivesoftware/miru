@@ -24,9 +24,6 @@ import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.layout.ByteBufferDestination;
 
-/**
- *
- */
 public class MiruStumptownInternalLogAppender implements Appender {
 
     private final String datacenter;
@@ -105,7 +102,7 @@ public class MiruStumptownInternalLogAppender implements Appender {
             throw new IllegalStateException("MiruLogAppender " + getName() + " is not active");
         } else {
             for (StackTraceElement traceElement : Thread.currentThread().getStackTrace()) {
-                // Kills recusive logging problem.
+                // prevents recursive logging
                 if (traceElement.getClassName().endsWith("MiruStumptownIntakeService")) {
                     return;
                 }
@@ -206,7 +203,6 @@ public class MiruStumptownInternalLogAppender implements Appender {
 
     @Override
     public void initialize() {
-
     }
 
     @Override
@@ -360,6 +356,7 @@ public class MiruStumptownInternalLogAppender implements Appender {
         @Override
         public void clear() {
         }
+
     }
 
     private static class EmptyLayout implements Layout<Serializable> {
@@ -396,7 +393,7 @@ public class MiruStumptownInternalLogAppender implements Appender {
 
         @Override
         public void encode(LogEvent logEvent, ByteBufferDestination byteBufferDestination) {
-
         }
+
     }
 }

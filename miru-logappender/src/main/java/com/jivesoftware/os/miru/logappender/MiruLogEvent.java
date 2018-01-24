@@ -1,8 +1,5 @@
 package com.jivesoftware.os.miru.logappender;
 
-/**
- *
- */
 public class MiruLogEvent {
 
     public String datacenter;
@@ -55,4 +52,5 @@ public class MiruLogEvent {
         this.exceptionClass = exceptionClass;
         this.thrownStackTrace = thrownStackTrace;
     }
+
 }
