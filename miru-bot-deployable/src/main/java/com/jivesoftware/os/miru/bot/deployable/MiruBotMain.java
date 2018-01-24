@@ -11,6 +11,8 @@ import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruB
 import com.jivesoftware.os.miru.bot.deployable.MiruBotHealthCheck.MiruBotHealthCheckConfig;
 import com.jivesoftware.os.miru.bot.deployable.MiruBotUniquesInitializer.MiruBotUniquesConfig;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
+import com.jivesoftware.os.miru.kinesis.logappender.KinesisLogAppenderInitializer;
+import com.jivesoftware.os.miru.kinesis.logappender.KinesisLogAppenderInitializer.KinesisLogAppenderConfig;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -42,11 +44,11 @@ public class MiruBotMain {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         new MiruBotMain().run(args);
     }
 
-    private void run(String[] args) throws Exception {
+    private void run(String[] args) {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
 
         try {
@@ -150,6 +152,10 @@ public class MiruBotMain {
                 instanceConfig.getVersion(),
                 miruLogAppenderConfig,
                 miruStumptownClient).install();
+
+            KinesisLogAppenderConfig kinesisLogAppenderConfig =
+                deployable.config(KinesisLogAppenderConfig.class);
+            new KinesisLogAppenderInitializer().initialize(kinesisLogAppenderConfig).install();
 
             MiruBotDistinctsConfig miruBotDistinctsConfig = deployable.config(MiruBotDistinctsConfig.class);
             MiruBotUniquesConfig miruBotUniquesConfig = deployable.config(MiruBotUniquesConfig.class);

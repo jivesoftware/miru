@@ -30,7 +30,6 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.layout.ByteBufferDestination;
 
 public class HttpMiruLogAppender implements MiruLogAppender, Appender {
-
     private final String datacenter;
     private final String cluster;
     private final String host;
@@ -152,7 +151,7 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
                 }
 
                 if (!queue.offer(miruLogEvent)) {
-                    System.err.println("MiruLogAppender " + getName() + " is unable to write. Queue is full.");
+                    System.err.println("MiruLogAppender " + getName() + " is unable to write to full queue.");
                 }
             }
         }
@@ -248,10 +247,10 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
 
         @Override
         public void run() {
-            List<MiruLogEvent> miruLogEvents = new ArrayList<>();
-
             while (running.get()) {
+                List<MiruLogEvent> miruLogEvents = new ArrayList<>();
                 queue.drainTo(miruLogEvents, batchSize);
+
                 if (miruLogEvents.isEmpty()) {
                     try {
                         Thread.sleep(ifEmptyPauseMillis);
@@ -285,8 +284,6 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
                         }
                     }
 
-                    miruLogEvents.clear();
-
                     try {
                         Thread.sleep(ifSuccessPauseMillis);
                     } catch (InterruptedException e) {
@@ -306,8 +303,7 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
 
     private static class DevNullCollection<E> implements Collection<E> {
 
-        private DevNullCollection() {
-        }
+        private DevNullCollection() {}
 
         @Override
         public int size() {

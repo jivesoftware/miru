@@ -34,7 +34,7 @@ public class MiruStumptownIntakeEndpoints {
     @POST
     @Path("/intake")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response intake(List<MiruLogEvent> logEvents) throws Exception {
+    public Response intake(List<MiruLogEvent> logEvents) {
         try {
             for (MiruLogEvent logEvent : logEvents) {
                 LOG.debug("host:{} service:{} instance:{} message:{}",
