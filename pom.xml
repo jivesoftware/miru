@@ -55,5 +55,6 @@
         <module>miru-siphon-api</module>
         <module>miru-siphon-deployable</module>
         <module>miru-edge-siphon</module>
+        <module>kinesis-logappender</module>
   </modules>
 </project>
