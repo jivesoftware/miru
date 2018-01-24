@@ -119,10 +119,6 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.amza</groupId>
             <artifactId>amza-client</artifactId>
         </dependency>
         <dependency>
