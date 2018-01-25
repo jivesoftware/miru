@@ -49,6 +49,8 @@ import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.client.ClusterSchemaProvider;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
+import com.jivesoftware.os.miru.kinesis.logappender.KinesisLogAppenderInitializer;
+import com.jivesoftware.os.miru.kinesis.logappender.KinesisLogAppenderInitializer.KinesisLogAppenderConfig;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
@@ -146,11 +148,11 @@ public class MiruReaderMain {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         new MiruReaderMain().run(args);
     }
 
-    void run(String[] args) throws Exception {
+    void run(String[] args) {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
         try {
             ConfigBinder configBinder = new ConfigBinder(args);
@@ -212,6 +214,10 @@ public class MiruReaderMain {
                 instanceConfig.getVersion(),
                 miruLogAppenderConfig,
                 miruStumptownClient).install();
+
+            KinesisLogAppenderConfig kinesisLogAppenderConfig =
+                deployable.config(KinesisLogAppenderConfig.class);
+            new KinesisLogAppenderInitializer().initialize(kinesisLogAppenderConfig).install();
 
             MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
             @SuppressWarnings("unchecked")

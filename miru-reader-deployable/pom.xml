@@ -118,6 +118,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.miru.kinesis</groupId>
+            <artifactId>kinesis-logappender</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-service</artifactId>
             <version>${project.version}</version>

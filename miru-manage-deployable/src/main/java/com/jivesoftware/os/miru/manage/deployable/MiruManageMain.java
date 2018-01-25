@@ -43,6 +43,8 @@ import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
+import com.jivesoftware.os.miru.kinesis.logappender.KinesisLogAppenderInitializer;
+import com.jivesoftware.os.miru.kinesis.logappender.KinesisLogAppenderInitializer.KinesisLogAppenderConfig;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.miru.manage.deployable.balancer.MiruRebalanceDirector;
@@ -97,7 +99,7 @@ import org.merlin.config.defaults.StringDefault;
 
 public class MiruManageMain {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         new MiruManageMain().run(args);
     }
 
@@ -111,7 +113,7 @@ public class MiruManageMain {
         long getReplicateTimeoutMillis();
     }
 
-    void run(String[] args) throws Exception {
+    void run(String[] args) {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
         try {
             ConfigBinder configBinder = new ConfigBinder(args);
@@ -175,6 +177,10 @@ public class MiruManageMain {
                 instanceConfig.getVersion(),
                 miruLogAppenderConfig,
                 miruStumptownClient).install();
+
+            KinesisLogAppenderConfig kinesisLogAppenderConfig =
+                deployable.config(KinesisLogAppenderConfig.class);
+            new KinesisLogAppenderInitializer().initialize(kinesisLogAppenderConfig).install();
 
             MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
             @SuppressWarnings("unchecked")
