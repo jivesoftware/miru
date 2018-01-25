@@ -487,7 +487,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 }
                 return TxResult.MORE;
             });
-        LOG.info("Returning {} active updates for {} using registry={} info={} ingress={}",
+        LOG.trace("Returning {} active updates for {} using registry={} info={} ingress={}",
             tenantPartitions.size(), host, registryCount[0], infoCount[0], ingressCount[0]);
 
         List<MiruPartitionActiveUpdate> updates = Lists.newArrayList();
