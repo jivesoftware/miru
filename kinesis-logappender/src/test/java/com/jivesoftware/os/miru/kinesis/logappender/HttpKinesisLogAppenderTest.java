@@ -1,5 +1,16 @@
 package com.jivesoftware.os.miru.kinesis.logappender;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.nio.ByteBuffer;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.logging.log4j.core.impl.Log4jLogEvent;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.LogEvent;
+
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.kinesis.AmazonKinesis;
@@ -8,21 +19,11 @@ import com.amazonaws.services.kinesis.model.DescribeStreamResult;
 import com.amazonaws.services.kinesis.model.PutRecordsRequest;
 import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry;
 import com.amazonaws.services.kinesis.model.PutRecordsResult;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.LogEvent;
-
-import org.apache.logging.log4j.core.impl.Log4jLogEvent;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-@Test(enabled = false)
+@Test
 public class HttpKinesisLogAppenderTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -43,7 +44,7 @@ public class HttpKinesisLogAppenderTest {
 
     @BeforeClass
     public void beforeClass() {
-        String awsRegion = "<region>";
+        String awsRegion = "us-east-1";
         String awsAccessKeyId = "<access key id>";
         String awsSecretAccessKey = "<secret access key>";
 
@@ -54,14 +55,14 @@ public class HttpKinesisLogAppenderTest {
             .build();
     }
 
-    @Test
+    @Test(enabled = false)
     public void testKinesisConnection() {
         DescribeStreamResult describeStreamResult = client.describeStream(awsStreamName);
         System.out.println("AWS Kinesis stream " + awsStreamName + ": " +
             (describeStreamResult == null ? "null" : describeStreamResult.toString()));
     }
 
-    @Test
+    @Test(enabled = false)
     public void testKinesisPutRecords() throws Exception {
         List<LogEvent> logEventList = Collections.singletonList(
             Log4jLogEvent.createEvent("foobar", null, "foo.bar", Level.ERROR, null, null, null, null, null, "tname", null, 12345));

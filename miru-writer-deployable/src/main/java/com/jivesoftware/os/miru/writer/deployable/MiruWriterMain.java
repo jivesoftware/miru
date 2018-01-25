@@ -34,6 +34,8 @@ import com.jivesoftware.os.miru.api.wal.MiruWALConfig;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
+import com.jivesoftware.os.miru.kinesis.logappender.KinesisLogAppenderInitializer;
+import com.jivesoftware.os.miru.kinesis.logappender.KinesisLogAppenderInitializer.KinesisLogAppenderConfig;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
@@ -83,7 +85,7 @@ import org.merlin.config.defaults.StringDefault;
 
 public class MiruWriterMain {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         new MiruWriterMain().run(args);
     }
 
@@ -100,7 +102,7 @@ public class MiruWriterMain {
         long getReplicateCursorTimeoutMillis();
     }
 
-    void run(String[] args) throws Exception {
+    void run(String[] args) {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
         try {
             ConfigBinder configBinder = new ConfigBinder(args);
@@ -164,6 +166,10 @@ public class MiruWriterMain {
                 miruLogAppenderConfig,
                 miruStumptownClient).install();
 
+            KinesisLogAppenderConfig kinesisLogAppenderConfig =
+                deployable.config(KinesisLogAppenderConfig.class);
+            new KinesisLogAppenderInitializer().initialize(kinesisLogAppenderConfig).install();
+
             MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
             @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> miruAnomalyClient = tenantRoutingHttpClientInitializer.builder(
@@ -223,7 +229,7 @@ public class MiruWriterMain {
                 instanceConfig.getHost(),
                 instanceConfig.getMainPort(),
                 instanceConfig.getMainServiceAuthEnabled(),
-                null, //"miru-writer-" + instanceConfig.getClusterName(),
+                null,
                 miruAmzaServiceConfig,
                 true,
                 -1,
