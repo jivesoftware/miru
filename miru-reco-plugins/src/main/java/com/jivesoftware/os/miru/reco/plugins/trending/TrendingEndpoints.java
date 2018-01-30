@@ -56,20 +56,21 @@ public class TrendingEndpoints {
             long t = System.currentTimeMillis();
             MiruResponse<TrendingAnswer> response = injectable.scoreTrending(request);
 
-            if (log.isInfoEnabled()) {
-                int resultsCount = 0;
-                int desiredCount = 0;
-                for (TrendingQueryScoreSet queryScoreSet : request.query.scoreSets) {
-                    TrendingAnswerScoreSet answerScoreSet = response.answer.scoreSets.get(queryScoreSet.key);
-                    if (answerScoreSet != null) {
-                        for (List<Trendy> trendies : answerScoreSet.results.values()) {
-                            resultsCount += trendies.size();
-                        }
+            int resultsCount = 0;
+            int desiredCount = 0;
+            for (TrendingQueryScoreSet queryScoreSet : request.query.scoreSets) {
+                TrendingAnswerScoreSet answerScoreSet = response.answer.scoreSets.get(queryScoreSet.key);
+                if (answerScoreSet != null) {
+                    for (List<Trendy> trendies : answerScoreSet.results.values()) {
+                        resultsCount += trendies.size();
                     }
-                    desiredCount += queryScoreSet.desiredNumberOfDistincts;
                 }
-                log.info("scoreTrending: {} / {} in {} ms", resultsCount, desiredCount, (System.currentTimeMillis() - t));
+                desiredCount += queryScoreSet.desiredNumberOfDistincts;
             }
+
+            log.info("scoreTrending for {}: {} / {} in {} ms",
+                request.tenantId, resultsCount, desiredCount, (System.currentTimeMillis() - t));
+
             return responseHelper.jsonResponse(response);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
@@ -95,10 +96,7 @@ public class TrendingEndpoints {
         }
 
         try {
-            //byte[] jsonBytes = Snappy.uncompress(rawBytes);
-            //MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport = objectMapper.readValue(jsonBytes, resultType);
             MiruPartitionResponse<AnalyticsAnswer> result = injectable.scoreTrending(partitionId, requestAndReport);
-            //byte[] responseBytes = result != null ? Snappy.compress(objectMapper.writeValueAsBytes(result)) : new byte[0];
             byte[] responseBytes = result != null ? conf.asByteArray(result) : new byte[0];
             return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
@@ -108,4 +106,5 @@ public class TrendingEndpoints {
             return Response.serverError().build();
         }
     }
+
 }

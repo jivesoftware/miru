@@ -65,23 +65,13 @@ public class TrendingInjectable {
         this.gatherDistinctsBatchSize = config.getGatherDistinctsBatchSize();
     }
 
-    double zeroToOne(long _min, long _max, long _long) {
-        if (_max == _min) {
-            if (_long == _min) {
-                return 0;
-            }
-            if (_long > _max) {
-                return Double.MAX_VALUE;
-            }
-            return -Double.MAX_VALUE;
-        }
-        return (double) (_long - _min) / (double) (_max - _min);
-    }
-
     public MiruResponse<TrendingAnswer> scoreTrending(MiruRequest<TrendingQuery> request) throws MiruQueryServiceException, InterruptedException {
         try {
+            if (LOG.isTraceEnabled()) {
+                LOG.trace("askAndMerge scoreTrending {}: request={}", request.tenantId, request);
+            }
+
             WaveformRegression regression = new WaveformRegression();
-            LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
 
@@ -215,7 +205,9 @@ public class TrendingInjectable {
             ImmutableList<String> solutionLog = ImmutableList.<String>builder()
                 .addAll(analyticsResponse.log)
                 .build();
-            LOG.debug("Solution:\n{}", solutionLog);
+            if (LOG.isTraceEnabled()) {
+                LOG.trace("Solution for {}:\n{}", tenantId, solutionLog);
+            }
 
             return new MiruResponse<>(new TrendingAnswer(keyedDistinctWaveforms, keyedScoreSets),
                 ImmutableList.<MiruSolution>builder()
@@ -240,8 +232,12 @@ public class TrendingInjectable {
         throws MiruQueryServiceException, InterruptedException {
         try {
             MiruRequest<TrendingQuery> request = requestAndReport.request;
-            LOG.debug("askImmediate: partitionId={} request={}", partitionId, request);
-            LOG.trace("askImmediate: report={}", requestAndReport.report);
+
+            if (LOG.isTraceEnabled()) {
+                LOG.trace("askImmediate scoreTrending for {}: partitionId={} request={}", request.tenantId, partitionId, request);
+                LOG.trace("askImmediate scoreTrending for {}: report={}", request.tenantId, requestAndReport.report);
+            }
+
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
 
@@ -277,4 +273,5 @@ public class TrendingInjectable {
         }
         return new MiruTimeRange(minTimestamp, maxTimestamp);
     }
+
 }
