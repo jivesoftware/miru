@@ -51,7 +51,6 @@ public class AmzaWALDirector {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public interface GetActivityLatency extends TimerHealthCheckConfig {
-
         @StringDefault("getActivity>latency")
         @Override
         String getName();
@@ -62,13 +61,12 @@ public class AmzaWALDirector {
 
         @DoubleDefault(30000d) /// 30sec
         @Override
-        Double get95ThPecentileMax();
+        Double get95ThPercentileMax();
     }
 
     private static final HealthTimer getActivityLatency = HealthFactory.getHealthTimer(GetActivityLatency.class, TimerHealthChecker.FACTORY);
 
     public interface SipActivityLatency extends TimerHealthCheckConfig {
-
         @StringDefault("sipActivity>latency")
         @Override
         String getName();
@@ -79,13 +77,12 @@ public class AmzaWALDirector {
 
         @DoubleDefault(30000d) /// 30sec
         @Override
-        Double get95ThPecentileMax();
+        Double get95ThPercentileMax();
     }
 
     private static final HealthTimer sipActivityLatency = HealthFactory.getHealthTimer(SipActivityLatency.class, TimerHealthChecker.FACTORY);
 
     public interface OldestReadEventIdLatency extends TimerHealthCheckConfig {
-
         @StringDefault("oldestReadEventId>latency")
         @Override
         String getName();
@@ -96,13 +93,12 @@ public class AmzaWALDirector {
 
         @DoubleDefault(30000d) /// 30sec
         @Override
-        Double get95ThPecentileMax();
+        Double get95ThPercentileMax();
     }
 
     private static final HealthTimer oldestReadEventIdLatency = HealthFactory.getHealthTimer(OldestReadEventIdLatency.class, TimerHealthChecker.FACTORY);
 
     public interface ScanReadLatency extends TimerHealthCheckConfig {
-
         @StringDefault("scanRead>latency")
         @Override
         String getName();
@@ -113,7 +109,7 @@ public class AmzaWALDirector {
 
         @DoubleDefault(30000d) /// 30sec
         @Override
-        Double get95ThPecentileMax();
+        Double get95ThPercentileMax();
     }
 
     private static final HealthTimer scanReadLatency = HealthFactory.getHealthTimer(ScanReadLatency.class, TimerHealthChecker.FACTORY);

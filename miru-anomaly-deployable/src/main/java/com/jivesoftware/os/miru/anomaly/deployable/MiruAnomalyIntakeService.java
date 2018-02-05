@@ -25,8 +25,7 @@ import org.merlin.config.defaults.StringDefault;
  */
 public class MiruAnomalyIntakeService {
 
-    public static interface IngressLatency extends TimerHealthCheckConfig {
-
+    public interface IngressLatency extends TimerHealthCheckConfig {
         @StringDefault("ingress>latency")
         @Override
         String getName();
@@ -37,7 +36,7 @@ public class MiruAnomalyIntakeService {
 
         @DoubleDefault(30000d) /// 30sec
         @Override
-        Double get95ThPecentileMax();
+        Double get95ThPercentileMax();
     }
 
     private static final HealthTimer ingressLatency = HealthFactory.getHealthTimer(IngressLatency.class, TimerHealthChecker.FACTORY);

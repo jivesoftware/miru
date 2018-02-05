@@ -44,7 +44,6 @@ public class MiruJustInTimeBackfillerizer {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public interface BackfillUnreadLatency extends TimerHealthCheckConfig {
-
         @StringDefault("backfillUnread>latency")
         @Override
         String getName();
@@ -55,7 +54,7 @@ public class MiruJustInTimeBackfillerizer {
 
         @DoubleDefault(30000d) /// 30sec
         @Override
-        Double get95ThPecentileMax();
+        Double get95ThPercentileMax();
     }
 
     private static final HealthTimer backfillUnreadLatency = HealthFactory.getHealthTimer(BackfillUnreadLatency.class, TimerHealthChecker.FACTORY);
