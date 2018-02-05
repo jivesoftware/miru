@@ -6,11 +6,7 @@ import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
 
-/**
- *
- */
 public interface MiruAmzaServiceConfig extends Config {
-
     @StringDefault("./var/amza/default/data/")
     String getWorkingDirectories();
 
@@ -42,9 +38,6 @@ public interface MiruAmzaServiceConfig extends Config {
     @BooleanDefault(false)
     boolean getHardFsync();
 
-    @LongDefault(30_000L)
-    long getDiscoveryIntervalMillis();
-
     @IntDefault(3)
     int getActivityRingSize();
 
@@ -62,9 +55,6 @@ public interface MiruAmzaServiceConfig extends Config {
 
     @LongDefault(60_000L)
     long getTakeCyaIntervalInMillis();
-
-    @LongDefault(60_000)
-    long getInterruptBlockingReadsIfLingersForNMillis();
 
     @BooleanDefault(true)
     boolean getRackDistributionEnabled();

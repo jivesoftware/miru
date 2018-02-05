@@ -65,19 +65,14 @@ public class MiruIngressEndpoints {
         this.miruStats = miruStats;
     }
 
-    static interface IngressHealth extends TimerHealthCheckConfig {
-
+    interface IngressHealth extends TimerHealthCheckConfig {
         @StringDefault("http>ingress")
         @Override
         String getName();
 
         @DoubleDefault(30000d) /// 30sec
         @Override
-        Double get95ThPecentileMax();
-
-        @IntDefault(50)
-        @Override
-        Integer getSampleWindowSize();
+        Double get95ThPercentileMax();
     }
 
     private final HealthTimer ingressHealthTimer = HealthFactory.getHealthTimer(IngressHealth.class, TimerHealthChecker.FACTORY);
@@ -117,19 +112,14 @@ public class MiruIngressEndpoints {
         }
     }
 
-    static interface RemoveHealth extends TimerHealthCheckConfig {
-
+    interface RemoveHealth extends TimerHealthCheckConfig {
         @StringDefault("http>remove")
         @Override
         String getName();
 
         @DoubleDefault(30000d) /// 30sec
         @Override
-        Double get95ThPecentileMax();
-
-        @IntDefault(50)
-        @Override
-        Integer getSampleWindowSize();
+        Double get95ThPercentileMax();
     }
 
     private final HealthTimer removeHealthTimer = HealthFactory.getHealthTimer(RemoveHealth.class, TimerHealthChecker.FACTORY);
@@ -158,19 +148,14 @@ public class MiruIngressEndpoints {
         }
     }
 
-    static interface IngressStreamEventHealth extends TimerHealthCheckConfig {
-
+    interface IngressStreamEventHealth extends TimerHealthCheckConfig {
         @StringDefault("http>ingressStreamEvent")
         @Override
         String getName();
 
         @DoubleDefault(30000d) /// 30sec
         @Override
-        Double get95ThPecentileMax();
-
-        @IntDefault(50)
-        @Override
-        Integer getSampleWindowSize();
+        Double get95ThPercentileMax();
     }
 
     private final HealthTimer ingressStreamEventTimer = HealthFactory.getHealthTimer(IngressStreamEventHealth.class, TimerHealthChecker.FACTORY);
@@ -199,19 +184,14 @@ public class MiruIngressEndpoints {
         }
     }
 
-    static interface IngressReadAllHealth extends TimerHealthCheckConfig {
-
+    interface IngressReadAllHealth extends TimerHealthCheckConfig {
         @StringDefault("http>ingressReadAll")
         @Override
         String getName();
 
         @DoubleDefault(30000d) /// 30sec
         @Override
-        Double get95ThPecentileMax();
-
-        @IntDefault(50)
-        @Override
-        Integer getSampleWindowSize();
+        Double get95ThPercentileMax();
     }
 
     private final HealthTimer ingressReadAllTimer = HealthFactory.getHealthTimer(IngressReadAllHealth.class, TimerHealthChecker.FACTORY);
@@ -240,19 +220,14 @@ public class MiruIngressEndpoints {
         }
     }
 
-    static interface IngressReadHealth extends TimerHealthCheckConfig {
-
+    interface IngressReadHealth extends TimerHealthCheckConfig {
         @StringDefault("http>ingressRead")
         @Override
         String getName();
 
         @DoubleDefault(30000d) /// 30sec
         @Override
-        Double get95ThPecentileMax();
-
-        @IntDefault(50)
-        @Override
-        Integer getSampleWindowSize();
+        Double get95ThPercentileMax();
     }
 
     private HealthTimer ingressReadTimer = HealthFactory.getHealthTimer(IngressReadHealth.class, TimerHealthChecker.FACTORY);
@@ -281,19 +256,14 @@ public class MiruIngressEndpoints {
         }
     }
 
-    static interface IngressUnreadHealth extends TimerHealthCheckConfig {
-
+    interface IngressUnreadHealth extends TimerHealthCheckConfig {
         @StringDefault("http>ingressUnread")
         @Override
         String getName();
 
         @DoubleDefault(30000d) /// 30sec
         @Override
-        Double get95ThPecentileMax();
-
-        @IntDefault(50)
-        @Override
-        Integer getSampleWindowSize();
+        Double get95ThPercentileMax();
     }
 
     private final HealthTimer ingressUnreadTimer = HealthFactory.getHealthTimer(IngressUnreadHealth.class, TimerHealthChecker.FACTORY);
@@ -329,7 +299,6 @@ public class MiruIngressEndpoints {
         @PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId,
         @PathParam("index") int index) {
-
         try {
             activityIngress.updateCursor(writerId, new MiruTenantId(tenantId.getBytes(UTF_8)), MiruPartitionId.of(partitionId), index);
             return responseHelper.jsonResponse("Success");
@@ -338,4 +307,5 @@ public class MiruIngressEndpoints {
             return Response.serverError().build();
         }
     }
+
 }

@@ -90,7 +90,6 @@ public class MiruWriterMain {
     }
 
     public interface WriterAmzaServiceConfig extends MiruAmzaServiceConfig {
-
         @StringDefault("./var/amza/writer/data/")
         @Override
         String getWorkingDirectories();
@@ -104,6 +103,7 @@ public class MiruWriterMain {
 
     void run(String[] args) {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
+
         try {
             ConfigBinder configBinder = new ConfigBinder(args);
             InstanceConfig instanceConfig = configBinder.bind(InstanceConfig.class);
@@ -130,7 +130,6 @@ public class MiruWriterMain {
                 }
             });
             deployable.buildManageServer().start();
-
 
             ObjectMapper mapper = new ObjectMapper();
             mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
@@ -287,9 +286,7 @@ public class MiruWriterMain {
                 walClient);
 
             MiruStats miruStats = new MiruStats();
-
             MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(miruStats, "", manageHttpClient, mapper);
-
             MiruPartitioner miruPartitioner = new MiruPartitioner(instanceConfig.getInstanceName(),
                 amzaPartitionIdProvider,
                 walClient,
@@ -306,7 +303,6 @@ public class MiruWriterMain {
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
             Resource sourceTree = new Resource(staticResourceDir)
-                //.addResourcePath("../../../../../src/main/resources") // fluff?
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setDirectoryListingAllowed(false)
                 .setContext("/ui/static");
@@ -341,4 +337,5 @@ public class MiruWriterMain {
             serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);
         }
     }
+
 }
