@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 /** @author jonathan */
 public class MiruPartitioner {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final int writerId;
     private final MiruPartitionIdProvider partitionIdProvider;
@@ -82,7 +82,7 @@ public class MiruPartitioner {
                 partitionedActivities.put(largestPartitionIdAcrossAllWriters,
                     partitionedActivityFactory.begin(writerId, largestPartitionIdAcrossAllWriters, tenantId, latestIndex));
 
-                log.info("Cursor for {} is out of alignment: {}", tenantId, partitionCursor);
+                LOG.info("Cursor for {} is out of alignment: {}", tenantId, partitionCursor);
                 flushActivities(tenantId, largestPartitionIdAcrossAllWriters, latestIndex, true,
                     new PartitionedLists(Collections.emptyList(), partitionedActivities));
             } else {
@@ -103,9 +103,7 @@ public class MiruPartitioner {
         }
     }
 
-    public void writeActivities(MiruTenantId tenantId, List<MiruActivity> activities, boolean recoverFromRemoval)
-        throws Exception {
-
+    public void writeActivities(MiruTenantId tenantId, List<MiruActivity> activities, boolean recoverFromRemoval) throws Exception {
         List<List<MiruActivity>> partitions = Lists.partition(activities, 10_000); //TODO config
         for (List<MiruActivity> partition : partitions) {
             MiruPartitionId latestPartitionId;
@@ -118,7 +116,7 @@ public class MiruPartitioner {
             synchronized (locks.lock(tenantId, 0)) {
                 MiruPartitionCursor partitionCursor = partitionIdProvider.getCursor(tenantId, writerId);
                 if (partitionCursor.isMaxCapacity()) {
-                    log.info("Cursor for {} is at max capacity: {}", tenantId, partitionCursor);
+                    LOG.info("Cursor for {} is at max capacity: {}", tenantId, partitionCursor);
                     end = new TenantAndPartition(tenantId, partitionCursor.getPartitionId());
                     partitionCursor = partitionIdProvider.nextCursor(tenantId, partitionCursor, writerId);
                     partitionRolloverOccurred = true;
@@ -167,7 +165,6 @@ public class MiruPartitioner {
     public void removeActivities(MiruTenantId tenantId, List<MiruActivity> activities) throws Exception {
         synchronized (locks.lock(tenantId, 0)) {
             ListMultimap<MiruPartitionId, MiruPartitionedActivity> partitionedActivities = ArrayListMultimap.create();
-            List<MiruVersionedActivityLookupEntry> versionedEntries = Lists.newArrayList();
 
             Long[] times = new Long[activities.size()];
             int index = 0;
@@ -185,13 +182,11 @@ public class MiruPartitioner {
                     if (activity.version > versionedEntry.version) {
                         MiruPartitionId partitionId = MiruPartitionId.of(versionedEntry.entry.partitionId);
                         partitionedActivities.put(partitionId, partitionedActivityFactory.remove(writerId, partitionId, versionedEntry.entry.index, activity));
-                        versionedEntries.add(new MiruVersionedActivityLookupEntry(activity.time, activity.version,
-                            new MiruActivityLookupEntry(partitionId.getId(), versionedEntry.entry.index, versionedEntry.entry.writerId, true)));
                     } else {
-                        log.debug("Ignored stale deletion {} <= {} of activity {}", activity.version, versionedEntry.version, activity);
+                        LOG.debug("Ignored stale deletion {} <= {} of activity {}", activity.version, versionedEntry.version, activity);
                     }
                 } else {
-                    log.debug("Ignored removal of nonexistent activity {}", activity);
+                    LOG.debug("Ignored removal of nonexistent activity {}", activity);
                 }
             }
 
@@ -237,16 +232,16 @@ public class MiruPartitioner {
 
         if (!partitionedLists.activities.isEmpty()) {
             walClient.writeActivity(tenantId, partitionId, partitionedLists.activities);
-            log.set(ValueType.COUNT, "partitioner>index>" + partitionId.getId(), latestIndex, tenantId.toString());
-            log.set(ValueType.COUNT, "partitioner>partition", partitionId.getId(), tenantId.toString());
+            LOG.set(ValueType.COUNT, "partitioner>index>" + partitionId.getId(), latestIndex, tenantId.toString());
+            LOG.set(ValueType.COUNT, "partitioner>partition", partitionId.getId(), tenantId.toString());
         }
 
         for (MiruPartitionId repairPartitionId : partitionedLists.repairs.keySet()) {
             List<MiruPartitionedActivity> repairActivities = partitionedLists.repairs.get(repairPartitionId);
             if (!repairActivities.isEmpty()) {
                 walClient.writeActivity(tenantId, repairPartitionId, repairActivities);
-                log.inc("partitioner>repair>calls>" + repairPartitionId.getId(), tenantId.toString());
-                log.inc("partitioner>repair>count>" + repairPartitionId.getId(), repairActivities.size(), tenantId.toString());
+                LOG.inc("partitioner>repair>calls>" + repairPartitionId.getId(), tenantId.toString());
+                LOG.inc("partitioner>repair>count>" + repairPartitionId.getId(), repairActivities.size(), tenantId.toString());
             }
         }
 
@@ -289,10 +284,10 @@ public class MiruPartitioner {
                         MiruPartitionId partitionId = MiruPartitionId.of(versionedEntry.entry.partitionId);
                         partitionedRepairs.put(partitionId, partitionedActivityFactory.repair(writerId, partitionId, versionedEntry.entry.index, activity));
                     } else {
-                        log.debug("Ignored removed activity {}", activity);
+                        LOG.debug("Ignored removed activity {}", activity);
                     }
                 } else {
-                    log.debug("Ignored stale version {} <= {} of activity {}", activity.version, versionedEntry.version, activity);
+                    LOG.debug("Ignored stale version {} <= {} of activity {}", activity.version, versionedEntry.version, activity);
                 }
             } else {
                 int id = cursor.next();
@@ -333,7 +328,7 @@ public class MiruPartitioner {
                 partitionIds.add(entry.getKey());
             }
         }
-        Collections.sort(partitionIds, Collections.reverseOrder());
+        partitionIds.sort(Collections.reverseOrder());
 
         List<MiruVersionedActivityLookupEntry> result = Arrays.asList(new MiruVersionedActivityLookupEntry[times.length]);
         int found = 0;
@@ -342,6 +337,7 @@ public class MiruPartitioner {
             if (versionedEntries == null) {
                 throw new IllegalStateException("Unable to perform versioned entries lookup because WAL is unavailable for " + tenantId + " " + partitionId);
             }
+
             for (int i = 0; i < versionedEntries.size(); i++) {
                 MiruVersionedActivityLookupEntry versionedEntry = versionedEntries.get(i);
                 if (versionedEntry != null) {
@@ -358,11 +354,10 @@ public class MiruPartitioner {
     }
 
     private static class PartitionedLists {
+        final List<MiruPartitionedActivity> activities;
+        final ListMultimap<MiruPartitionId, MiruPartitionedActivity> repairs;
 
-        public final List<MiruPartitionedActivity> activities;
-        public final ListMultimap<MiruPartitionId, MiruPartitionedActivity> repairs;
-
-        public PartitionedLists(List<MiruPartitionedActivity> activities,
+        PartitionedLists(List<MiruPartitionedActivity> activities,
             ListMultimap<MiruPartitionId, MiruPartitionedActivity> repairs) {
             this.activities = activities;
             this.repairs = repairs;

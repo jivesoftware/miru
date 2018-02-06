@@ -72,7 +72,6 @@ public class AmzaHttpWALClient implements MiruWALClient<AmzaCursor, AmzaSipCurso
         ObjectMapper requestMapper,
         HttpResponseMapper responseMapper,
         SickThreads sickThreads, long sleepOnFailureMillis) {
-
         this.routingTenantId = routingTenantId;
         this.walClient = walClient;
         this.tasExecutors = tasExecutors;
@@ -89,7 +88,7 @@ public class AmzaHttpWALClient implements MiruWALClient<AmzaCursor, AmzaSipCurso
             .build();
     }
 
-    private HostPort[] getTenantRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, boolean createIfAbsent) throws Exception {
+    private HostPort[] getTenantRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, boolean createIfAbsent) {
         return send(tenantId, "getTenantRoutingGroup", httpClient -> {
             HttpResponse httpResponse = httpClient.get(
                 "/miru/wal/amza/routing/lazyTenant" +
@@ -195,7 +194,7 @@ public class AmzaHttpWALClient implements MiruWALClient<AmzaCursor, AmzaSipCurso
     }
 
     @Override
-    public MiruPartitionId getLargestPartitionId(final MiruTenantId tenantId) throws Exception {
+    public MiruPartitionId getLargestPartitionId(final MiruTenantId tenantId) {
         return send(tenantId, "getLargestPartitionId", client -> {
             HttpResponse response = client.get("/miru/wal/amza/largestPartitionId/" + tenantId.toString(), null);
             return new ClientResponse<>(responseMapper.extractResultFromResponse(response, MiruPartitionId.class, null), true);
