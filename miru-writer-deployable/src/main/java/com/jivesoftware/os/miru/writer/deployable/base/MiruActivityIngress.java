@@ -73,18 +73,6 @@ public class MiruActivityIngress {
         }
     }
 
-    public void sendStreamEvents(List<MiruStreamEvent> streamEvents) {
-        ListMultimap<MiruTenantId, MiruStreamEvent> tenantStreamEvents = ArrayListMultimap.create();
-        for (MiruStreamEvent streamEvent : streamEvents) {
-            tenantStreamEvents.put(streamEvent.tenantId, streamEvent);
-        }
-        for (MiruTenantId tenantId : tenantStreamEvents.keySet()) {
-            checkForWriterAlignmentIfNecessary(tenantId);
-            List<MiruStreamEvent> events = tenantStreamEvents.get(tenantId);
-            //TODO miruPartitioner.writeStreamEvents(tenantId, events);
-        }
-    }
-
     public void sendRead(List<MiruReadEvent> readEvents) throws Exception {
         ListMultimap<MiruTenantId, MiruReadEvent> tenantReadEvents = splitByTenant(readEvents);
         for (MiruTenantId tenantId : tenantReadEvents.keySet()) {

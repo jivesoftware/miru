@@ -139,6 +139,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
 
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         BM answer = bitmaps.and(ands);
+        LOG.debug("Aggregate Counts answer: {}", answer);
 
         BM counter = null;
         if (!MiruTimeRange.ALL_TIME.equals(request.query.countTimeRange)) {

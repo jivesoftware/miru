@@ -274,14 +274,12 @@ public class MiruWriterMain {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
 
-            String indexClass = "lab";
-
             EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaLifecycle.amzaService);
             AmzaPartitionIdProvider amzaPartitionIdProvider = new AmzaPartitionIdProvider(amzaLifecycle.amzaService,
                 clientProvider,
                 miruAmzaServiceConfig.getReplicateLatestPartitionTimeoutMillis(),
                 miruAmzaServiceConfig.getReplicateCursorTimeoutMillis(),
-                indexClass,
+                "lab",
                 clientConfig.getTotalCapacity(),
                 walClient);
 

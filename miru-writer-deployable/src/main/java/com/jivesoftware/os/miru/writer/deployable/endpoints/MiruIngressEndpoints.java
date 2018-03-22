@@ -148,42 +148,6 @@ public class MiruIngressEndpoints {
         }
     }
 
-    interface IngressStreamEventHealth extends TimerHealthCheckConfig {
-        @StringDefault("http>ingressStreamEvent")
-        @Override
-        String getName();
-
-        @DoubleDefault(30000d) /// 30sec
-        @Override
-        Double get95ThPercentileMax();
-    }
-
-    private final HealthTimer ingressStreamEventTimer = HealthFactory.getHealthTimer(IngressStreamEventHealth.class, TimerHealthChecker.FACTORY);
-
-    @POST
-    @Path(MiruWriterEndpointConstants.STREAM_EVENT)
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response ingressStreamEvent(List<MiruStreamEvent> events) {
-        if (events == null) {
-            return Response
-                .status(Response.Status.BAD_REQUEST)
-                .entity("Read all events list must not be null.")
-                .build();
-        }
-
-        try {
-            ingressStreamEventTimer.startTimer();
-            activityIngress.sendStreamEvents(events);
-            return responseHelper.jsonResponse("Success");
-        } catch (Exception e) {
-            LOG.error("Failed to read activities.", e);
-            return Response.serverError().build();
-        } finally {
-            ingressStreamEventTimer.stopTimer("Read All Latency", " Add more capacity. Increase batching. Look for down stream issue.");
-        }
-    }
-
     interface IngressReadAllHealth extends TimerHealthCheckConfig {
         @StringDefault("http>ingressReadAll")
         @Override

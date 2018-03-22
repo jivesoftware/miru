@@ -56,8 +56,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         long replicateCursorTimeoutMillis,
         String indexClass,
         int capacity,
-        MiruWALClient<?, ?> walClient)
-        throws Exception {
+        MiruWALClient<?, ?> walClient) {
         this.amzaService = amzaService;
         this.clientProvider = clientProvider;
         this.replicateLatestPartitionTimeoutMillis = replicateLatestPartitionTimeoutMillis;
